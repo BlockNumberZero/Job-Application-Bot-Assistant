@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      /* Basic styling for the sidebar */
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 15px;
+        background-color: #f8f9fa;
+        color: #3c4043;
+        font-size: 14px;
+      }
+      h3 {
+        color: #4285f4;
+        margin-top: 0;
+      }
+      label {
+        display: block;
+        margin-top: 15px;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      textarea {
+        width: 100%;
+        height: 120px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        padding: 8px;
+        box-sizing: border-box;
+        font-family: inherit; /* Use body font */
+        font-size: 14px;
+      }
+      select, button {
+        width: 100%;
+        margin-top: 8px; /* Slightly reduced margin */
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+      select {
+         background-color: white; /* Ensure select has a white background */
+      }
+      button {
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s ease;
+      }
+      button:hover {
+        background-color: #357ae8;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      
+      /* Rejection Button Styling */
+      #rejectionBtn {
+        background-color: #f4b400; /* Yellow accent to distinguish */
+        margin-top: 15px;
+      }
+      #rejectionBtn:hover {
+        background-color: #e0a800;
+      }
+
+      /* Status Output Area */
+      #output {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 13px;
+        display: none; /* Hidden by default */
+        line-height: 1.4;
+        border: 1px solid transparent; /* Base border */
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .loading {
+        color: #666;
+        font-style: italic;
+        margin-top: 10px;
+        display: none; /* Hidden by default */
+      }
+    </style>
+  </head>
+  <body>
+    <h3>🤖 AI Recruitment Suite</h3>
+
+    <label for="jdInput">Job Description / URL:</label>
+    <textarea id="jdInput" placeholder="Paste the job text here or a link..."></textarea>
+
+    <label for="cvType">Select CV Profile:</label>
+    <select id="cvType">
+      <option value="DE Web2 Marketing Manager">DE Web2 Marketing Manager</option>
+      <option value="EN Web2 Marketing Manager">EN Web2 Marketing Manager</option>
+      <option value="Web3 Marketing Manager">Web3 Marketing Manager</option>
+    </select>
+
+    <button id="mainBtn" onclick="processJob()">Generate & Register</button>
+    <button id="rejectionBtn" onclick="scanRejections()">Scan Rejections 🤖</button>
+
+    <div id="loader" class="loading">Processing... 🤖</div>
+    <div id="output"></div>
+
+    <script>
+      function processJob() {
+        const jd = document.getElementById('jdInput').value.trim();
+        const cv = document.getElementById('cvType').value;
+        const btn = document.getElementById('mainBtn');
+        const rejBtn = document.getElementById('rejectionBtn');
+        const loader = document.getElementById('loader');
+        const output = document.getElementById('output');
+
+        if (!jd) {
+          showOutput("Please paste a Job Description text or URL.", "error");
+          return;
+        }
+
+        btn.disabled = true;
+        rejBtn.disabled = true;
+        loader.innerText = "Processing with Mistral... 🤖";
+        loader.style.display = "block";
+        output.style.display = "none";
+        output.innerText = "";
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            rejBtn.disabled = false;
+            loader.style.display = "none";
+            if (res.startsWith("Error:")) {
+              showOutput(res, "error");
+            } else {
+              showOutput(res, "success");
+              document.getElementById('jdInput').value = ""; 
+            }
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            rejBtn.disabled = false;
+            loader.style.display = "none";
+            showOutput("Critical Script Error: " + err.message, "error");
+            console.error("Script Failure:", err);
+          })
+          .mainJobProcessor(jd, cv); 
+      }
+
+      function scanRejections() {
+        const btn = document.getElementById('mainBtn');
+        const rejBtn = document.getElementById('rejectionBtn');
+        const loader = document.getElementById('loader');
+        const output = document.getElementById('output');
+
+        btn.disabled = true;
+        rejBtn.disabled = true;
+        rejBtn.innerText = "Scanning Inbox...";
+        loader.innerText = "Scanning for rejections... 🤖";
+        loader.style.display = "block";
+        output.style.display = "none";
+        output.innerText = "";
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            rejBtn.disabled = false;
+            rejBtn.innerText = "Scan Rejections 🤖";
+            loader.style.display = "none";
+            showOutput(res, "success");
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            rejBtn.disabled = false;
+            rejBtn.innerText = "Scan Rejections 🤖";
+            loader.style.display = "none";
+            showOutput("Error: " + err.message, "error");
+            console.error(err);
+          })
+          .processRejectionEmails();
+      }
+
+      function showOutput(text, type) {
+        const output = document.getElementById('output');
+        output.innerText = text;
+        output.className = type; 
+        output.style.display = "block";
+      }
+    </script>
+  </body>
+</html>
