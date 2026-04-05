@@ -40,3 +40,15 @@ git rm --cached -r .gemini
 git rm --cached -r -f .gemini
 echo ".gemini/" >> .gitignore git add .gitignore
 git add .gitignore
+git reset --hard HEAD
+git clean -fdx
+git pull --rebase origin main
+--autostash
+git pull --rebase --autostash origin main
+git push -u origin main
+git push -u origin master:main
+git init
+git add .
+echo ".gemini/" >> .gitignore
+git rm -r --cached .gemini
+git rm -r --cached -f .gemini

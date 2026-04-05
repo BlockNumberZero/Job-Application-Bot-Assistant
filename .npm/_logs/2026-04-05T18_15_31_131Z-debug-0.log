@@ -7,9 +7,9 @@
 6 silly config load:file:/usr/local/nvm/versions/node/v24.14.1/etc/npmrc
 7 verbose title npm config get prefix
 8 verbose argv "config" "--loglevel" "warn" "get" "prefix"
-9 verbose logfile logs-max:10 dir:/home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-05T14_41_02_324Z-
-10 verbose logfile /home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-05T14_41_02_324Z-debug-0.log
-11 silly logfile start cleaning logs, removing 4 files
+9 verbose logfile logs-max:10 dir:/home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-05T18_15_31_131Z-
+10 verbose logfile /home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-05T18_15_31_131Z-debug-0.log
+11 silly logfile start cleaning logs, removing 3 files
 12 verbose cwd /google/devshell/editor/code-oss-for-cloud-shell
 13 verbose os Linux 6.6.123+
 14 verbose node v24.14.1
