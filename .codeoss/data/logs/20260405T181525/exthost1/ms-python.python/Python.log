@@ -1,0 +1,33 @@
+2026-04-05 18:34:52.702 [warning] Dir "/home/rey_miller_chancahuana_almora/.pixi/envs" is not watchable (directory does not exist)
+2026-04-05 18:34:55.385 [info] Starting Environment refresh
+2026-04-05 18:34:55.385 [info] Searching for interpreters in posix paths locator
+2026-04-05 18:34:55.394 [info] Searching for pyenv environments
+2026-04-05 18:34:55.394 [info] Searching for conda environments
+2026-04-05 18:34:55.395 [info] Searching for global virtual environments
+2026-04-05 18:34:55.395 [info] Searching for custom virtual environments
+2026-04-05 18:34:55.401 [info] Skipping ActivatedEnv Detection:  process.env.VSCODE_CLI !== '1'
+2026-04-05 18:34:55.402 [info] Skipping ActivatedEnv Detection:  process.env.VSCODE_CLI !== '1'
+2026-04-05 18:34:55.404 [info] pyenv is not installed
+2026-04-05 18:34:55.404 [info] Finished searching for pyenv environments: 18 milliseconds
+2026-04-05 18:34:55.406 [info] Finished searching for custom virtual envs: 18 milliseconds
+2026-04-05 18:34:55.418 [info] > conda info --json
+2026-04-05 18:34:55.431 [info] > hatch env show --json
+2026-04-05 18:34:55.431 [info] cwd: .
+2026-04-05 18:34:55.444 [info] > pyenv which python
+2026-04-05 18:34:55.444 [info] cwd: .
+2026-04-05 18:34:55.445 [info] Finished searching for global virtual envs: 58 milliseconds
+2026-04-05 18:34:55.453 [info] Found: /bin/python --> /bin/python3.12
+2026-04-05 18:34:55.454 [info] Found: /bin/python3 --> /bin/python3.12
+2026-04-05 18:34:55.454 [info] Found: /bin/python3.12 --> /bin/python3.12
+2026-04-05 18:34:55.473 [info] Found: /usr/bin/python --> /usr/bin/python3.12
+2026-04-05 18:34:55.473 [info] Found: /usr/bin/python3 --> /usr/bin/python3.12
+2026-04-05 18:34:55.473 [info] Found: /usr/bin/python3.12 --> /usr/bin/python3.12
+2026-04-05 18:34:55.510 [info] Finished searching for interpreters in posix paths locator: 118 milliseconds
+2026-04-05 18:34:55.510 [info] > /bin/python -I /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/get_output_via_markers.py /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/interpreterInfo.py
+2026-04-05 18:34:55.545 [info] > /usr/bin/python -I /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/get_output_via_markers.py /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/interpreterInfo.py
+2026-04-05 18:34:55.546 [info] Environments refresh paths discovered (event): 162 milliseconds
+2026-04-05 18:34:55.546 [info] Environments refresh paths discovered: 163 milliseconds
+2026-04-05 18:34:55.654 [info] Environments refresh finished (event): 271 milliseconds
+2026-04-05 18:34:55.664 [info] Environment refresh took 281 milliseconds
+2026-04-05 18:34:55.670 [info] Python interpreter path: /bin/python
+2026-04-05 18:34:57.905 [info] Starting Jedi language server for rey_miller_chancahuana_almora.

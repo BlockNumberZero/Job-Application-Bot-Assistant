@@ -52,3 +52,9 @@ git add .
 echo ".gemini/" >> .gitignore
 git rm -r --cached .gemini
 git rm -r --cached -f .gemini
+git stash
+git branch -M main
+git pull --rebase origin main
+.gemini/
+.cache/
+echo -e ".gemini/\n.cache/" > .gitignore
