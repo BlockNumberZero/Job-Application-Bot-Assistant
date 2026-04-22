@@ -86,7 +86,20 @@ function onOpen() {
     .addSeparator()
     .addItem('Scan Gmail for Applications', 'processGmailApplications')
     .addItem('Scan Gmail for Rejections', 'processRejectionEmails')
+    .addSeparator()
+    .addItem('🔄 Refresh Dashboard Data', 'refreshAllData')
     .addToUi();
+}
+
+function refreshAllData() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    updateSankeyData();
+    updateGeoData();
+    ui.alert('Success: Dashboard data updated.');
+  } catch (e) {
+    ui.alert('Error updating data: ' + e.toString());
+  }
 }
 
 function showSidebar() {
