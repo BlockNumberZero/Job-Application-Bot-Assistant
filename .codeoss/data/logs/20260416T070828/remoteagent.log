@@ -1,0 +1,177 @@
+2026-04-16 07:08:28.884 [info] 
+
+
+
+
+2026-04-16 07:08:28.927 [info] Extension host agent started.
+2026-04-16 07:09:42.171 [info] [127.0.0.1][4d3d7784][ManagementConnection] New connection established.
+2026-04-16 07:09:42.628 [info] [127.0.0.1][52dbd2c8][ExtensionHostConnection] New connection established.
+2026-04-16 07:09:45.566 [info] [127.0.0.1][52dbd2c8][ExtensionHostConnection] <1454> Launched Extension Host Process.
+2026-04-16 07:09:46.530 [info] [127.0.0.1][52dbd2c8][ExtensionHostConnection] <1454> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 07:18:24.274 [info] [127.0.0.1][0dbbd36d][ManagementConnection] New connection established.
+2026-04-16 07:18:24.439 [info] [127.0.0.1][74cbbe1b][ExtensionHostConnection] New connection established.
+2026-04-16 07:18:24.447 [info] [127.0.0.1][74cbbe1b][ExtensionHostConnection] <1516> Launched Extension Host Process.
+2026-04-16 07:18:25.199 [info] [127.0.0.1][74cbbe1b][ExtensionHostConnection] <1516> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 07:20:03.298 [warning] RequestStore#acceptReply was called without receiving a matching request 13
+2026-04-16 07:20:03.299 [warning] RequestStore#acceptReply was called without receiving a matching request 14
+2026-04-16 07:20:03.299 [warning] RequestStore#acceptReply was called without receiving a matching request 15
+2026-04-16 07:20:03.299 [warning] RequestStore#acceptReply was called without receiving a matching request 16
+2026-04-16 07:20:03.299 [warning] RequestStore#acceptReply was called without receiving a matching request 17
+2026-04-16 07:20:03.299 [warning] RequestStore#acceptReply was called without receiving a matching request 18
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 19
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 20
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 21
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 22
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 23
+2026-04-16 07:20:03.300 [warning] RequestStore#acceptReply was called without receiving a matching request 24
+2026-04-16 07:23:15.697 [warning] RequestStore#acceptReply was called without receiving a matching request 25
+2026-04-16 07:23:15.697 [warning] RequestStore#acceptReply was called without receiving a matching request 26
+2026-04-16 07:23:15.697 [warning] RequestStore#acceptReply was called without receiving a matching request 27
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 28
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 29
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 30
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 31
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 32
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 33
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 34
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 35
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 36
+2026-04-16 07:23:15.698 [warning] RequestStore#acceptReply was called without receiving a matching request 37
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 38
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 39
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 40
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 41
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 42
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 43
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 44
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 45
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 46
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 47
+2026-04-16 07:23:15.699 [warning] RequestStore#acceptReply was called without receiving a matching request 48
+2026-04-16 07:24:37.630 [info] [127.0.0.1][4d3d7784][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2026-04-16 07:24:37.848 [info] [127.0.0.1][52dbd2c8][ExtensionHostConnection] <1454> Extension Host Process exited with code: 0, signal: null.
+2026-04-16 07:25:31.676 [warning] RequestStore#acceptReply was called without receiving a matching request 49
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 50
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 51
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 52
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 53
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 54
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 55
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 56
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 57
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 58
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 59
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 60
+2026-04-16 07:25:31.677 [warning] RequestStore#acceptReply was called without receiving a matching request 61
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 62
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 63
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 64
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 65
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 66
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 67
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 68
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 69
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 70
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 71
+2026-04-16 07:25:31.678 [warning] RequestStore#acceptReply was called without receiving a matching request 72
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 73
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 74
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 75
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 76
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 77
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 78
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 79
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 80
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 81
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 82
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 83
+2026-04-16 07:25:31.679 [warning] RequestStore#acceptReply was called without receiving a matching request 84
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 85
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 86
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 87
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 88
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 89
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 90
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 91
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 92
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 93
+2026-04-16 07:25:31.680 [warning] RequestStore#acceptReply was called without receiving a matching request 94
+2026-04-16 07:25:31.681 [warning] RequestStore#acceptReply was called without receiving a matching request 95
+2026-04-16 07:25:31.681 [warning] RequestStore#acceptReply was called without receiving a matching request 96
+2026-04-16 07:25:54.388 [info] [127.0.0.1][0dbbd36d][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2026-04-16 07:25:54.696 [info] [127.0.0.1][74cbbe1b][ExtensionHostConnection] <1516> Extension Host Process exited with code: 0, signal: null.
+2026-04-16 07:26:27.282 [info] [127.0.0.1][377509d7][ManagementConnection] New connection established.
+2026-04-16 07:26:32.392 [info] [127.0.0.1][b718a497][ExtensionHostConnection] New connection established.
+2026-04-16 07:26:32.398 [info] [127.0.0.1][b718a497][ExtensionHostConnection] <1643> Launched Extension Host Process.
+2026-04-16 07:26:32.837 [info] [127.0.0.1][b718a497][ExtensionHostConnection] <1643> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 07:28:49.366 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:29:26.653 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:35:47.514 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:36:12.681 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:36:34.968 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:36:57.731 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:37:19.875 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:37:41.910 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:38:03.734 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:38:25.645 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:38:47.282 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:39:09.061 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:39:30.796 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:39:52.280 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:40:14.118 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:40:35.800 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:41:00.735 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:41:22.524 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:41:44.481 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:42:06.183 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:42:27.790 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:42:49.799 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:43:11.403 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:44:56.420 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:45:17.884 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:45:39.583 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:46:01.246 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:46:22.725 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:46:44.146 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:47:05.837 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:47:27.251 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:47:48.829 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:48:10.517 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:48:31.971 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:48:54.409 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:49:16.716 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:49:38.556 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:50:00.277 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:50:21.992 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:50:43.690 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:51:05.598 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:51:27.234 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:51:48.913 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:52:11.774 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:52:33.348 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:52:55.099 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:53:16.610 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:53:38.370 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:54:00.381 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:54:21.948 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:54:43.525 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:55:05.169 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:55:26.769 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:55:48.286 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 07:56:27.383 [info] [127.0.0.1][377509d7][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...
+2026-04-16 08:28:51.872 [info] [127.0.0.1][377509d7][ManagementConnection] Another client has connected, will shorten the wait for reconnection 5m before disposing...
+2026-04-16 08:28:51.874 [info] [127.0.0.1][b718a497][ExtensionHostConnection] The client has reconnected.
+2026-04-16 08:28:52.116 [info] [127.0.0.1][377509d7][ManagementConnection] The client has reconnected.
+2026-04-16 08:34:10.477 [info] [127.0.0.1][377509d7][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2026-04-16 08:34:11.151 [info] [127.0.0.1][b718a497][ExtensionHostConnection] <1643> Extension Host Process exited with code: 0, signal: null.
+2026-04-16 08:34:14.995 [info] [127.0.0.1][a68c91a6][ManagementConnection] New connection established.
+2026-04-16 08:34:15.066 [info] [127.0.0.1][2ccf4963][ExtensionHostConnection] New connection established.
+2026-04-16 08:34:15.076 [info] [127.0.0.1][2ccf4963][ExtensionHostConnection] <2213> Launched Extension Host Process.
+2026-04-16 08:34:16.251 [info] [127.0.0.1][2ccf4963][ExtensionHostConnection] <2213> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 08:42:41.021 [info] [127.0.0.1][a68c91a6][ManagementConnection] The client has reconnected.
+2026-04-16 08:56:14.578 [info] [127.0.0.1][2ccf4963][ExtensionHostConnection] The client has reconnected.
+2026-04-16 09:17:43.570 [info] [127.0.0.1][a68c91a6][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...

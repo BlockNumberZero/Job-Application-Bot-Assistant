@@ -1,0 +1,7 @@
+2026-04-20 14:01:59.542 [warning] Dir "/home/rey_miller_chancahuana_almora/.pixi/envs" is not watchable (directory does not exist)
+2026-04-20 14:02:01.732 [info] Skipping ActivatedEnv Detection:  process.env.VSCODE_CLI !== '1'
+2026-04-20 14:02:01.792 [info] > conda info --json
+2026-04-20 14:02:01.823 [info] Python interpreter path: /bin/python
+2026-04-20 14:02:02.217 [info] > pyenv which python
+2026-04-20 14:02:02.217 [info] cwd: .
+2026-04-20 14:02:10.773 [info] Starting Jedi language server for rey_miller_chancahuana_almora.

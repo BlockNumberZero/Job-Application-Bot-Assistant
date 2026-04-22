@@ -1,0 +1,221 @@
+Starting background process...
+Background process started with PID 1606
+[INFO] 2026-04-20 14:02:03.303 PM -- [CoderAgentExecutor] Overriding workspace path to: /home/rey_miller_chancahuana_almora
+[ERROR] 2026-04-20 14:02:03.314 PM -- Warning: unexpected file /home/rey_miller_chancahuana_almora/.gemini/extensions/extension-enablement.json in extensions directory.
+[ERROR] 2026-04-20 14:02:03.317 PM -- Warning: unexpected file /home/rey_miller_chancahuana_almora/.gemini/extensions/extension-enablement.json in extensions directory.
+[INFO] 2026-04-20 14:02:03.318 PM -- Loading extension: vertex (version: 0.2.0)
+Ignore file not found: /home/rey_miller_chancahuana_almora/.geminiignore, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.aiexclude, continue without it.
+[DEBUG] [MemoryDiscovery] Loading server hierarchical memory for CWD:  (importFormat: tree)
+[DEBUG] [MemoryDiscovery] Searching for GEMINI.md starting from CWD: /home/rey_miller_chancahuana_almora
+[DEBUG] [MemoryDiscovery] Determined project root: /home/rey_miller_chancahuana_almora
+[DEBUG] [MemoryDiscovery] deduplication: keeping /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (dev: 2065, ino: 133967)
+[DEBUG] [MemoryDiscovery] Successfully read and processed imports: /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (Length: 55458)
+Ignore file not found: /home/rey_miller_chancahuana_almora/.geminiignore, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.aiexclude, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.geminiignore, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.aiexclude, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.geminiignore, continue without it.
+Ignore file not found: /home/rey_miller_chancahuana_almora/.aiexclude, continue without it.
+Loading extension: vertex
+[MCP error] Error during discovery for MCP server 'VertexMcpServer': spawn ${extensionPath}/run.sh ENOENT Error: spawn ${extensionPath}/run.sh ENOENT
+    at ChildProcess._handle.onexit (node:internal/child_process:285:19)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'spawn ${extensionPath}/run.sh',
+  path: '${extensionPath}/run.sh',
+  spawnargs: []
+}
+Scheduling MCP context refresh...
+Executing MCP context refresh...
+[DEBUG] [MemoryDiscovery] Loading server hierarchical memory for CWD:  (importFormat: tree)
+Hook registry initialized with 0 hook entries
+Hook system initialized successfully
+[DEBUG] [MemoryDiscovery] deduplication: keeping /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (dev: 2065, ino: 133967)
+[DEBUG] [MemoryDiscovery] Loading environment memory for trusted root: /home/rey_miller_chancahuana_almora (Stopping at git root: /home/rey_miller_chancahuana_almora)
+[DEBUG] [MemoryDiscovery] Starting upward search from /home/rey_miller_chancahuana_almora stopping at /home/rey_miller_chancahuana_almora
+[DEBUG] [MemoryDiscovery] deduplication: keeping /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (dev: 2065, ino: 133967)
+[DEBUG] [MemoryDiscovery] Successfully read and processed imports: /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (Length: 55458)
+MCP context refresh complete.
+[DEBUG] [MemoryDiscovery] Successfully read and processed imports: /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (Length: 55458)
+[STARTUP] StartupProfiler.flush() called with 1 phases
+[STARTUP] Recording metric for phase: discover_tools duration: 12874.911390000001
+[INFO] 2026-04-20 14:02:17.060 PM -- [Config] Using CCPA Auth:
+[INFO] 2026-04-20 14:02:17.061 PM -- [Config] Skipping LOGIN_WITH_GOOGLE due to headless mode. Attempting COMPUTE_ADC.
+Keychain initialization encountered an error: Cannot find package 'keytar' imported from /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/agent/a2a-server.mjs
+Using FileKeychain fallback for secure storage.
+Failed to load credentials from /home/rey_miller_chancahuana_almora/.gemini/oauth_creds.json: ENOENT: no such file or directory, open '/home/rey_miller_chancahuana_almora/.gemini/oauth_creds.json'
+Attempting to authenticate via metadata server application default credentials.
+Authentication successful.
+Experiments loaded {
+  experimentIds: [
+    106018683,
+    105979538,
+    105979560,
+    106015337,
+    105979579,
+    105867471,
+    105979522,
+    105995634,
+    106100625,
+    105640665,
+    104638466,
+    105704191,
+    101868197,
+    104817729,
+    105695344,
+    106064591,
+    104913215,
+    105821930,
+    104922093,
+    103012598,
+    106143956,
+    105856899,
+    102617194,
+    105098746,
+    106064030,
+    105757908,
+    104892493,
+    105822886,
+    105785683,
+    105721273,
+    105897325,
+    105658071,
+    105885552,
+    105864343,
+    106166745,
+    106106762,
+    106057393,
+    106106760,
+    105620019,
+    106038160,
+    106124361,
+    106115648,
+    106115654,
+    106029321,
+    104739378,
+    105887313,
+    105849474,
+    106045721,
+    106032303,
+    106033846,
+    106113886,
+    103118072,
+    105979531,
+    105979553,
+    106015328,
+    105867469,
+    105979517,
+    106100654,
+    105640661,
+    104638459,
+    105704187,
+    101551624,
+    104673683,
+    105695346,
+    106064590,
+    104913210,
+    105821928,
+    104922082,
+    103012592,
+    102519585,
+    105098743,
+    106064028,
+    104892490,
+    105822881,
+    105721268,
+    105895316,
+    105658068,
+    105885549,
+    105863625,
+    106102706,
+    106057389,
+    105620012,
+    106038153,
+    106124357,
+    106115644,
+    106115650,
+    106029319,
+    105887311,
+    106045719,
+    106032301,
+    106033844,
+    106113877,
+    103118069,
+    106018680
+  ],
+  flags: [
+    {
+      flagId: '45740197',
+      floatValue: 0.7
+    },
+    {
+      flagId: '45740199',
+      stringValue: ''
+    },
+    {
+      flagId: '45740200',
+      stringValue: ''
+    },
+    {
+      flagId: '45743869',
+      boolValue: false
+    },
+    {
+      flagId: '45750526',
+      boolValue: true
+    },
+    {
+      flagId: '45750527',
+      intValue: '90'
+    },
+    {
+      flagId: '45752213',
+      boolValue: true
+    },
+    {
+      flagId: '45761848',
+      boolValue: true
+    },
+    {
+      flagId: '45768879',
+      boolValue: true
+    },
+    {
+      flagId: '45773036',
+      stringValue: ''
+    },
+    {
+      flagId: '45773134',
+      intValue: '300'
+    },
+    {
+      flagId: '45773135',
+      intValue: '600'
+    },
+    {
+      flagId: '45773187',
+      stringValue: ''
+    },
+    {
+      flagId: '45773188',
+      boolValue: false
+    },
+    {
+      flagId: '45773189',
+      intValue: '30'
+    },
+    {
+      flagId: '45773190',
+      intValue: '15'
+    }
+  ]
+}
+[INFO] 2026-04-20 14:02:18.022 PM -- [Config] COMPUTE_ADC successful.
+[INFO] 2026-04-20 14:02:18.023 PM -- [Config] GOOGLE_CLOUD_PROJECT: cloudshell-gca
+[INFO] 2026-04-20 14:02:18.039 PM -- Using InMemoryTaskStore
+[INFO] 2026-04-20 14:02:18.051 PM -- [CoreAgent] Agent Server started on http://localhost:33703
+[INFO] 2026-04-20 14:02:18.051 PM -- [CoreAgent] Agent Card: http://localhost:33703/.well-known/agent-card.json
+[INFO] 2026-04-20 14:02:18.051 PM -- [CoreAgent] Press Ctrl+C to stop the server

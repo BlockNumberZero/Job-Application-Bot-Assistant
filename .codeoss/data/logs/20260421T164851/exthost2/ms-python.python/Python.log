@@ -1,0 +1,7 @@
+2026-04-21 16:50:07.617 [warning] Dir "/home/rey_miller_chancahuana_almora/JABA/.pixi/envs" is not watchable (directory does not exist)
+2026-04-21 16:50:09.191 [info] Skipping ActivatedEnv Detection:  process.env.VSCODE_CLI !== '1'
+2026-04-21 16:50:09.271 [info] > conda info --json
+2026-04-21 16:50:09.280 [info] Python interpreter path: /bin/python
+2026-04-21 16:50:09.716 [info] > pyenv which python
+2026-04-21 16:50:09.716 [info] cwd: .
+2026-04-21 16:50:14.599 [info] Starting Jedi language server for JABA.

@@ -1,0 +1,34 @@
+2026-04-21 16:49:37.720 [info] Extension host with pid 1893 started
+2026-04-21 16:49:37.720 [error] Error: EEXIST: file already exists, open '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock'
+2026-04-21 16:49:37.723 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock': Could not acquire lock, checking if the file is stale.
+2026-04-21 16:49:37.736 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock': The lock looks stale, waiting for 2s.
+2026-04-21 16:49:38.170 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-04-21 16:49:38.171 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-04-21 16:49:38.172 [info] ExtensionService#_doActivateExtension google.geminicodeassist, startup: false, activationEvent: 'onView:cloudcode.gemini.chatView'
+2026-04-21 16:49:38.172 [info] ExtensionService#_doActivateExtension vscode.typescript-language-features, startup: false, activationEvent: 'onLanguage:javascript'
+2026-04-21 16:49:40.564 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2026-04-21 16:49:40.595 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock': The lock looks stale even after waiting for 2s.
+2026-04-21 16:49:40.595 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock': Deleting a stale lock.
+2026-04-21 16:49:40.734 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/42f05192/vscode.lock': Lock acquired.
+2026-04-21 16:49:41.323 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2026-04-21 16:49:41.324 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-04-21 16:49:42.004 [info] ExtensionService#_doActivateExtension google.cloud-shell, startup: false, activationEvent: 'onCommand:cloudshell.isAuthorized'
+2026-04-21 16:49:42.276 [info] Eager extensions activated
+2026-04-21 16:49:42.277 [info] ExtensionService#_doActivateExtension EditorConfig.EditorConfig, startup: false, activationEvent: 'onStartupFinished'
+2026-04-21 16:49:42.278 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-04-21 16:49:42.278 [info] ExtensionService#_doActivateExtension google.gemini-cli-vscode-ide-companion, startup: false, activationEvent: 'onStartupFinished'
+2026-04-21 16:49:42.279 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-04-21 16:49:44.177 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-21 16:49:44.177 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-21 16:49:47.133 [info] ExtensionService#_doActivateExtension googlecloudtools.cloudcode, startup: false, activationEvent: 'onStartupFinished'
+2026-04-21 16:49:54.734 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1136
+2026-04-21 16:49:55.673 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1136
+2026-04-21 16:50:05.265 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter, startup: false, activationEvent: 'api', root cause: googlecloudtools.cloudcode
+2026-04-21 16:50:06.341 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-21 16:50:06.733 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter-renderers, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-21 16:50:13.922 [info] ExtensionService#_doActivateExtension vscode.terminal-suggest, startup: false, activationEvent: 'onTerminalShellIntegration:*'
+2026-04-21 16:50:21.749 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1145
+2026-04-21 16:50:27.023 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1145
+2026-04-21 16:50:34.179 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1145
+2026-04-21 16:50:46.491 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1145
+2026-04-21 16:50:51.712 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1146

@@ -1,0 +1,107 @@
+2026-04-22 15:09:56.481 [info] Extension host with pid 1449 started
+2026-04-22 15:09:57.071 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-04-22 15:09:57.072 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-04-22 15:09:57.610 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2026-04-22 15:09:58.053 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2026-04-22 15:09:58.054 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-04-22 15:09:58.147 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:09:58.148 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:09:58.148 [info] ExtensionService#_doActivateExtension vscode.typescript-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:09:58.614 [info] Eager extensions activated
+2026-04-22 15:09:58.614 [info] ExtensionService#_doActivateExtension EditorConfig.EditorConfig, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:09:58.615 [info] ExtensionService#_doActivateExtension google.cloud-shell, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:09:58.615 [info] ExtensionService#_doActivateExtension google.geminicodeassist, startup: false, activationEvent: 'onStartupFinished', root cause: googlecloudtools.cloudcode
+2026-04-22 15:09:58.616 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:09:58.616 [info] ExtensionService#_doActivateExtension google.gemini-cli-vscode-ide-companion, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:09:58.616 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:10:37.931 [info] ExtensionService#_doActivateExtension googlecloudtools.cloudcode, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:11:16.795 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter, startup: false, activationEvent: 'api', root cause: googlecloudtools.cloudcode
+2026-04-22 15:11:17.309 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.experimentationServiceTimer (node:internal/process/task_queues:105:5)
+    at c.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:259:26)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:228:58
+2026-04-22 15:11:17.327 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.experimentationServiceTimer (node:internal/process/task_queues:105:5)
+    at c.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:259:26)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:228:58
+2026-04-22 15:11:18.164 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-22 15:11:18.772 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter-renderers, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-22 15:11:19.249 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.experimentationServiceTimer (node:internal/process/task_queues:105:5)
+    at c.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:259:26)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:228:58
+2026-04-22 15:11:19.259 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.experimentationServiceTimer (node:internal/process/task_queues:105:5)
+    at c.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:259:26)
+    at ef.value (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/experimentation/experiment_service.ts:242:53)
+2026-04-22 15:11:38.332 [info] ExtensionService#_doActivateExtension vscode.terminal-suggest, startup: false, activationEvent: 'onTerminalShellIntegration:*'
+2026-04-22 15:11:47.668 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.aiLanguageClient (node:internal/process/task_queues:105:5)
+    at t.AICompanionPlugin.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:336:62)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:166:58
+2026-04-22 15:11:47.671 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.aiLanguageClient (node:internal/process/task_queues:105:5)
+    at t.AICompanionPlugin.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:336:62)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:166:58
+2026-04-22 15:11:47.672 [error] Error: Client got disposed and can't be restarted.
+    at q.start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:644:19)
+    at q.$start (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:1130:20)
+    at q.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/common/client.js:340:39)
+    at func (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1332:27)
+    at t.AILanguageClient.callClient (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1351:19)
+    at t.AILanguageClient.sendRequest (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1331:17)
+    at t.AILanguageClient.sendExperimentationFlags (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/ai_language_client.ts:1300:17)
+    at c.updateExperimentationData (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/packages/experimentation/gemini_experiment_service.ts:63:31)
+    at process.aiLanguageClient (node:internal/process/task_queues:105:5)
+    at t.AICompanionPlugin.async [as onLogin] (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:336:62)
+    at /google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/src/ai-companion/plugin.ts:166:58
+2026-04-22 15:12:33.584 [info] Extension host terminating: received terminate message from renderer
+2026-04-22 15:12:33.766 [info] Extension host with pid 1449 exiting with code 0

@@ -1,0 +1,3 @@
+2026-04-16 08:34:21.337 [info] Log level: Info
+2026-04-16 08:50:35.648 [warning] [GitHubBranchProtectionProvider][updateRepositoryBranchProtection] Failed to update repository branch protection: No GitHub authentication session available.
+2026-04-16 08:50:36.877 [warning] [GitHubSourceControlHistoryItemDetailsProvider][_loadAssignableUsers] Failed to load assignable user(s) for BlockNumberZero/Job-Application-Bot-Assistant: Error: No GitHub authentication session available.

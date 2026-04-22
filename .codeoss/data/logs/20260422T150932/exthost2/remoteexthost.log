@@ -1,0 +1,29 @@
+2026-04-22 15:12:46.390 [info] Extension host with pid 1917 started
+2026-04-22 15:12:46.406 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/6722a9a8/vscode.lock': Lock acquired.
+2026-04-22 15:12:46.972 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-04-22 15:12:46.973 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-04-22 15:12:47.511 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2026-04-22 15:12:48.246 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2026-04-22 15:12:48.246 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-04-22 15:12:54.517 [info] Not activating extension 'ms-python.python': Timed out while searching for 'workspaceContains' pattern **/pylock.*.toml
+2026-04-22 15:12:54.517 [info] Not activating extension 'redhat.java': Timed out while searching for 'workspaceContains' pattern */pom.xml,*/build.gradle,*/settings.gradle,*/build.gradle.kts,*/settings.gradle.kts,*/.classpath
+2026-04-22 15:12:54.518 [info] Not activating extension 'vscjava.vscode-java-dependency': Timed out while searching for 'workspaceContains' pattern */pom.xml,*/build.gradle,*/settings.gradle,*/build.gradle.kts,*/settings.gradle.kts,*/.classpath
+2026-04-22 15:12:54.519 [info] Not activating extension 'vscjava.vscode-java-test': Timed out while searching for 'workspaceContains' pattern */pom.xml,*/build.gradle,*/settings.gradle,*/build.gradle.kts,*/settings.gradle.kts,*/.classpath
+2026-04-22 15:12:54.519 [info] Not activating extension 'vscjava.vscode-maven': Timed out while searching for 'workspaceContains' pattern **/pom.xml
+2026-04-22 15:12:54.955 [info] Eager extensions activated
+2026-04-22 15:12:54.956 [info] ExtensionService#_doActivateExtension EditorConfig.EditorConfig, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:54.956 [info] ExtensionService#_doActivateExtension google.cloud-shell, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:54.956 [info] ExtensionService#_doActivateExtension google.geminicodeassist, startup: false, activationEvent: 'onStartupFinished', root cause: googlecloudtools.cloudcode
+2026-04-22 15:12:54.957 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:54.957 [info] ExtensionService#_doActivateExtension google.gemini-cli-vscode-ide-companion, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:54.958 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:57.004 [info] ExtensionService#_doActivateExtension googlecloudtools.cloudcode, startup: false, activationEvent: 'onStartupFinished'
+2026-04-22 15:12:58.847 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:12:58.849 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:12:58.849 [info] ExtensionService#_doActivateExtension vscode.typescript-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-22 15:13:26.648 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter, startup: false, activationEvent: 'api', root cause: googlecloudtools.cloudcode
+2026-04-22 15:13:27.819 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-22 15:13:28.194 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter-renderers, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-22 15:13:46.669 [info] ExtensionService#_doActivateExtension vscode.terminal-suggest, startup: false, activationEvent: 'onTerminalShellIntegration:*'
+2026-04-22 15:16:42.033 [info] ExtensionService#_doActivateExtension vscode.extension-editing, startup: false, activationEvent: 'onLanguage:json'
+2026-04-22 15:16:42.033 [info] ExtensionService#_doActivateExtension vscode.npm, startup: false, activationEvent: 'onLanguage:json'

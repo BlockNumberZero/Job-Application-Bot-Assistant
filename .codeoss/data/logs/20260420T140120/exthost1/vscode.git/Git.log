@@ -1,0 +1,50 @@
+2026-04-20 14:01:35.681 [info] [main] Log level: Info
+2026-04-20 14:01:35.681 [info] [main] Validating found git in: "git"
+2026-04-20 14:01:35.681 [info] [main] Using git "2.43.0" from "git"
+2026-04-20 14:01:35.681 [info] [Model][doInitialScan] Initial repository scan started
+2026-04-20 14:01:35.681 [info] > git rev-parse --show-toplevel [1970ms]
+2026-04-20 14:01:35.682 [info] > git rev-parse --git-dir --git-common-dir --show-superproject-working-tree [31ms]
+2026-04-20 14:01:39.198 [info] [Model][openRepository] Opened repository (path): /home/rey_miller_chancahuana_almora
+2026-04-20 14:01:39.198 [info] [Model][openRepository] Opened repository (real path): /home/rey_miller_chancahuana_almora
+2026-04-20 14:01:39.198 [info] [Model][openRepository] Opened repository (kind): repository
+2026-04-20 14:01:39.422 [info] > git rev-parse --show-toplevel [191ms]
+2026-04-20 14:01:39.423 [info] > git config --get commit.template [195ms]
+2026-04-20 14:01:39.537 [info] > git rev-parse --show-toplevel [74ms]
+2026-04-20 14:01:39.929 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [417ms]
+2026-04-20 14:01:39.930 [info] > git rev-parse --show-toplevel [366ms]
+2026-04-20 14:01:39.985 [info] > git rev-parse --show-toplevel [43ms]
+2026-04-20 14:01:40.017 [info] > git rev-parse --show-toplevel [16ms]
+2026-04-20 14:01:40.020 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [37ms]
+2026-04-20 14:01:40.051 [info] > git rev-parse --show-toplevel [8ms]
+2026-04-20 14:01:40.074 [info] > git rev-parse --show-toplevel [10ms]
+2026-04-20 14:01:40.090 [info] > git rev-parse --show-toplevel [8ms]
+2026-04-20 14:01:40.123 [info] > git rev-parse --show-toplevel [7ms]
+2026-04-20 14:01:40.147 [info] > git rev-parse --show-toplevel [6ms]
+2026-04-20 14:01:40.174 [info] > git rev-parse --show-toplevel [12ms]
+2026-04-20 14:01:40.175 [info] [Model][doInitialScan] Initial repository scan completed - repositories (1), closed repositories (0), parent repositories (0), unsafe repositories (0)
+2026-04-20 14:01:40.332 [info] > git check-ignore -v -z --stdin [13ms]
+2026-04-20 14:01:40.384 [info] > git check-ignore -v -z --stdin [8ms]
+2026-04-20 14:01:40.526 [info] > git status -z -uall [558ms]
+2026-04-20 14:01:41.013 [info] > git show --textconv :JABA/Code.js [23ms]
+2026-04-20 14:01:41.013 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [286ms]
+2026-04-20 14:01:41.027 [info] > git ls-files --stage -- JABA/Code.js [29ms]
+2026-04-20 14:01:41.041 [info] > git config --get commit.template [72ms]
+2026-04-20 14:01:41.062 [info] > git config --get --local branch.main.vscode-merge-base [41ms]
+2026-04-20 14:01:41.062 [warning] [Git][config] git config failed: Failed to execute git
+2026-04-20 14:01:41.085 [info] > git cat-file -s 51bfea3d503ae3edabbb6b7835d8edb71387ec1f [46ms]
+2026-04-20 14:01:41.088 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [6ms]
+2026-04-20 14:01:41.088 [info] > git reflog main --grep-reflog=branch: Created from *. [17ms]
+2026-04-20 14:01:41.098 [info] > git symbolic-ref --short refs/remotes/origin/HEAD [5ms]
+2026-04-20 14:01:41.099 [info] fatal: ref refs/remotes/origin/HEAD is not a symbolic ref
+2026-04-20 14:01:41.099 [warning] [Repository][getDefaultBranch] Failed to get default branch details: Failed to execute git.
+2026-04-20 14:01:41.128 [info] > git merge-base refs/heads/main refs/remotes/origin/main [23ms]
+2026-04-20 14:01:41.137 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [10ms]
+2026-04-20 14:01:41.141 [info] > git diff --raw --numstat --diff-filter=ADMR -z --find-renames=50% f9a8faa24ef9e2ddb4dca70a186268a99a5c5817...refs/remotes/origin/main -- [5ms]
+2026-04-20 14:01:41.290 [info] > git status -z -uall [173ms]
+2026-04-20 14:01:44.060 [info] > git check-ignore -v -z --stdin [18ms]
+2026-04-20 14:01:44.069 [info] > git blame --root --incremental f9a8faa24ef9e2ddb4dca70a186268a99a5c5817 -- JABA/Code.js [9ms]
+2026-04-20 14:01:46.073 [info] > git check-ignore -v -z --stdin [6ms]
+2026-04-20 14:02:54.684 [info] > git check-ignore -v -z --stdin [23ms]
+2026-04-20 14:02:55.558 [info] > git check-ignore -v -z --stdin [4ms]
+2026-04-20 14:03:07.233 [info] > git check-ignore -v -z --stdin [4ms]
+2026-04-20 14:03:14.823 [info] > git check-ignore -v -z --stdin [32ms]

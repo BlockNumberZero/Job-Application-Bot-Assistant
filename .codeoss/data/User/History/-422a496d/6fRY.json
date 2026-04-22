@@ -1,0 +1,5 @@
+{
+    "window.menuBarVisibility": "classic",
+    "window.commandCenter": true,
+    "http.proxySupport": "off"
+}

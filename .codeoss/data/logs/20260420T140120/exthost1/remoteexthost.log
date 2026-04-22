@@ -1,0 +1,44 @@
+2026-04-20 14:01:29.422 [info] Extension host with pid 1435 started
+2026-04-20 14:01:29.433 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/-178a477b/vscode.lock': Lock acquired.
+2026-04-20 14:01:29.828 [info] ExtensionService#_doActivateExtension vscode.github-authentication, startup: false, activationEvent: 'onAuthenticationRequest:github'
+2026-04-20 14:01:29.830 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2026-04-20 14:01:29.830 [info] ExtensionService#_doActivateExtension google.geminicodeassist, startup: false, activationEvent: 'onView:cloudcode.gemini.chatView'
+2026-04-20 14:01:29.831 [info] ExtensionService#_doActivateExtension vscode.typescript-language-features, startup: false, activationEvent: 'onLanguage:javascript'
+2026-04-20 14:01:31.177 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: true, activationEvent: '*', root cause: vscode.git
+2026-04-20 14:01:31.694 [info] ExtensionService#_doActivateExtension vscode.git, startup: true, activationEvent: '*'
+2026-04-20 14:01:31.697 [info] ExtensionService#_doActivateExtension vscode.github, startup: true, activationEvent: '*'
+2026-04-20 14:01:32.244 [info] ExtensionService#_doActivateExtension google.cloud-shell, startup: false, activationEvent: 'onCommand:cloudshell.isAuthorized'
+2026-04-20 14:01:32.459 [info] Eager extensions activated
+2026-04-20 14:01:32.460 [info] ExtensionService#_doActivateExtension EditorConfig.EditorConfig, startup: false, activationEvent: 'onStartupFinished'
+2026-04-20 14:01:32.462 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2026-04-20 14:01:32.463 [info] ExtensionService#_doActivateExtension google.gemini-cli-vscode-ide-companion, startup: false, activationEvent: 'onStartupFinished'
+2026-04-20 14:01:32.463 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2026-04-20 14:01:35.698 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-20 14:01:35.699 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:jsonc'
+2026-04-20 14:01:36.486 [info] ExtensionService#_doActivateExtension googlecloudtools.cloudcode, startup: false, activationEvent: 'onStartupFinished'
+2026-04-20 14:01:40.665 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1086
+2026-04-20 14:01:41.329 [warning] [Decorations] CAPPING events from decorations provider vscode.git 1086
+2026-04-20 14:01:57.337 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter, startup: false, activationEvent: 'api', root cause: googlecloudtools.cloudcode
+2026-04-20 14:01:58.143 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-20 14:01:58.538 [info] ExtensionService#_doActivateExtension ms-toolsai.jupyter-renderers, startup: false, activationEvent: 'api', root cause: ms-toolsai.jupyter
+2026-04-20 14:02:08.394 [info] ExtensionService#_doActivateExtension vscode.terminal-suggest, startup: false, activationEvent: 'onTerminalShellIntegration:*'
+2026-04-20 14:15:12.259 [info] Extension host terminating: received terminate message from renderer
+2026-04-20 14:15:12.286 [info] Lock '/home/rey_miller_chancahuana_almora/.codeoss/data/User/workspaceStorage/-178a477b/vscode.lock': Marking the lockfile as scheduled to be released in 6000 ms.
+2026-04-20 14:15:12.530 [error] Error: Channel has been closed
+    at r (file:///google/devshell/editor/code-oss-for-cloud-shell/out/vs/workbench/api/node/extensionHostProcess.js:123:2616)
+    at Object.append (file:///google/devshell/editor/code-oss-for-cloud-shell/out/vs/workbench/api/node/extensionHostProcess.js:123:2713)
+    at s.append (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/common/packages/logging/buffered_output_logger.ts:117:18)
+    at Socket.<anonymous> (/google/devshell/editor/code-oss-for-cloud-shell/extensions/geminicodeassist/dist/webpack:/node_modules/vscode-languageclient/lib/node/main.js:430:80)
+    at Socket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Socket.Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+2026-04-20 14:15:12.549 [error] Error: Channel has been closed
+    at n (file:///google/devshell/editor/code-oss-for-cloud-shell/out/vs/workbench/api/node/extensionHostProcess.js:123:3001)
+    at Object.info (file:///google/devshell/editor/code-oss-for-cloud-shell/out/vs/workbench/api/node/extensionHostProcess.js:123:3346)
+    at T.info (/google/devshell/editor/code-oss-for-cloud-shell/extensions/json-language-features/client/dist/node/jsonClientMain.js:2:45267)
+    at ChildProcess.<anonymous> (/google/devshell/editor/code-oss-for-cloud-shell/extensions/json-language-features/client/dist/node/jsonClientMain.js:2:606637)
+    at ChildProcess.emit (node:events:519:28)
+    at Process.ChildProcess._handle.onexit (node:internal/child_process:293:12)
+2026-04-20 14:15:12.556 [info] Extension host with pid 1435 exiting with code 0

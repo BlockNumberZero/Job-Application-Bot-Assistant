@@ -1,0 +1,37 @@
+0 verbose cli /usr/local/nvm/versions/node/v24.14.1/bin/node /usr/local/nvm/versions/node/v24.14.1/bin/npm
+1 info using npm@11.12.1
+2 info using node@v24.14.1
+3 silly config load:file:/usr/local/nvm/versions/node/v24.14.1/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/rey_miller_chancahuana_almora/.cache/typescript/5.9/.npmrc
+5 silly config load:file:/home/rey_miller_chancahuana_almora/.npmrc
+6 silly config load:file:/usr/local/nvm/versions/node/v24.14.1/etc/npmrc
+7 verbose title npm install types-registry@latest
+8 verbose argv "install" "--ignore-scripts" "types-registry@latest"
+9 verbose logfile logs-max:10 dir:/home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-21T16_49_49_381Z-
+10 verbose logfile /home/rey_miller_chancahuana_almora/.npm/_logs/2026-04-21T16_49_49_381Z-debug-0.log
+11 silly logfile start cleaning logs, removing 6 files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly packumentCache corgi:https://registry.npmjs.org/types-registry cache-miss
+14 silly logfile done cleaning log files
+15 http fetch GET 200 https://registry.npmjs.org/types-registry 519ms (cache revalidated)
+16 silly packumentCache corgi:https://registry.npmjs.org/types-registry set size:622642 disposed:false
+17 silly idealTree buildDeps
+18 silly fetch manifest types-registry@0.1.766
+19 silly packumentCache full:https://registry.npmjs.org/types-registry cache-miss
+20 http fetch GET 200 https://registry.npmjs.org/types-registry 129ms (cache revalidated)
+21 silly packumentCache full:https://registry.npmjs.org/types-registry set size:1345709 disposed:false
+22 silly placeDep ROOT types-registry@0.1.766 REPLACE for:  want: 0.1.766
+23 silly reify moves {}
+24 silly audit bulk request {
+24 silly audit   '@types/react': [ '19.2.14' ],
+24 silly audit   csstype: [ '3.2.3' ],
+24 silly audit   'types-registry': [ '0.1.766' ]
+24 silly audit }
+25 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 249ms
+26 silly audit report {}
+27 verbose cwd /home/rey_miller_chancahuana_almora/.cache/typescript/5.9
+28 verbose os Linux 6.6.123+
+29 verbose node v24.14.1
+30 verbose npm  v11.12.1
+31 verbose exit 0
+32 info ok

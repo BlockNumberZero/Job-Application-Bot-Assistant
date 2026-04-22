@@ -1,0 +1,7 @@
+{
+    "window.menuBarVisibility": "classic",
+    "window.commandCenter": true,
+    "http.proxySupport": "off",
+    "workbench.startupEditor": "welcomePageInEmptyWorkbench",
+    "redhat.telemetry.enabled": false
+}

@@ -1,0 +1,18 @@
+2026-04-21 05:28:31.027 [warning] Dir "/home/rey_miller_chancahuana_almora/JABA/.pixi/envs" is not watchable (directory does not exist)
+2026-04-21 05:28:37.296 [info] Starting Environment refresh
+2026-04-21 05:28:37.358 [info] Skipping ActivatedEnv Detection:  process.env.VSCODE_CLI !== '1'
+2026-04-21 05:28:37.374 [info] > hatch env show --json
+2026-04-21 05:28:37.374 [info] cwd: .
+2026-04-21 05:28:37.400 [info] > conda info --json
+2026-04-21 05:28:37.405 [info] Python interpreter path: /bin/python
+2026-04-21 05:28:37.459 [info] > /bin/python -I /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/get_output_via_markers.py /google/devshell/editor/code-oss-for-cloud-shell/extensions/ms-python.python/python_files/interpreterInfo.py
+2026-04-21 05:28:37.459 [info] Environments refresh paths discovered: 165 milliseconds
+2026-04-21 05:28:37.561 [info] Environments refresh finished (event): 267 milliseconds
+2026-04-21 05:28:37.568 [info] Environment refresh took 275 milliseconds
+2026-04-21 05:28:38.166 [info] Starting Environment refresh
+2026-04-21 05:28:38.199 [info] Environments refresh finished (event): 33 milliseconds
+2026-04-21 05:28:38.199 [info] Environments refresh paths discovered: 33 milliseconds
+2026-04-21 05:28:38.201 [info] Environment refresh took 35 milliseconds
+2026-04-21 05:28:38.213 [info] > pyenv which python
+2026-04-21 05:28:38.213 [info] cwd: .
+2026-04-21 05:28:40.495 [info] Starting Jedi language server for JABA.

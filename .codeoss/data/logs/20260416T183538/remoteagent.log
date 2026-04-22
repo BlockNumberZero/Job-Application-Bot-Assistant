@@ -1,0 +1,47 @@
+2026-04-16 18:35:38.645 [info] 
+
+
+
+
+2026-04-16 18:35:38.698 [info] Extension host agent started.
+2026-04-16 18:35:41.616 [info] [127.0.0.1][e446bfa5][ManagementConnection] New connection established.
+2026-04-16 18:35:41.641 [info] [127.0.0.1][04cdef60][ExtensionHostConnection] New connection established.
+2026-04-16 18:35:42.911 [info] [127.0.0.1][04cdef60][ExtensionHostConnection] <1568> Launched Extension Host Process.
+2026-04-16 18:35:43.689 [info] [127.0.0.1][04cdef60][ExtensionHostConnection] <1568> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 18:36:28.396 [info] Getting Manifest... ms-toolsai.jupyter
+2026-04-16 18:36:28.896 [info] Installing extension: ms-toolsai.jupyter {"context":{"extensionInstallSource":"command"},"isMachineScoped":false,"pinned":false,"isApplicationScoped":false,"profileLocation":{"$mid":1,"fsPath":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","external":"file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","path":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","scheme":"file"},"productVersion":{"version":"1.109.5-cde","date":"2026-04-10T07:14:59.320Z"}}
+2026-04-16 18:36:29.499 [info] Getting Manifest... ms-toolsai.vscode-jupyter-slideshow
+2026-04-16 18:36:29.608 [info] Getting Manifest... ms-toolsai.jupyter-keymap
+2026-04-16 18:36:29.715 [info] Getting Manifest... ms-toolsai.vscode-jupyter-cell-tags
+2026-04-16 18:36:29.821 [info] Getting Manifest... ms-toolsai.jupyter-renderers
+2026-04-16 18:36:29.928 [info] Installing extension: ms-toolsai.vscode-jupyter-slideshow {"context":{"extensionInstallSource":"command","dependecyOrPackExtensionInstall":true},"isMachineScoped":false,"pinned":false,"isApplicationScoped":false,"profileLocation":{"$mid":1,"fsPath":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","external":"file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","path":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","scheme":"file"},"productVersion":{"version":"1.109.5-cde","date":"2026-04-10T07:14:59.320Z"},"installGivenVersion":false}
+2026-04-16 18:36:29.929 [info] Installing extension: ms-toolsai.jupyter-keymap {"context":{"extensionInstallSource":"command","dependecyOrPackExtensionInstall":true},"isMachineScoped":false,"pinned":false,"isApplicationScoped":false,"profileLocation":{"$mid":1,"fsPath":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","external":"file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","path":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","scheme":"file"},"productVersion":{"version":"1.109.5-cde","date":"2026-04-10T07:14:59.320Z"},"installGivenVersion":false}
+2026-04-16 18:36:29.929 [info] Installing extension: ms-toolsai.vscode-jupyter-cell-tags {"context":{"extensionInstallSource":"command","dependecyOrPackExtensionInstall":true},"isMachineScoped":false,"pinned":false,"isApplicationScoped":false,"profileLocation":{"$mid":1,"fsPath":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","external":"file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","path":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","scheme":"file"},"productVersion":{"version":"1.109.5-cde","date":"2026-04-10T07:14:59.320Z"},"installGivenVersion":false}
+2026-04-16 18:36:29.930 [info] Installing extension: ms-toolsai.jupyter-renderers {"context":{"extensionInstallSource":"command","dependecyOrPackExtensionInstall":true},"isMachineScoped":false,"pinned":false,"isApplicationScoped":false,"profileLocation":{"$mid":1,"fsPath":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","external":"file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","path":"/home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json","scheme":"file"},"productVersion":{"version":"1.109.5-cde","date":"2026-04-10T07:14:59.320Z"},"installGivenVersion":false}
+2026-04-16 18:36:30.565 [info] Extracted extension to file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-keymap-1.1.2-universal: ms-toolsai.jupyter-keymap
+2026-04-16 18:36:30.618 [info] Renamed to /home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-keymap-1.1.2-universal
+2026-04-16 18:36:30.720 [info] Extracted extension to file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.vscode-jupyter-slideshow-0.1.6-universal: ms-toolsai.vscode-jupyter-slideshow
+2026-04-16 18:36:30.734 [info] Renamed to /home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.vscode-jupyter-slideshow-0.1.6-universal
+2026-04-16 18:36:30.757 [info] Extracted extension to file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.vscode-jupyter-cell-tags-0.1.9-universal: ms-toolsai.vscode-jupyter-cell-tags
+2026-04-16 18:36:30.778 [info] Renamed to /home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.vscode-jupyter-cell-tags-0.1.9-universal
+2026-04-16 18:36:31.452 [info] Extracted extension to file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-renderers-1.3.0-universal: ms-toolsai.jupyter-renderers
+2026-04-16 18:36:31.472 [info] Renamed to /home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-renderers-1.3.0-universal
+2026-04-16 18:36:31.765 [info] Extracted extension to file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-2025.9.1-universal: ms-toolsai.jupyter
+2026-04-16 18:36:31.847 [info] Renamed to /home/rey_miller_chancahuana_almora/.codeoss/extensions/ms-toolsai.jupyter-2025.9.1-universal
+2026-04-16 18:36:31.917 [info] Extension installed successfully: ms-toolsai.jupyter-keymap file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json
+2026-04-16 18:36:31.917 [info] Extension installed successfully: ms-toolsai.vscode-jupyter-slideshow file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json
+2026-04-16 18:36:31.918 [info] Extension installed successfully: ms-toolsai.vscode-jupyter-cell-tags file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json
+2026-04-16 18:36:31.918 [info] Extension installed successfully: ms-toolsai.jupyter-renderers file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json
+2026-04-16 18:36:31.918 [info] Extension installed successfully: ms-toolsai.jupyter file:///home/rey_miller_chancahuana_almora/.codeoss/extensions/extensions.json
+2026-04-16 18:36:39.933 [info] [127.0.0.1][e446bfa5][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2026-04-16 18:36:41.655 [info] [127.0.0.1][21660867][ManagementConnection] New connection established.
+2026-04-16 18:36:41.726 [info] [127.0.0.1][bc139f99][ExtensionHostConnection] New connection established.
+2026-04-16 18:36:41.735 [info] [127.0.0.1][bc139f99][ExtensionHostConnection] <1810> Launched Extension Host Process.
+2026-04-16 18:36:43.165 [info] [127.0.0.1][bc139f99][ExtensionHostConnection] <1810> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+2026-04-16 18:36:45.946 [info] [127.0.0.1][04cdef60][ExtensionHostConnection] <1568> Extension Host Process exited with code: 0, signal: null.
+2026-04-16 19:42:20.390 [info] [127.0.0.1][21660867][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...
+2026-04-16 20:08:26.936 [info] [127.0.0.1][21660867][ManagementConnection] Another client has connected, will shorten the wait for reconnection 5m before disposing...
+2026-04-16 20:08:26.937 [info] [127.0.0.1][bc139f99][ExtensionHostConnection] The client has reconnected.
+2026-04-16 20:08:26.940 [info] [127.0.0.1][21660867][ManagementConnection] The client has reconnected.

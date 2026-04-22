@@ -1,0 +1,17 @@
+Starting background process...
+Background process started with PID 1498
+[ERROR] 2026-04-21 16:49:20.354 PM -- Warning: unexpected file /home/rey_miller_chancahuana_almora/.gemini/extensions/extension-enablement.json in extensions directory.
+[INFO] 2026-04-21 16:49:20.379 PM -- Loading extension: vertex (version: 0.2.0)
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.geminiignore, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.aiexclude, continue without it.
+[DEBUG] [MemoryDiscovery] Loading server hierarchical memory for CWD: /google/devshell/editor/code-oss-for-cloud-shell (importFormat: tree)
+[DEBUG] [MemoryDiscovery] Searching for GEMINI.md starting from CWD: /google/devshell/editor/code-oss-for-cloud-shell
+[DEBUG] [MemoryDiscovery] Determined project root: None
+[DEBUG] [MemoryDiscovery] deduplication: keeping /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (dev: 2065, ino: 133967)
+[DEBUG] [MemoryDiscovery] Successfully read and processed imports: /home/rey_miller_chancahuana_almora/.gemini/extensions/vertex/GEMINI.md (Length: 55458)
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.geminiignore, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.aiexclude, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.geminiignore, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.aiexclude, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.geminiignore, continue without it.
+Ignore file not found: /google/devshell/editor/code-oss-for-cloud-shell/.aiexclude, continue without it.
