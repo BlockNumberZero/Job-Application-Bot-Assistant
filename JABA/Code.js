@@ -74,9 +74,6 @@ function onEdit(e) {
       }
     }
     SpreadsheetApp.flush();
-    updateSankeyData();
-    updateGeoData();
-    SpreadsheetApp.flush();
   }
 }
 
@@ -89,6 +86,17 @@ function onOpen() {
     .addSeparator()
     .addItem('🔄 Refresh Dashboard Data', 'refreshAllData')
     .addToUi();
+}
+
+function refreshAllData() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    updateSankeyData();
+    updateGeoData();
+    ui.alert('Success: Dashboard data updated.');
+  } catch (e) {
+    ui.alert('Error updating data: ' + e.toString());
+  }
 }
 
 function refreshAllData() {
