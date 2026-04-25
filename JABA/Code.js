@@ -1,10 +1,6 @@
 /**
 CONFIGURATION
 */
-// Moved configuration to PropertiesService for better management
-// Keys to be set in Script Properties:
-// MISTRAL_API_KEY, TEMPLATE_DOC_ID_DE, TEMPLATE_DOC_ID_EN, TEMPLATE_DOC_ID_WEB3, PDF_FOLDER_ID
-
 const CONFIG = {
   MISTRAL_MODEL: "mistral-medium-latest",
   TIMEZONE: "Europe/Berlin",
@@ -21,7 +17,6 @@ const CONFIG = {
   }
 };
 
-// ─── FIX ISSUE 2 ─────────────────────────────────────────────────────────────
 // Central helper: replaces any "remote" or "home office" variant with "Sassnitz"
 function normalizeLocation(city) {
   if (!city) return "";
@@ -31,7 +26,6 @@ function normalizeLocation(city) {
   }
   return cleaned;
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 function getScriptProperty(key) {
   try {
@@ -99,31 +93,225 @@ function refreshAllData() {
   }
 }
 
-function refreshAllData() {
-  const ui = SpreadsheetApp.getUi();
-  try {
-    updateSankeyData();
-    updateGeoData();
-    ui.alert('Success: Dashboard data updated.');
-  } catch (e) {
-    ui.alert('Error updating data: ' + e.toString());
-  }
-}
-
 function showSidebar() {
-  const html = HtmlService.createHtmlOutputFromFile('Sidebar').setTitle('AI Recruitment Suite').setWidth(300);
+  // Width set to 620px to give the radar chart enough room for all skill labels
+  const html = HtmlService.createHtmlOutputFromFile('Sidebar')
+    .setTitle('AI Recruitment Suite')
+    .setWidth(620);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
 
+/* ============================================================
+   NEW: SKILLS MATCH MAKER (SMM) — Step 1
+   Called from sidebar when user clicks a DE/EN/Web3 SMM button.
+   Returns a JSON string with 8 skills, scores, and match level.
+   ============================================================ */
+function analyzeSkillsMatch(jdInput, cvType) {
+  try {
+    // Load the correct CV template
+    let templateDocId;
+    if (cvType === "DE Web2 Marketing Manager") {
+      templateDocId = getTemplateDE();
+    } else if (cvType === "EN Web2 Marketing Manager") {
+      templateDocId = getTemplateEN();
+    } else if (cvType === "Web3 Marketing Manager") {
+      templateDocId = getTemplateWeb3();
+    } else {
+      throw new Error(`Unknown CV type: ${cvType}`);
+    }
+
+    const templateText = DocumentApp.openById(templateDocId).getBody().getText();
+    const cleanedJD    = jdInput.replace(/[^\x20-\x7E\n]/g, '').substring(0, 4000);
+    const cleanedCV    = templateText.replace(/[^\x20-\x7E\n]/g, '').substring(0, 3000);
+
+    const prompt = `You are a precise recruitment skills analyst. Analyze the job description and CV profile below.
+
+JOB DESCRIPTION:
+${cleanedJD}
+
+CV PROFILE:
+${cleanedCV}
+
+TASK:
+1. Identify the TOP 8 most important skills from the JD, ranked by the JD's own priority (not by CV match).
+2. For each skill, score the CV evidence from 0 to 5:
+   - 0: Skill not mentioned in CV at all
+   - 1: Briefly mentioned, no supporting evidence
+   - 2: Mentioned with some context or description
+   - 3: Clear experience with a concrete example
+   - 4: Strong experience with partial metrics or results
+   - 5: Expert-level evidence with quantified achievements (e.g. "+20% revenue")
+3. Classify the JD's importance for that skill: "Crucial" (must-have), "Necessary" (important), or "Optional" (nice-to-have).
+4. Extract the CV evidence (max 15 words) or write "Not found in CV" if score is 0.
+5. Write a practical gap tip (max 12 words) explaining how to improve the score for that skill.
+
+SCORING RULES:
+- Base scores ONLY on concrete CV evidence — do NOT award points for keywords alone.
+- A score of 0 is valid and expected when a skill is genuinely absent from the CV.
+- The sum of all 8 scores is the total_score (max 40).
+
+MATCH LEVEL (based on total_score):
+- M0: 0–10
+- M1: 11–20
+- M2: 21–29
+- M3: 30–35
+- M4: 36–40
+
+RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation):
+{
+  "skills": [
+    {
+      "name": "Skill name",
+      "score": 0,
+      "importance": "Crucial",
+      "evidence": "Brief CV quote or Not found in CV",
+      "gap_tip": "Practical advice to improve this score"
+    }
+  ],
+  "total_score": 0,
+  "match_level": "M0"
+}`;
+
+    const url = "https://api.mistral.ai/v1/chat/completions";
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": `Bearer ${getMistralKey()}` },
+      payload: JSON.stringify({
+        model: CONFIG.MISTRAL_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "You are a precise recruitment skills analyst. Always respond with valid JSON only. No markdown, no code blocks, no explanation whatsoever."
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 1200
+      }),
+      muteHttpExceptions: true
+    };
+
+    const response     = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+
+    if (responseCode !== 200) {
+      throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
+    }
+
+    const json    = JSON.parse(response.getContentText());
+    let   content = json.choices[0].message.content.trim()
+                        .replace(/```json|```/g, '').trim();
+
+    const parsed = JSON.parse(content);
+
+    // Server-side validation: recalculate total and match level to prevent AI drift
+    if (parsed.skills && parsed.skills.length > 0) {
+      parsed.total_score = parsed.skills.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
+
+      if      (parsed.total_score <= 10) parsed.match_level = "M0";
+      else if (parsed.total_score <= 20) parsed.match_level = "M1";
+      else if (parsed.total_score <= 29) parsed.match_level = "M2";
+      else if (parsed.total_score <= 35) parsed.match_level = "M3";
+      else                               parsed.match_level = "M4";
+    }
+
+    Logger.log(`SMM Analysis complete — ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
+    return JSON.stringify(parsed);
+
+  } catch (e) {
+    Logger.log(`Error in analyzeSkillsMatch: ${e.toString()}\nStack: ${e.stack}`);
+    return JSON.stringify({ error: e.message || "Unknown error in SMM analysis." });
+  }
+}
+
+
+/* ============================================================
+   NEW: SMM_Raw_Data sheet — create or retrieve
+   ============================================================ */
+function getOrCreateSmmRawDataSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("SMM_Raw_Data");
+  if (!sheet) {
+    sheet = ss.insertSheet("SMM_Raw_Data");
+    const headers = [
+      "UID", "Date", "Company", "Position", "CV_Type",
+      "Skill_Rank", "Skill_Name", "Match_Score", "JD_Importance",
+      "CV_Evidence", "Gap_Tip", "Interview_Reached"
+    ];
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers])
+         .setBackground("#4285f4")
+         .setFontColor("white")
+         .setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
+    Logger.log("SMM_Raw_Data sheet created.");
+  }
+  return sheet;
+}
+
+
+/* ============================================================
+   NEW: Write 8 skill rows to SMM_Raw_Data
+   ============================================================ */
+function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
+  try {
+    const sheet  = getOrCreateSmmRawDataSheet();
+    const skills = smmData.skills || [];
+
+    const rows = skills.map((s, i) => [
+      uid,
+      dateStr,
+      company,
+      position,
+      cvType,
+      i + 1,                     // Skill_Rank (1–8, ordered by JD priority)
+      s.name        || "",
+      s.score       || 0,
+      s.importance  || "",
+      s.evidence    || "",
+      s.gap_tip     || "",
+      false                      // Interview_Reached — updated later by onEdit hook (Phase 2)
+    ]);
+
+    if (rows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      sheet.getRange(startRow, 1, rows.length, 12).setValues(rows);
+      Logger.log(`SMM_Raw_Data: wrote ${rows.length} rows for UID ${uid} (${company})`);
+    }
+  } catch (e) {
+    Logger.log(`Error in writeSmmRawData: ${e.toString()}`);
+    // Non-fatal: do not throw — main registration should still succeed
+  }
+}
+
+
 /*
-CORE PROCESSOR for manual input via Sidebar
+CORE PROCESSOR — Step 2 (Generate & Register)
+Now accepts optional smmDataJson from the sidebar (pre-calculated SMM result).
+When smmDataJson is provided, match level comes from SMM score (accurate).
+When not provided (fallback), Mistral estimates it as before.
 */
-function mainJobProcessor(jdInput, cvType) {
+function mainJobProcessor(jdInput, cvType, smmDataJson) {
   try {
     const sheet = getOrCreateMonthlyTab();
-    const isDe = cvType.includes("DE");
+    const isDe  = cvType.includes("DE");
 
+    // ── Parse pre-calculated SMM data (if provided by sidebar) ──
+    let smmData       = null;
+    let smmMatchLevel = null;
+    if (smmDataJson) {
+      try {
+        smmData       = JSON.parse(smmDataJson);
+        smmMatchLevel = smmData.match_level || null;
+      } catch (e) {
+        Logger.log(`Could not parse smmDataJson: ${e.message}`);
+      }
+    }
+
+    // ── Load CV template ──
     let templateDocId;
     if (cvType === "DE Web2 Marketing Manager") {
       templateDocId = getTemplateDE();
@@ -143,6 +331,9 @@ function mainJobProcessor(jdInput, cvType) {
       ? "Ich bin bereit umzuziehen (falls erforderlich) und stehe kurzfristig mit einer Kündigungsfrist von einer Woche zur Verfügung."
       : "I am fully open to relocation if required and am available to start within a one-week notice period.";
 
+    // ── Mistral prompt — Step 2 focuses ONLY on cover letter + metadata ──
+    // MATCH is still in the output format so parsing stays consistent,
+    // but we override it with the SMM value when available.
     const prompt = `You are an expert career coach. Output format MUST be exactly: MATCH | COMPANY | POSITION | PLATFORM | CITY | SMART_LOC | SALARY | LETTER
 
 RULES FOR OUTPUT FIELDS:
@@ -201,14 +392,13 @@ COVER LETTER RULES:
     letterText = letterText.replace(/—/g, ',');
     letterText = letterText.replace(/–/g, ',');
     letterText = letterText.replace(/\n{3,}/g, '\n\n');
-
     letterText = `${letterText}\n\n${availabilityText}\n\n${signOff}\n\n${CONFIG.MY_NAME}`;
 
+    // ── Platform detection (unchanged) ──
     let detectedPlatform = plat || "Own website";
-
     if (jdInput.startsWith("http") && jdInput.includes(".")) {
       try {
-        const url = new URL(jdInput);
+        const url      = new URL(jdInput);
         const hostname = url.hostname.replace(/^www\./, '');
         if (CONFIG.PLATFORM_DOMAINS[hostname]) {
           detectedPlatform = CONFIG.PLATFORM_DOMAINS[hostname];
@@ -217,7 +407,6 @@ COVER LETTER RULES:
         Logger.log(`URL parsing failed for ${jdInput}: ${e.message}`);
       }
     }
-
     if (detectedPlatform === "Own website" && !CONFIG.ALLOWED_PLATFORMS.includes(plat)) {
       if (!Object.values(CONFIG.PLATFORM_DOMAINS).includes(plat)) {
         detectedPlatform = "Own website";
@@ -230,10 +419,7 @@ COVER LETTER RULES:
 
     const companyName = co ? co.trim() : "Unknown";
     const position    = pos ? pos.trim() : "Unknown";
-
-    // ─── FIX ISSUE 2: normalize location ─────────────────────────────────────
-    const location = normalizeLocation(city);
-    // ─────────────────────────────────────────────────────────────────────────
+    const location    = normalizeLocation(city);
 
     let cleanedSalary = "";
     if (salary) {
@@ -247,14 +433,34 @@ COVER LETTER RULES:
       }
     }
 
-    const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy");
-    let notes = [];
+    // ── Determine final match level ──
+    // Priority: SMM-calculated level > Mistral's guess
+    let finalMatch;
+    if (smmMatchLevel) {
+      // When Web3 CV + high match, use the Web3 emoji indicator
+      if (cvType === "Web3 Marketing Manager" && (smmMatchLevel === "M3" || smmMatchLevel === "M4")) {
+        finalMatch = "🚀 Web3";
+      } else {
+        finalMatch = smmMatchLevel;
+      }
+      Logger.log(`Using SMM match level: ${finalMatch} (score: ${smmData ? smmData.total_score : 'n/a'})`);
+    } else {
+      // Fallback: use Mistral's MATCH output (legacy behaviour, no SMM run)
+      finalMatch = match || "M0";
+      Logger.log(`Using Mistral match level (no SMM data): ${finalMatch}`);
+    }
+
+    const dateStr  = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy");
+    let   notes    = [];
     if (smartLoc && smartLoc !== "") notes.push(`Work: ${smartLoc}`);
-    if (cleanedSalary) notes.push(`Salary: ${cleanedSalary}`);
+    if (cleanedSalary)               notes.push(`Salary: ${cleanedSalary}`);
+    // Append SMM score to notes for quick reference in the sheet
+    if (smmData && smmData.total_score !== undefined) {
+      notes.push(`SMM: ${smmData.total_score}/40`);
+    }
     const finalNotes = notes.join(" | ");
 
-    const rowData = [[match || "M0", companyName, position, detectedPlatform, location, "Applied", dateStr, "", finalNotes]];
-
+    const rowData   = [[finalMatch, companyName, position, detectedPlatform, location, "Applied", dateStr, "", finalNotes]];
     const targetRow = findNextEmptyRow(sheet);
     sheet.getRange(targetRow, 1, 1, 9).setValues(rowData);
     updateRowStatusLogic(sheet, targetRow, "Applied");
@@ -262,19 +468,26 @@ COVER LETTER RULES:
     const statusPathFormula = `=JOIN(""; IF(J${targetRow}>0;"📩";""); IF(K${targetRow}>0;"0️⃣";""); IF(L${targetRow}>0;"1️⃣";""); IF(M${targetRow}>0;"2️⃣";""); IF(N${targetRow}>0;"3️⃣";""); IF(O${targetRow}>0;"4️⃣";""); IF(P${targetRow}>0;"🎉";""); IF(Q${targetRow}>0;"⚪";""); IF(R${targetRow}>0;"🛑";""))`;
     sheet.getRange(targetRow, 19).setFormula(statusPathFormula);
 
-    const prefix = isDe ? "Anschreiben Rey" : "Cover letter Rey";
+    // ── Generate cover letter PDF ──
+    const prefix       = isDe ? "Anschreiben Rey" : "Cover letter Rey";
     const tempDocTitle = `${prefix} - ${companyName}`;
     savePdfGhostFree(letterText, companyName, isDe, tempDocTitle);
 
-    // ─── FIX ISSUE 3: flush before AND after, then fresh reads in update fns ─
+    // ── Write SMM skills to SMM_Raw_Data (if SMM was run) ──
+    if (smmData && smmData.skills && smmData.skills.length > 0) {
+      const uid = Utilities.getUuid();
+      writeSmmRawData(uid, dateStr, companyName, position, cvType, smmData);
+    }
+
+    // ── Refresh dashboard data ──
     SpreadsheetApp.flush();
     Utilities.sleep(1500);
     updateSankeyData();
     updateGeoData();
     SpreadsheetApp.flush();
-    // ─────────────────────────────────────────────────────────────────────────
 
-    return `Success: ${companyName} registered as ${match}!`;
+    const scoreNote = smmData ? ` (SMM ${smmData.total_score}/40 · ${finalMatch})` : "";
+    return `✅ Success: ${companyName} registered${scoreNote}!`;
 
   } catch (e) {
     Logger.log(`Error in mainJobProcessor: ${e.toString()}\nStack: ${e.stack}`);
@@ -298,11 +511,10 @@ function processGmailApplications() {
           .filter(e => e !== "-")
       : [];
 
-    const since = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
+    const since          = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
     const sinceFormatted = Utilities.formatDate(since, timezone, "yyyy/MM/dd");
-    const searchString = `in:inbox after:${sinceFormatted} subject:"Ihre Bewerbung wurde an" subject:"gesendet" -label:LinkedIn-Processed`;
-
-    const threads = GmailApp.search(searchString, 0, 50);
+    const searchString   = `in:inbox after:${sinceFormatted} subject:"Ihre Bewerbung wurde an" subject:"gesendet" -label:LinkedIn-Processed`;
+    const threads        = GmailApp.search(searchString, 0, 50);
 
     if (threads.length === 0) {
       SpreadsheetApp.getUi().alert("Keine neuen Bewerbungs-E-Mails in den letzten 24 Stunden gefunden.");
@@ -315,8 +527,8 @@ function processGmailApplications() {
       const message = thread.getMessages()[0];
       const body    = message.getPlainBody();
       const lines   = body.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const subject = message.getSubject();
 
-      const subject      = message.getSubject();
       const companyMatch = subject.match(/Ihre Bewerbung wurde an (.+?) gesendet/i);
       if (!companyMatch) continue;
       const companyName = companyMatch[1].trim();
@@ -338,24 +550,21 @@ function processGmailApplications() {
             .replace(/\s+und\s+Umgebung$/i, '')
             .replace(/\s+and\s+surroundings$/i, '')
             .trim();
-
           const countryToCity = { "deutschland": "Sassnitz", "germany": "Sassnitz" };
           if (countryToCity[city.toLowerCase()]) city = countryToCity[city.toLowerCase()];
 
           const workTypeRaw = (cityMatch[2] || "").toLowerCase();
-          if      (workTypeRaw.includes("hybrid"))   smartLoc = "Hybrid";
-          else if (workTypeRaw.includes("remote"))   smartLoc = "Remote";
-          else if (workTypeRaw.includes("vor ort"))  smartLoc = "On-site";
+          if      (workTypeRaw.includes("hybrid"))  smartLoc = "Hybrid";
+          else if (workTypeRaw.includes("remote"))  smartLoc = "Remote";
+          else if (workTypeRaw.includes("vor ort")) smartLoc = "On-site";
         }
       }
 
-      // ─── FIX ISSUE 2: normalize location ───────────────────────────────────
       city = normalizeLocation(city);
-      // ───────────────────────────────────────────────────────────────────────
 
       const entryKey = `${companyName}-${normalizeJobTitle(jobTitle)}`;
       const normalizedExisting = existingJobs.map(e => {
-        const dashIndex     = e.indexOf('-');
+        const dashIndex       = e.indexOf('-');
         const existingCompany = e.substring(0, dashIndex);
         const existingTitle   = e.substring(dashIndex + 1);
         return `${existingCompany}-${normalizeJobTitle(existingTitle)}`;
@@ -364,7 +573,7 @@ function processGmailApplications() {
 
       const appDate = Utilities.formatDate(message.getDate(), timezone, "dd.MM.yyyy");
 
-      let salary = "";
+      let salary      = "";
       const salaryMatch = body.match(/([\$£€¥]\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|\d{1,3}(?:[.,]\d{3})+\s?(?:EUR|USD|GBP|€|\$|£))/i);
       if (salaryMatch) salary = salaryMatch[0].trim();
 
@@ -459,8 +668,8 @@ function updateRowStatusLogic(sheet, row, newStatus) {
     "Applied": 10, "HR Interview": 11, "1st Interview": 12, "2nd Interview": 13,
     "3rd Interview": 14, "4th Interview": 15, "Offer": 16, "Ignored": 17, "Rejected": 18
   };
-  const currentRowValues     = sheet.getRange(row, 10, 1, 9).getValues()[0];
-  const targetColIndexInRow  = statusColumnMap[newStatus] - 10;
+  const currentRowValues    = sheet.getRange(row, 10, 1, 9).getValues()[0];
+  const targetColIndexInRow = statusColumnMap[newStatus] - 10;
   if (targetColIndexInRow >= 0 && targetColIndexInRow < currentRowValues.length) {
     if (currentRowValues[targetColIndexInRow] !== 1) currentRowValues[targetColIndexInRow] = 1;
   }
@@ -469,7 +678,7 @@ function updateRowStatusLogic(sheet, row, newStatus) {
 
 
 /*
-Mistral API Caller
+Mistral API Caller (resilient, for cover letter + metadata)
 */
 function callMistralResilient(prompt) {
   const url     = "https://api.mistral.ai/v1/chat/completions";
@@ -480,7 +689,7 @@ function callMistralResilient(prompt) {
     payload: JSON.stringify({
       model: CONFIG.MISTRAL_MODEL,
       messages: [
-        { role: "system", content: "You are a professional writing tool. Current date is Feb 2026. Never use 2024/2025 in text. Output exactly 8 fields with pipes (|)." },
+        { role: "system", content: "You are a professional writing tool. Current date is 2026. Never use 2024/2025 in text. Output exactly 8 fields with pipes (|)." },
         { role: "user", content: prompt }
       ],
       temperature: 0.1
@@ -495,8 +704,8 @@ function callMistralResilient(prompt) {
       const responseBody = res.getContentText();
 
       if (responseCode === 200) {
-        const json    = JSON.parse(responseBody);
-        let content   = json.choices[0].message.content.trim();
+        const json  = JSON.parse(responseBody);
+        let content = json.choices[0].message.content.trim();
         if (content.includes("|")) {
           const matchIndex = content.search(/🚀|M[0-4]/);
           if (matchIndex !== -1) {
@@ -580,10 +789,10 @@ function debugEmailBody() {
 
 
 /*
-Pre-filter: quickly exclude obvious non-job emails before calling Gemini
+Pre-filter: quickly exclude obvious non-job emails
 */
 function isLikelyJobEmail(sender, subject) {
-  const senderLower = sender.toLowerCase();
+  const senderLower  = sender.toLowerCase();
   const subjectLower = subject.toLowerCase();
 
   const nonJobDomains = [
@@ -595,7 +804,6 @@ function isLikelyJobEmail(sender, subject) {
     'christ.de', 'zalando', 'otto.de', 'aboutyou', 'hm.com',
     'lieferando', 'deliveroo', 'uber', 'mjam'
   ];
-
   const nonJobSubjects = [
     'newsletter', 'angebot', '% rabatt', 'sale', 'discount',
     'bestellung', 'order confirmation', 'rechnung', 'invoice',
@@ -603,30 +811,24 @@ function isLikelyJobEmail(sender, subject) {
     'deine lieferung', 'your delivery', 'tracking', 'versandbestatigung'
   ];
 
-  if (nonJobDomains.some(d => senderLower.includes(d))) return false;
+  if (nonJobDomains.some(d => senderLower.includes(d)))  return false;
   if (nonJobSubjects.some(s => subjectLower.includes(s))) return false;
-
   return true;
 }
 
-/*
-Gemini API Caller for rejection detection
-*/
+
 /*
 Mistral API Caller for rejection detection
 */
 function callGeminiForRejection(sender, subject, body, pendingCompanyNames) {
-  // Note: keeping the function name to avoid changing all callers
   const mistralKey = getMistralKey();
   if (!mistralKey) {
     Logger.log("MISTRAL_API_KEY not set in Script Properties.");
     return null;
   }
 
-  const url = "https://api.mistral.ai/v1/chat/completions";
-
+  const url           = "https://api.mistral.ai/v1/chat/completions";
   const truncatedBody = body.substring(0, 1500);
-  
 
   const prompt = `You are analyzing a job application email.
 
@@ -641,7 +843,7 @@ Answer these two questions:
 
 IMPORTANT RULES:
 - Acknowledgment emails ("we received your application") are NOT rejections
-- Interview invitations are NOT rejections  
+- Interview invitations are NOT rejections
 - Job alert emails from Indeed/LinkedIn are NOT rejections
 - Only return true if the company explicitly declines to proceed
 
@@ -667,30 +869,25 @@ or
   };
 
   try {
-    const response = UrlFetchApp.fetch(url, options);
+    const response     = UrlFetchApp.fetch(url, options);
     const responseCode = response.getResponseCode();
-
     if (responseCode !== 200) {
       Logger.log(`Mistral rejection API error ${responseCode}: ${response.getContentText()}`);
       return null;
     }
-
-    const json = JSON.parse(response.getContentText());
-    const text = json.choices[0].message.content.trim()
-      .replace(/```json|```/g, '').trim();
-
+    const json   = JSON.parse(response.getContentText());
+    const text   = json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(text);
-    // Fix: Mistral sometimes returns "null" as a string instead of real null
     if (parsed.companyName === "null" || parsed.companyName === "") {
       parsed.companyName = null;
     }
     return parsed;
-
   } catch (e) {
     Logger.log(`Mistral rejection call failed: ${e.message}`);
     return null;
   }
 }
+
 
 /*
 Fuzzy company name matcher
@@ -698,7 +895,6 @@ Fuzzy company name matcher
 function findBestCompanyMatch(geminiName, pendingCompanies) {
   if (!geminiName) return null;
 
-  // Normalize a company name for comparison
   function normalize(name) {
     return name
       .toLowerCase()
@@ -710,43 +906,38 @@ function findBestCompanyMatch(geminiName, pendingCompanies) {
 
   const normalizedGemini = normalize(geminiName);
 
-  // First try exact normalized match
   let match = pendingCompanies.find(p => normalize(p.name) === normalizedGemini);
   if (match) return match;
 
-  // Then try: does the sheet name contain Gemini's answer or vice versa?
   match = pendingCompanies.find(p => {
     const normalizedSheet = normalize(p.name);
-    return normalizedSheet.includes(normalizedGemini) ||
-           normalizedGemini.includes(normalizedSheet);
+    return normalizedSheet.includes(normalizedGemini) || normalizedGemini.includes(normalizedSheet);
   });
   if (match) return match;
 
-  // Try word overlap — if 2+ significant words match
   const geminiWords = normalizedGemini.split(' ').filter(w => w.length > 3);
   match = pendingCompanies.find(p => {
     const sheetWords = normalize(p.name).split(' ').filter(w => w.length > 3);
-    const overlap = geminiWords.filter(w => sheetWords.includes(w));
+    const overlap    = geminiWords.filter(w => sheetWords.includes(w));
     return overlap.length >= 2;
   });
   if (match) return match;
 
-  // Last resort: first significant word matches uniquely across all pending companies
   if (geminiWords.length > 0) {
-    const firstWord = geminiWords[0];
+    const firstWord  = geminiWords[0];
     const candidates = pendingCompanies.filter(p => {
       const sheetWords = normalize(p.name).split(' ').filter(w => w.length > 3);
       return sheetWords[0] === firstWord;
     });
-    // Only match if exactly one company starts with that word — avoids false positives
     if (candidates.length === 1) return candidates[0];
   }
 
   return null;
 }
 
+
 /*
-Rejection Email Scanner — Gemini powered
+Rejection Email Scanner — Mistral powered
 */
 function processRejectionEmails() {
   const ss       = SpreadsheetApp.getActiveSpreadsheet();
@@ -754,33 +945,22 @@ function processRejectionEmails() {
   const timezone = CONFIG.TIMEZONE;
   const props    = PropertiesService.getScriptProperties();
 
-// TEMPORARY DEBUG — remove after diagnosis
-  const ts = props.getProperty('LAST_REJECTION_SCAN');
-  Logger.log(`Timestamp in use: "${ts}"`);
-  const testSince = ts ? new Date(ts) : new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
+  const ts           = props.getProperty('LAST_REJECTION_SCAN');
+  const testSince    = ts ? new Date(ts) : new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
   const testFormatted = Utilities.formatDate(testSince, timezone, "yyyy/MM/dd");
-  Logger.log(`Searching after: ${testFormatted}`);
-  const testFresh = GmailApp.search(`after:${testFormatted} -label:bot-rejections-processed`, 0, 10);
-  Logger.log(`First 10 fresh threads:`);
-  testFresh.forEach(t => {
-    const m = t.getMessages()[t.getMessages().length - 1];
-    Logger.log(`  "${m.getSubject()}" from "${m.getFrom()}" on ${m.getDate()}`);
-  });
-
+  Logger.log(`Rejection scan — searching after: ${testFormatted}`);
 
   const COMPANY_COL = 1;
   const STATUS_COL  = 5;
 
-  // 1. Collect all pending companies from ALL monthly sheets
   let pendingCompanies = [];
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
-    if (sheetName !== "Sankey_Data" && sheetName !== "Geo_Data" && /\d{4}/.test(sheetName)) {
+    if (sheetName !== "Sankey_Data" && sheetName !== "Geo_Data" && sheetName !== "SMM_Raw_Data" && /\d{4}/.test(sheetName)) {
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
         const status      = data[i][STATUS_COL] ? data[i][STATUS_COL].toString().trim().toLowerCase() : "";
         const companyName = data[i][COMPANY_COL] ? data[i][COMPANY_COL].toString().trim() : "";
-        // Skip finalized entries and URL-only entries from old Web3 sheets
         if (companyName &&
             !companyName.startsWith("http") &&
             status !== "rejected" &&
@@ -794,31 +974,25 @@ function processRejectionEmails() {
 
   if (pendingCompanies.length === 0) return "No pending applications to check.";
 
-  // 2. Determine scan start time from stored timestamp
   const lastScanStr = props.getProperty('LAST_REJECTION_SCAN');
   let sinceDate;
   if (lastScanStr) {
     sinceDate = new Date(lastScanStr);
   } else {
-    // First ever run — go back 14 days
     sinceDate = new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
     Logger.log("First run — scanning last 14 days.");
   }
   const sinceFormatted = Utilities.formatDate(sinceDate, timezone, "yyyy/MM/dd");
 
-  // 3. Setup rejection label
   const labelName = 'bot-rejections-processed';
   let label = GmailApp.getUserLabelByName(labelName);
   if (!label) label = GmailApp.createLabel(labelName);
 
-  // 4. Broad Gmail search — also include already-labeled threads
-  // in case they were labeled but never registered due to previous errors
   const queryFresh   = `after:${sinceFormatted} -label:${labelName}`;
   const queryLabeled = `after:${sinceFormatted} label:${labelName}`;
   const freshThreads   = GmailApp.search(queryFresh,   0, 100);
   const labeledThreads = GmailApp.search(queryLabeled, 0, 50);
 
-  // Merge, deduplicate by thread ID
   const seen = new Set();
   const allThreads = [];
   for (const t of [...freshThreads, ...labeledThreads]) {
@@ -826,88 +1000,61 @@ function processRejectionEmails() {
   }
 
   if (allThreads.length === 0) {
-    // Update timestamp even if no emails found
     props.setProperty('LAST_REJECTION_SCAN', new Date().toISOString());
     return "Scan complete. No new emails to process.";
   }
 
-  // 5. Pre-filter to likely job-related emails
   const jobThreads = allThreads.filter(thread => {
     const msg = thread.getMessages()[thread.getMessages().length - 1];
     return isLikelyJobEmail(msg.getFrom(), msg.getSubject());
   });
 
-  Logger.log(`Total threads found: ${allThreads.length} | After pre-filter: ${jobThreads.length}`);
+  Logger.log(`Total threads: ${allThreads.length} | After pre-filter: ${jobThreads.length}`);
 
-  // 6. Process max 50 per run to stay within GAS 6-minute limit
-  const MAX_PER_RUN = 150;
+  const MAX_PER_RUN     = 150;
   const threadsToProcess = jobThreads.slice(0, MAX_PER_RUN);
 
-  let rejectionsFound   = 0;
-  let oldestProcessedDate = new Date(); // track oldest, not newest
-  const dateStr          = Utilities.formatDate(new Date(), timezone, "dd.MM.yyyy");
-  const botRejectionMark = `${dateStr} 🤖`;
-  const pendingNames     = pendingCompanies.map(p => p.name);
+  let rejectionsFound = 0;
+  const dateStr       = Utilities.formatDate(new Date(), timezone, "dd.MM.yyyy");
+  const botMark       = `${dateStr} 🤖`;
 
   for (const thread of threadsToProcess) {
     const messages      = thread.getMessages();
     const latestMessage = messages[messages.length - 1];
-    // Use full body — getPlainBody() can be truncated for long emails
-    let body = latestMessage.getPlainBody();
+    let   body          = latestMessage.getPlainBody();
     if (body.includes('Nachricht gekürzt') || body.includes('message has been truncated')) {
       body = latestMessage.getRawContent();
     }
-
-    const sender        = latestMessage.getFrom();
-    const subject       = latestMessage.getSubject();
-    const messageDate   = latestMessage.getDate();
+    const sender  = latestMessage.getFrom();
+    const subject = latestMessage.getSubject();
 
     Logger.log(`Processing: "${subject}" from "${sender}"`);
-
-    // Call Gemini
     const result = callGeminiForRejection(sender, subject, body, []);
 
-    if (!result) {
-      Logger.log(`Gemini returned null — skipping.`);
-      // Update date tracker even on failure
-      if (messageDate < oldestProcessedDate) oldestProcessedDate = messageDate;
-      Utilities.sleep(300);
-      continue;
-    }
+    if (!result) { Utilities.sleep(300); continue; }
 
-    Logger.log(`Gemini result: isRejection=${result.isRejection}, matchedCompany="${result.matchedCompany}"`);
+    Logger.log(`Mistral result: isRejection=${result.isRejection}, company="${result.companyName}"`);
 
     if (result.isRejection && result.companyName) {
-      Logger.log(`Mistral extracted company: "${result.companyName}"`);
       const matchedEntry = findBestCompanyMatch(result.companyName, pendingCompanies);
-
       if (matchedEntry) {
-        // Update sheet
         matchedEntry.sheet.getRange(matchedEntry.rowIndex, 6).setValue("Rejected");
-        matchedEntry.sheet.getRange(matchedEntry.rowIndex, 20).setValue(botRejectionMark);
+        matchedEntry.sheet.getRange(matchedEntry.rowIndex, 20).setValue(botMark);
         updateRowStatusLogic(matchedEntry.sheet, matchedEntry.rowIndex, "Rejected");
         rejectionsFound++;
         thread.addLabel(label);
         Logger.log(`✓ Rejection registered: "${matchedEntry.name}"`);
-        // Remove from pending to avoid double-processing in same run
         pendingCompanies = pendingCompanies.filter(p => p !== matchedEntry);
       } else {
-        // Gemini found a rejection but company name doesn't exactly match
-        // Label it so we don't reprocess, log for manual review
-        Logger.log(`⚠ Rejection detected, Mistral said "${result.companyName}" but no match found in sheet — labeled for manual review.`);
+        Logger.log(`⚠ Rejection detected but "${result.companyName}" has no sheet match — labeled for review.`);
         thread.addLabel(label);
       }
     }
-    // Non-rejections: no label applied, no action taken
-
-    if (messageDate < oldestProcessedDate) oldestProcessedDate = messageDate;
-    Utilities.sleep(1200); // Mistral rate limit: ~1 req/sec on free tier
+    Utilities.sleep(1200);
   }
 
-  // 7. Update timestamp
   props.setProperty('LAST_REJECTION_SCAN', new Date().toISOString());
 
-  // 8. Update data tabs if rejections were found
   if (rejectionsFound > 0) {
     SpreadsheetApp.flush();
     Utilities.sleep(1500);
@@ -923,13 +1070,12 @@ function processRejectionEmails() {
   return `Scan complete. Logged ${rejectionsFound} new rejection(s).`;
 }
 
+
 /*
 Sankey Data
 */
 function updateSankeyData() {
-  // ─── FIX ISSUE 3: get a guaranteed-fresh spreadsheet reference ────────────
-  const ss = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
-  // ─────────────────────────────────────────────────────────────────────────
+  const ss          = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
   const sheets      = ss.getSheets();
   const transitions = {};
 
@@ -941,21 +1087,17 @@ function updateSankeyData() {
   sheets.forEach(sheet => {
     const sheetName = sheet.getName().replace('.', '');
     if (sheetName.includes("2026")) {
-      // ─── FIX ISSUE 3: use getDataRange() to avoid stale getLastRow() ──────
       const dataRange = sheet.getDataRange();
       const lastRow   = dataRange.getNumRows();
       if (lastRow < 2) return;
       const data = dataRange.getValues();
-      // ───────────────────────────────────────────────────────────────────────
       for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row[1]) continue;
-
         let path = ["Applied"];
         for (let j = 1; j < stages.length; j++) {
           if (row[9 + j] === 1) path.push(stages[j]);
         }
-
         if (path.length > 1) {
           for (let p = 0; p < path.length - 1; p++) {
             const key = `${sheetName}|${path[p]}|${path[p+1]}`;
@@ -979,10 +1121,10 @@ function updateSankeyData() {
     return [parts[0], parts[1], parts[2], transitions[k]];
   });
   if (output.length > 0) {
-  const range = sankeySheet.getRange(2, 1, output.length, 4);
-  range.setNumberFormat('@STRING@');
-  range.setValues(output);
-}
+    const range = sankeySheet.getRange(2, 1, output.length, 4);
+    range.setNumberFormat('@STRING@');
+    range.setValues(output);
+  }
 }
 
 
@@ -990,11 +1132,10 @@ function updateSankeyData() {
 Geo Data
 */
 function updateGeoData() {
-  const ss = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
+  const ss        = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
   const sheets    = ss.getSheets();
   const geoCounts = {};
 
-  // Build country lookup once, outside the loop
   const countryToCities = {
     "Spain":                ["madrid", "barcelona"],
     "United Kingdom":       ["london"],
@@ -1017,7 +1158,6 @@ function updateGeoData() {
     "Finland":              ["helsinki"],
   };
 
-  // Build reverse lookup once
   const cityToCountry = {};
   Object.entries(countryToCities).forEach(([country, cities]) => {
     cities.forEach(city => { cityToCountry[city] = country; });
@@ -1037,7 +1177,7 @@ function updateGeoData() {
             cleanCity.toLowerCase().includes(c)
           );
           const country = matchedCountry ? cityToCountry[matchedCountry] : "Germany";
-          const key = `${sheetName}|${cleanCity}|${country}`;
+          const key     = `${sheetName}|${cleanCity}|${country}`;
           geoCounts[key] = (geoCounts[key] || 0) + 1;
         }
       }
@@ -1052,21 +1192,22 @@ function updateGeoData() {
     geoSheet.clearFormats();
   }
 
-  const output = Object.keys(geoCounts).map(key => {
+  const output  = Object.keys(geoCounts).map(key => {
     const [month, city, country] = key.split("|");
     return [month, city, country, geoCounts[key]];
   });
-
   const allRows = [["Month", "City", "Country", "Application Count"], ...output];
-  const range = geoSheet.getRange(1, 1, allRows.length, 4);
+  const range   = geoSheet.getRange(1, 1, allRows.length, 4);
   range.setNumberFormat('@STRING@');
   range.setValues(allRows);
 }
 
-//2 functions added to fix error//
+
+// ── Utility / Debug Functions ──────────────────────────────────────────────
+
 function checkScanTimestamp() {
   const props = PropertiesService.getScriptProperties();
-  const ts = props.getProperty('LAST_REJECTION_SCAN');
+  const ts    = props.getProperty('LAST_REJECTION_SCAN');
   Logger.log(`LAST_REJECTION_SCAN = "${ts}"`);
 }
 
@@ -1087,48 +1228,18 @@ function testGeminiDirectly() {
 }
 
 function testSpecificRejections() {
-  const pendingNames = ["Town & Country Kundenservice GmbH", "TV NORD Systems GmbH & Co. KG", 
-                        "WeWork", "Rhenus Warehousing Solutions Global GmbH & Co. KG", 
+  const pendingNames = ["Town & Country Kundenservice GmbH", "TV NORD Systems GmbH & Co. KG",
+                        "WeWork", "Rhenus Warehousing Solutions Global GmbH & Co. KG",
                         "Lidl Dienstleistung", "Columbia Road", "koenig.solutions"];
-
   const testEmails = [
-    {
-      sender: "towncountry-jobs@m.personio.de",
-      subject: "TC - Vielen Dank für Ihre Bewerbung als Spezialist CRM",
-      body: "Nach eingehender Prüfung Ihrer Unterlagen müssen wir Ihnen leider mitteilen, dass wir Ihre Bewerbung für diese Position nicht weiterverfolgen können."
-    },
-    {
-      sender: "bbidarnariman@tuevnordgroup.recruitmail.com",
-      subject: "Feedback zu deiner Bewerbung als PowerPlatform Manager:in",
-      body: "Leider müssen wir dir mitteilen, dass wir deine Bewerbung im Auswahlverfahren nicht weiter berücksichtigen können."
-    },
-    {
-      sender: "wework@myworkday.com",
-      subject: "Thank You, from WeWork",
-      body: "We recently filled the role you originally applied to, so we won't be moving forward with your candidacy for this position."
-    },
-    {
-      sender: "rhe@myworkday.com",
-      subject: "Deine Bewerbung für Junior Innovation Manager",
-      body: "Nach sorgfältiger Überlegung bedauern wir, dir mitteilen zu müssen, dass wir deine Bewerbung zu diesem Zeitpunkt nicht weiter verfolgen werden."
-    },
-    {
-      sender: "noreply@lidl.com",
-      subject: "Deine Bewerbung als Junior Automation & AI Specialist",
-      body: "Andere Bewerbungen entsprechen dem Stellenprofil jedoch noch etwas besser. Wir bedauern, den Bewerbungsprozess deshalb an dieser Stelle beenden zu müssen."
-    },
-    {
-      sender: "hannu.saarinen@columbiaroad.teamtailor-mail.com",
-      subject: "Your application to Columbia Road",
-      body: "we will not be moving forward with your application for now."
-    },
-    {
-      sender: "noreply@indeed.com",
-      subject: "Neuigkeiten zu Ihrer Bewerbung von koenig.solutions",
-      body: "Leider konnte Ihre Bewerbung dieses Mal nicht berücksichtigt werden."
-    }
+    { sender: "towncountry-jobs@m.personio.de", subject: "TC - Vielen Dank für Ihre Bewerbung als Spezialist CRM", body: "Nach eingehender Prüfung Ihrer Unterlagen müssen wir Ihnen leider mitteilen, dass wir Ihre Bewerbung für diese Position nicht weiterverfolgen können." },
+    { sender: "bbidarnariman@tuevnordgroup.recruitmail.com", subject: "Feedback zu deiner Bewerbung als PowerPlatform Manager:in", body: "Leider müssen wir dir mitteilen, dass wir deine Bewerbung im Auswahlverfahren nicht weiter berücksichtigen können." },
+    { sender: "wework@myworkday.com", subject: "Thank You, from WeWork", body: "We recently filled the role you originally applied to, so we won't be moving forward with your candidacy for this position." },
+    { sender: "rhe@myworkday.com", subject: "Deine Bewerbung für Junior Innovation Manager", body: "Nach sorgfältiger Überlegung bedauern wir, dir mitteilen zu müssen, dass wir deine Bewerbung zu diesem Zeitpunkt nicht weiter verfolgen werden." },
+    { sender: "noreply@lidl.com", subject: "Deine Bewerbung als Junior Automation & AI Specialist", body: "Andere Bewerbungen entsprechen dem Stellenprofil jedoch noch etwas besser. Wir bedauern, den Bewerbungsprozess deshalb an dieser Stelle beenden zu müssen." },
+    { sender: "hannu.saarinen@columbiaroad.teamtailor-mail.com", subject: "Your application to Columbia Road", body: "we will not be moving forward with your application for now." },
+    { sender: "noreply@indeed.com", subject: "Neuigkeiten zu Ihrer Bewerbung von koenig.solutions", body: "Leider konnte Ihre Bewerbung dieses Mal nicht berücksichtigt werden." }
   ];
-
   testEmails.forEach(email => {
     const result = callGeminiForRejection(email.sender, email.subject, email.body, pendingNames);
     Logger.log(`"${email.subject}" → ${JSON.stringify(result)}`);

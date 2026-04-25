@@ -2,200 +2,575 @@
 <html>
   <head>
     <base target="_top">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-      /* Basic styling for the sidebar */
+      /* ── Base ── */
+      * { box-sizing: border-box; }
       body {
         font-family: 'Segoe UI', sans-serif;
-        padding: 15px;
+        padding: 14px;
         background-color: #f8f9fa;
         color: #3c4043;
-        font-size: 14px;
+        font-size: 13px;
+        margin: 0;
       }
-      h3 {
-        color: #4285f4;
-        margin-top: 0;
-      }
+      h3 { color: #4285f4; margin: 0 0 12px 0; font-size: 15px; }
       label {
         display: block;
-        margin-top: 15px;
-        margin-bottom: 5px;
-        font-weight: bold;
+        margin: 12px 0 4px;
+        font-weight: 600;
+        font-size: 12px;
+        color: #5f6368;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
       }
       textarea {
         width: 100%;
-        height: 120px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
+        height: 110px;
+        border-radius: 6px;
+        border: 1px solid #dadce0;
         padding: 8px;
-        box-sizing: border-box;
-        font-family: inherit; /* Use body font */
-        font-size: 14px;
+        font-family: inherit;
+        font-size: 13px;
+        resize: vertical;
+        transition: border-color 0.2s;
       }
-      select, button {
-        width: 100%;
-        margin-top: 8px; /* Slightly reduced margin */
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-        font-size: 14px;
+      textarea:focus { outline: none; border-color: #4285f4; }
+
+      /* ── SMM Button Group ── */
+      .smm-btn-group {
+        display: flex;
+        gap: 5px;
+        margin-top: 6px;
       }
-      select {
-         background-color: white; /* Ensure select has a white background */
-      }
-      button {
+      .smm-btn {
+        flex: 1;
+        padding: 9px 4px;
+        border-radius: 6px;
+        border: none;
         background-color: #4285f4;
         color: white;
-        border: none;
+        font-size: 11px;
+        font-weight: 700;
         cursor: pointer;
-        font-weight: bold;
-        transition: background-color 0.2s ease;
+        transition: background-color 0.2s, opacity 0.2s;
+        line-height: 1.3;
       }
-      button:hover {
-        background-color: #357ae8;
-      }
-      button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-      }
-      
-      /* Rejection Button Styling */
+      .smm-btn:hover  { background-color: #357ae8; }
+      .smm-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+      /* ── Rejection Button ── */
       #rejectionBtn {
-        background-color: #f4b400; /* Yellow accent to distinguish */
-        margin-top: 15px;
+        width: 100%;
+        margin-top: 10px;
+        padding: 9px;
+        border-radius: 6px;
+        border: none;
+        background-color: #f4b400;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s;
       }
-      #rejectionBtn:hover {
-        background-color: #e0a800;
+      #rejectionBtn:hover    { background-color: #e0a800; }
+      #rejectionBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+      /* ── Loader ── */
+      #loader {
+        display: none;
+        color: #5f6368;
+        font-style: italic;
+        font-size: 12px;
+        margin-top: 10px;
+        text-align: center;
+        padding: 6px;
       }
 
-      /* Status Output Area */
-      #output {
-        margin-top: 20px;
-        padding: 10px;
-        border-radius: 5px;
+      /* ── Divider ── */
+      .section-divider {
+        border: none;
+        border-top: 1px solid #e0e0e0;
+        margin: 14px 0 10px;
+      }
+
+      /* ── Score Badge ── */
+      #score-badge {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 8px;
+        border: 2px solid #ccc;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+        background: white;
+        transition: border-color 0.4s;
+      }
+      #score-main {
+        font-size: 22px;
+        font-weight: 800;
+        color: #3c4043;
+      }
+      #score-max { font-size: 13px; color: #9aa0a6; font-weight: 400; }
+      #match-level-pill {
         font-size: 13px;
-        display: none; /* Hidden by default */
-        line-height: 1.4;
-        border: 1px solid transparent; /* Base border */
+        font-weight: 800;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background-color: #ccc;
+        transition: background-color 0.4s;
+        letter-spacing: 0.5px;
       }
-      .success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+      #score-label-text {
+        font-size: 11px;
+        color: #9aa0a6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
-      .error {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+
+      /* ── Radar Container ── */
+      #radar-container {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        padding: 16px 10px 10px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: center;
       }
-      .loading {
-        color: #666;
+      #radarChart { width: 100% !important; max-width: 560px; max-height: 560px; }
+
+      /* ── CV Type Indicator ── */
+      #cv-type-indicator {
+        font-size: 11px;
+        color: #5f6368;
+        text-align: center;
+        margin-bottom: 6px;
         font-style: italic;
-        margin-top: 10px;
-        display: none; /* Hidden by default */
       }
+
+      /* ── Gap Tips ── */
+      #gap-tips-section {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+      }
+      #gap-tips-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #3c4043;
+        margin: 0 0 8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .gap-tip-item {
+        font-size: 12px;
+        color: #5f6368;
+        padding: 5px 0;
+        border-bottom: 1px solid #f1f3f4;
+        line-height: 1.4;
+      }
+      .gap-tip-item:last-child { border-bottom: none; }
+      .gap-tip-skill { font-weight: 700; color: #3c4043; }
+      .gap-tip-score { color: #9aa0a6; }
+      .gap-tip-importance {
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 3px;
+        padding: 1px 5px;
+        margin-left: 3px;
+      }
+      .imp-crucial   { background: #fce8e6; color: #c5221f; }
+      .imp-necessary { background: #fef7e0; color: #c77c00; }
+      .imp-optional  { background: #e8f0fe; color: #1967d2; }
+
+      /* ── Action Buttons ── */
+      .action-btn-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      #registerBtn {
+        flex: 2;
+        padding: 10px;
+        border-radius: 6px;
+        border: none;
+        background-color: #34a853;
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      #registerBtn:hover    { background-color: #2d9248; }
+      #registerBtn:disabled { background-color: #ccc; cursor: not-allowed; }
+      #resetBtn {
+        flex: 1;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #dadce0;
+        background-color: white;
+        color: #3c4043;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      #resetBtn:hover    { background-color: #f1f3f4; }
+      #resetBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      /* ── Output ── */
+      #output {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        display: none;
+        line-height: 1.5;
+        border: 1px solid transparent;
+      }
+      .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb !important; }
+      .error   { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb !important; }
     </style>
   </head>
+
   <body>
     <h3>🤖 AI Recruitment Suite</h3>
 
+    <!-- ── INPUT SECTION ── -->
     <label for="jdInput">Job Description / URL:</label>
-    <textarea id="jdInput" placeholder="Paste the job text here or a link..."></textarea>
+    <textarea id="jdInput" placeholder="Paste the full job description or a URL..."></textarea>
 
-    <label for="cvType">Select CV Profile:</label>
-    <select id="cvType">
-      <option value="DE Web2 Marketing Manager">DE Web2 Marketing Manager</option>
-      <option value="EN Web2 Marketing Manager">EN Web2 Marketing Manager</option>
-      <option value="Web3 Marketing Manager">Web3 Marketing Manager</option>
-    </select>
+    <label>Analyze Skills Match (SMM):</label>
+    <div class="smm-btn-group">
+      <button class="smm-btn" onclick="runSmm('DE Web2 Marketing Manager')">🇩🇪 DE<br>Web2</button>
+      <button class="smm-btn" onclick="runSmm('EN Web2 Marketing Manager')">🇬🇧 EN<br>Web2</button>
+      <button class="smm-btn" onclick="runSmm('Web3 Marketing Manager')">🔗<br>Web3</button>
+    </div>
 
-    <button id="mainBtn" onclick="processJob()">Generate & Register</button>
+    <!-- ── LOADER ── -->
+    <div id="loader">Analyzing with Mistral... 🤖</div>
+
+    <!-- ── SMM RESULTS (hidden until analysis runs) ── -->
+    <div id="smm-section" style="display:none;">
+      <hr class="section-divider">
+
+      <!-- Score Badge -->
+      <div id="score-badge">
+        <div>
+          <div id="score-label-text">Skills Match Score</div>
+          <div>
+            <span id="score-main">0</span>
+            <span id="score-max"> / 40</span>
+          </div>
+        </div>
+        <div id="match-level-pill">M0</div>
+      </div>
+
+      <!-- CV Type Indicator -->
+      <div id="cv-type-indicator"></div>
+
+      <!-- Radar Chart -->
+      <div id="radar-container">
+        <canvas id="radarChart"></canvas>
+      </div>
+
+      <!-- Gap Tips -->
+      <div id="gap-tips-section">
+        <div id="gap-tips-title">💡 Gap Tips</div>
+        <div id="gap-tips-list"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-btn-group">
+        <button id="registerBtn" onclick="proceedToRegister()">✅ Generate &amp; Register</button>
+        <button id="resetBtn"    onclick="resetAll()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <!-- ── SCAN REJECTIONS ── -->
     <button id="rejectionBtn" onclick="scanRejections()">Scan Rejections 🤖</button>
 
-    <div id="loader" class="loading">Processing... 🤖</div>
+    <!-- ── OUTPUT ── -->
     <div id="output"></div>
 
     <script>
-      function processJob() {
-        const jd = document.getElementById('jdInput').value.trim();
-        const cv = document.getElementById('cvType').value;
-        const btn = document.getElementById('mainBtn');
-        const rejBtn = document.getElementById('rejectionBtn');
-        const loader = document.getElementById('loader');
-        const output = document.getElementById('output');
+      /* ────────────────────────────────
+         State
+      ──────────────────────────────── */
+      var currentSmmData = null;
+      var currentCvType  = null;
+      var radarChart     = null;
 
+      /* ────────────────────────────────
+         Color helpers
+      ──────────────────────────────── */
+      function getScoreColor(score) {
+        if (score >= 36) return '#34a853'; // green
+        if (score >= 30) return '#4fc3f7'; // skyblue
+        if (score >= 21) return '#f4b400'; // yellow
+        if (score >= 11) return '#ff6d00'; // orange
+        return '#ea4335';                  // red
+      }
+
+      function getImportanceClass(imp) {
+        if (!imp) return '';
+        var l = imp.toLowerCase();
+        if (l === 'crucial')   return 'imp-crucial';
+        if (l === 'necessary') return 'imp-necessary';
+        return 'imp-optional';
+      }
+
+      /* ────────────────────────────────
+         Button state helpers
+      ──────────────────────────────── */
+      function setAllDisabled(disabled) {
+        document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = disabled; });
+        document.getElementById('rejectionBtn').disabled = disabled;
+        var regBtn = document.getElementById('registerBtn');
+        var resBtn = document.getElementById('resetBtn');
+        if (regBtn) regBtn.disabled = disabled;
+        if (resBtn) resBtn.disabled = disabled;
+      }
+
+      /* ────────────────────────────────
+         Step 1 — Run SMM Analysis
+      ──────────────────────────────── */
+      function runSmm(cvType) {
+        var jd = document.getElementById('jdInput').value.trim();
         if (!jd) {
-          showOutput("Please paste a Job Description text or URL.", "error");
+          showOutput('Please paste a Job Description or URL first.', 'error');
           return;
         }
-
-        btn.disabled = true;
-        rejBtn.disabled = true;
-        loader.innerText = "Processing with Mistral... 🤖";
-        loader.style.display = "block";
-        output.style.display = "none";
-        output.innerText = "";
+        currentCvType = cvType;
+        setAllDisabled(true);
+        document.getElementById('smm-section').style.display = 'none';
+        document.getElementById('output').style.display = 'none';
+        document.getElementById('loader').innerText = 'Analyzing skills with Mistral… 🤖';
+        document.getElementById('loader').style.display = 'block';
 
         google.script.run
-          .withSuccessHandler(function(res) {
-            btn.disabled = false;
-            rejBtn.disabled = false;
-            loader.style.display = "none";
-            if (res.startsWith("Error:")) {
-              showOutput(res, "error");
-            } else {
-              showOutput(res, "success");
-              document.getElementById('jdInput').value = ""; 
+          .withSuccessHandler(function(result) {
+            setAllDisabled(false);
+            document.getElementById('loader').style.display = 'none';
+            try {
+              var data = JSON.parse(result);
+              if (data.error) { showOutput('SMM Error: ' + data.error, 'error'); return; }
+              currentSmmData = data;
+              renderSmm(data, cvType);
+            } catch(e) {
+              showOutput('Parse error: ' + e.message, 'error');
             }
           })
           .withFailureHandler(function(err) {
-            btn.disabled = false;
-            rejBtn.disabled = false;
-            loader.style.display = "none";
-            showOutput("Critical Script Error: " + err.message, "error");
-            console.error("Script Failure:", err);
+            setAllDisabled(false);
+            document.getElementById('loader').style.display = 'none';
+            showOutput('SMM Error: ' + err.message, 'error');
           })
-          .mainJobProcessor(jd, cv); 
+          .analyzeSkillsMatch(jd, cvType);
       }
 
-      function scanRejections() {
-        const btn = document.getElementById('mainBtn');
-        const rejBtn = document.getElementById('rejectionBtn');
-        const loader = document.getElementById('loader');
-        const output = document.getElementById('output');
+      /* ────────────────────────────────
+         Render SMM results
+      ──────────────────────────────── */
+      function renderSmm(data, cvType) {
+        var total      = data.total_score  || 0;
+        var matchLevel = data.match_level  || 'M0';
+        var skills     = data.skills       || [];
+        var color      = getScoreColor(total);
 
-        btn.disabled = true;
-        rejBtn.disabled = true;
-        rejBtn.innerText = "Scanning Inbox...";
-        loader.innerText = "Scanning for rejections... 🤖";
-        loader.style.display = "block";
-        output.style.display = "none";
-        output.innerText = "";
+        /* Score badge */
+        document.getElementById('score-main').innerText = total;
+        document.getElementById('match-level-pill').innerText = matchLevel;
+        document.getElementById('score-badge').style.borderColor = color;
+        document.getElementById('match-level-pill').style.backgroundColor = color;
+
+        /* CV type indicator */
+        var cvLabel = { 'DE Web2 Marketing Manager': '🇩🇪 DE Web2', 'EN Web2 Marketing Manager': '🇬🇧 EN Web2', 'Web3 Marketing Manager': '🔗 Web3' };
+        document.getElementById('cv-type-indicator').innerText = 'Profile: ' + (cvLabel[cvType] || cvType);
+
+        /* Radar chart */
+        var labels = skills.map(function(s) { return s.name; });
+        var scores = skills.map(function(s) { return s.score || 0; });
+
+        if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+        var ctx = document.getElementById('radarChart').getContext('2d');
+        radarChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Match Score',
+              data: scores,
+              borderColor: color,
+              backgroundColor: color + '2e',
+              borderWidth: 2.5,
+              pointBackgroundColor: color,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 1.5,
+              pointRadius: 5,
+              pointHoverRadius: 7
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+              r: {
+                min: 0,
+                max: 5,
+                ticks: {
+                  stepSize: 1,
+                  font: { size: 9 },
+                  color: '#9aa0a6',
+                  backdropColor: 'transparent'
+                },
+                grid:        { color: '#e0e0e0' },
+                angleLines:  { color: '#e0e0e0' },
+                pointLabels: {
+                  font: { size: 12, weight: '600' },
+                  color: '#3c4043',
+                  padding: 10,
+                  callback: function(label) {
+                    /* Wrap long labels at ~18 chars so they fit cleanly */
+                    if (label.length <= 18) return label;
+                    var words = label.split(' ');
+                    var lines = []; var current = '';
+                    words.forEach(function(w) {
+                      if ((current + ' ' + w).trim().length > 18) {
+                        if (current) lines.push(current.trim());
+                        current = w;
+                      } else { current = (current + ' ' + w).trim(); }
+                    });
+                    if (current) lines.push(current.trim());
+                    return lines;
+                  }
+                }
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    var s = skills[ctx.dataIndex];
+                    return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : '');
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        /* Gap Tips */
+        var list = document.getElementById('gap-tips-list');
+        list.innerHTML = '';
+        skills.forEach(function(s) {
+          var div = document.createElement('div');
+          div.className = 'gap-tip-item';
+          var impClass = getImportanceClass(s.importance);
+          div.innerHTML =
+            '<span class="gap-tip-skill">' + escHtml(s.name) + '</span>' +
+            ' <span class="gap-tip-score">(' + (s.score || 0) + '/5)</span>' +
+            ' <span class="gap-tip-importance ' + impClass + '">' + escHtml(s.importance || '') + '</span>' +
+            '<br>' + escHtml(s.gap_tip || '');
+          list.appendChild(div);
+        });
+
+        /* Show section */
+        document.getElementById('smm-section').style.display = 'block';
+      }
+
+      /* ────────────────────────────────
+         Step 2 — Generate & Register
+      ──────────────────────────────── */
+      function proceedToRegister() {
+        var jd = document.getElementById('jdInput').value.trim();
+        if (!jd || !currentSmmData || !currentCvType) {
+          showOutput('Please run an SMM analysis first.', 'error');
+          return;
+        }
+        setAllDisabled(true);
+        document.getElementById('output').style.display = 'none';
+        document.getElementById('loader').innerText = 'Generating cover letter & registering… 🤖';
+        document.getElementById('loader').style.display = 'block';
 
         google.script.run
           .withSuccessHandler(function(res) {
-            btn.disabled = false;
-            rejBtn.disabled = false;
-            rejBtn.innerText = "Scan Rejections 🤖";
-            loader.style.display = "none";
-            showOutput(res, "success");
+            setAllDisabled(false);
+            document.getElementById('loader').style.display = 'none';
+            if (res && res.startsWith('Error:')) {
+              showOutput(res, 'error');
+            } else {
+              showOutput(res, 'success');
+              resetAll();
+            }
           })
           .withFailureHandler(function(err) {
-            btn.disabled = false;
-            rejBtn.disabled = false;
-            rejBtn.innerText = "Scan Rejections 🤖";
-            loader.style.display = "none";
-            showOutput("Error: " + err.message, "error");
-            console.error(err);
+            setAllDisabled(false);
+            document.getElementById('loader').style.display = 'none';
+            showOutput('Error: ' + err.message, 'error');
+          })
+          .mainJobProcessor(jd, currentCvType, JSON.stringify(currentSmmData));
+      }
+
+      /* ────────────────────────────────
+         Reset
+      ──────────────────────────────── */
+      function resetAll() {
+        document.getElementById('jdInput').value = '';
+        document.getElementById('smm-section').style.display = 'none';
+        if (radarChart) { radarChart.destroy(); radarChart = null; }
+        currentSmmData = null;
+        currentCvType  = null;
+      }
+
+      /* ────────────────────────────────
+         Scan Rejections
+      ──────────────────────────────── */
+      function scanRejections() {
+        var rejBtn = document.getElementById('rejectionBtn');
+        setAllDisabled(true);
+        rejBtn.innerText = 'Scanning Inbox…';
+        document.getElementById('output').style.display = 'none';
+        document.getElementById('loader').innerText = 'Scanning for rejections… 🤖';
+        document.getElementById('loader').style.display = 'block';
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            setAllDisabled(false);
+            rejBtn.innerText = 'Scan Rejections 🤖';
+            document.getElementById('loader').style.display = 'none';
+            showOutput(res, 'success');
+          })
+          .withFailureHandler(function(err) {
+            setAllDisabled(false);
+            rejBtn.innerText = 'Scan Rejections 🤖';
+            document.getElementById('loader').style.display = 'none';
+            showOutput('Error: ' + err.message, 'error');
           })
           .processRejectionEmails();
       }
 
+      /* ────────────────────────────────
+         Helpers
+      ──────────────────────────────── */
       function showOutput(text, type) {
-        const output = document.getElementById('output');
-        output.innerText = text;
-        output.className = type; 
-        output.style.display = "block";
+        var out = document.getElementById('output');
+        out.innerText = text;
+        out.className = type;
+        out.style.display = 'block';
+      }
+
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
     </script>
   </body>
