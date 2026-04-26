@@ -94,11 +94,11 @@ function refreshAllData() {
 }
 
 function showSidebar() {
-  // Width set to 620px to give the radar chart enough room for all skill labels
   const html = HtmlService.createHtmlOutputFromFile('Sidebar')
     .setTitle('AI Recruitment Suite')
-    .setWidth(620);
-  SpreadsheetApp.getUi().showSidebar(html);
+    .setWidth(720)
+    .setHeight(820);
+  SpreadsheetApp.getUi().showModelessDialog(html, 'AI Recruitment Suite');
 }
 
 
@@ -188,7 +188,7 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
           { role: "user", content: prompt }
         ],
         temperature: 0.1,
-        max_tokens: 1200
+        max_tokens: 2500
       }),
       muteHttpExceptions: true
     };
@@ -868,13 +868,22 @@ or
     muteHttpExceptions: true
   };
 
-  try {
-    const response     = UrlFetchApp.fetch(url, options);
-    const responseCode = response.getResponseCode();
-    if (responseCode !== 200) {
-      Logger.log(`Mistral rejection API error ${responseCode}: ${response.getContentText()}`);
-      return null;
-    }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response     = UrlFetchApp.fetch(url, options);
+      const responseCode = response.getResponseCode();
+
+      if (responseCode === 429) {
+        const waitMs = attempt * 5000; // 5s, 10s, 15s
+        Logger.log(`Mistral 429 rate limit (attempt ${attempt}) — waiting ${waitMs/1000}s before retry.`);
+        Utilities.sleep(waitMs);
+        continue;
+      }
+
+      if (responseCode !== 200) {
+        Logger.log(`Mistral rejection API error ${responseCode}: ${response.getContentText()}`);
+        return null;
+      }
     const json   = JSON.parse(response.getContentText());
     const text   = json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(text);
@@ -883,9 +892,12 @@ or
     }
     return parsed;
   } catch (e) {
-    Logger.log(`Mistral rejection call failed: ${e.message}`);
-    return null;
+      Logger.log(`Mistral rejection call failed (attempt ${attempt}): ${e.message}`);
+      if (attempt < 3) Utilities.sleep(3000);
+    }
   }
+  Logger.log('Mistral rejection: all 3 attempts failed.');
+  return null;
 }
 
 
@@ -1050,7 +1062,7 @@ function processRejectionEmails() {
         thread.addLabel(label);
       }
     }
-    Utilities.sleep(1200);
+    Utilities.sleep(2200);
   }
 
   props.setProperty('LAST_REJECTION_SCAN', new Date().toISOString());

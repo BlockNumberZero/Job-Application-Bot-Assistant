@@ -139,7 +139,7 @@
         display: flex;
         justify-content: center;
       }
-      #radarChart { width: 100% !important; max-width: 560px; max-height: 560px; }
+      #radarChart { width: 100% !important; max-width: 660px; max-height: 520px; }
 
       /* ── CV Type Indicator ── */
       #cv-type-indicator {
@@ -397,8 +397,13 @@
         var labels = skills.map(function(s) { return s.name; });
         var scores = skills.map(function(s) { return s.score || 0; });
 
+        /* Show section FIRST so canvas has real dimensions before Chart.js draws */
+        document.getElementById('smm-section').style.display = 'block';
+
         if (radarChart) { radarChart.destroy(); radarChart = null; }
 
+        /* Small delay to let the browser paint the container before Chart.js measures it */
+        setTimeout(function() {
         var ctx = document.getElementById('radarChart').getContext('2d');
         radarChart = new Chart(ctx, {
           type: 'radar',
@@ -453,6 +458,9 @@
                 }
               }
             },
+            layout: {
+              padding: { top: 40, left: 80, right: 80, bottom: 40 }
+            },
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -465,7 +473,7 @@
               }
             }
           }
-        });
+        }); }, 80);  // closes setTimeout — 80ms is enough for the browser to paint
 
         /* Gap Tips */
         var list = document.getElementById('gap-tips-list');
@@ -482,8 +490,7 @@
           list.appendChild(div);
         });
 
-        /* Show section */
-        document.getElementById('smm-section').style.display = 'block';
+
       }
 
       /* ────────────────────────────────
