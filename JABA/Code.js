@@ -41,7 +41,8 @@ function getTemplateEN()  { return getScriptProperty('TEMPLATE_DOC_ID_EN'); }
 function getTemplateWeb3(){ return getScriptProperty('TEMPLATE_DOC_ID_WEB3'); }
 function getPdfFolder()   { return getScriptProperty('PDF_FOLDER_ID'); }
 function getMistralKey()  { return getScriptProperty('MISTRAL_API_KEY'); }
-
+function getGroqKey()     { return getScriptProperty('GROQ_API_KEY'); }
+function getTavilyKey()  { return getScriptProperty('TAVILY_API_KEY'); }
 
 /*
 AUTOMATIC STATUS TRACKER
@@ -55,6 +56,13 @@ function onEdit(e) {
 
   if ((col === 5 || col === 6 || (col >= 10 && col <= 18)) && row > 1) {
     if (col === 6) {
+      // ── Phase 2: flag Interview_Reached in SMM_Raw_Data ──
+      const interviewStatuses = ["HR Interview", "1st Interview"];
+      if (interviewStatuses.includes(newValue)) {
+        const company = sheet.getRange(row, 2).getValue().toString().trim();
+        const appDate = sheet.getRange(row, 7).getValue();
+        flagSmmInterviewReached(company, appDate);
+      }
       if (newValue === "" || newValue === null) {
         sheet.getRange(row, 9, 1, 10).clearContent();
       } else {
@@ -79,11 +87,14 @@ function onOpen() {
     .addItem('Scan Gmail for Rejections', 'processRejectionEmails')
     .addSeparator()
     .addItem('🔄 Refresh Dashboard Data', 'refreshAllData')
+    .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
+    .addSeparator()
+    .addItem('📧 Process Indeed Job Alerts', 'processIndeedAlertEmails')
     .addToUi();
 }
 
 function refreshAllData() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
   try {
     updateSankeyData();
     updateGeoData();
@@ -125,6 +136,12 @@ function analyzeSkillsMatch(jdInput, cvType) {
     const cleanedJD    = jdInput.replace(/[^\x20-\x7E\n]/g, '').substring(0, 4000);
     const cleanedCV    = templateText.replace(/[^\x20-\x7E\n]/g, '').substring(0, 3000);
 
+    // Load existing Master_Category values to keep new ones consistent
+    const existingCategories = getExistingMasterCategories();
+    const categoryContext = existingCategories.length > 0
+      ? `\nEXISTING MASTER CATEGORIES (reuse these before creating new ones):\n${existingCategories.join(', ')}\n`
+      : '';
+
     const prompt = `You are a precise recruitment skills analyst. Analyze the job description and CV profile below.
 
 JOB DESCRIPTION:
@@ -132,23 +149,26 @@ ${cleanedJD}
 
 CV PROFILE:
 ${cleanedCV}
+${categoryContext}
 
 TASK:
-1. Identify the TOP 8 most important skills from the JD, ranked by the JD's own priority (not by CV match).
-2. For each skill, score the CV evidence from 0 to 5:
-   - 0: Skill not mentioned in CV at all
-   - 1: Briefly mentioned, no supporting evidence
-   - 2: Mentioned with some context or description
-   - 3: Clear experience with a concrete example
-   - 4: Strong experience with partial metrics or results
-   - 5: Expert-level evidence with quantified achievements (e.g. "+20% revenue")
-3. Classify the JD's importance for that skill: "Crucial" (must-have), "Necessary" (important), or "Optional" (nice-to-have).
-4. Extract the CV evidence (max 15 words) or write "Not found in CV" if score is 0.
-5. Write a practical gap tip (max 12 words) explaining how to improve the score for that skill.
+1. Identify the TOP 8 most important skills from the JD, ranked strictly by the JD's own emphasis (most repeated / most described first).
+2. For each skill score the CV from 0 to 5 using ONLY these exact criteria — no interpretation allowed:
+   - 0: The exact skill or a direct synonym does NOT appear anywhere in the CV.
+   - 1: The skill word appears once with no context (e.g. listed in a tools section only).
+   - 2: The skill is described in 1 sentence but with no measurable outcome.
+   - 3: The skill is described with a specific project or campaign as context.
+   - 4: The skill is described with a specific project AND at least one number (%, €, users, etc.).
+   - 5: The skill is described with a specific project AND two or more quantified outcomes.
+   RULE: When unsure between two scores, always choose the LOWER one.
+   RULE: A score of 0 is correct and expected when the skill is absent — never assign 1 just because a topic is vaguely related.
+3. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
+4. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
+5. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
 
 SCORING RULES:
-- Base scores ONLY on concrete CV evidence — do NOT award points for keywords alone.
-- A score of 0 is valid and expected when a skill is genuinely absent from the CV.
+- Scores are based ONLY on what is written in the CV — not on assumptions about the candidate.
+- Do NOT give partial credit for related skills. Score the specific skill requested.
 - The sum of all 8 scores is the total_score (max 40).
 
 MATCH LEVEL (based on total_score):
@@ -166,7 +186,8 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
       "score": 0,
       "importance": "Crucial",
       "evidence": "Brief CV quote or Not found in CV",
-      "gap_tip": "Practical advice to improve this score"
+      "gap_tip": "Practical advice to improve this score",
+      "master_category": "Overarching skill cluster (e.g. 'CRM & Automation', 'Data Analytics', 'Content Marketing', 'Social Media', 'SEO & Performance', 'Web3 & Blockchain', 'Leadership & Strategy', 'Community Management')"
     }
   ],
   "total_score": 0,
@@ -187,22 +208,41 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
           },
           { role: "user", content: prompt }
         ],
-        temperature: 0.1,
-        max_tokens: 2500
+        temperature: 0,
+        max_tokens: 3000
       }),
       muteHttpExceptions: true
     };
 
-    const response     = UrlFetchApp.fetch(url, options);
-    const responseCode = response.getResponseCode();
-
+    let response, responseCode;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      response     = UrlFetchApp.fetch(url, options);
+      responseCode = response.getResponseCode();
+      if (responseCode === 200) break;
+      if (responseCode === 429 || responseCode === 503) {
+        Logger.log(`Mistral SMM rate limit (attempt ${attempt}) — waiting ${attempt * 15}s`);
+        Utilities.sleep(attempt * 15000);
+      } else {
+        throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
+      }
+    }
     if (responseCode !== 200) {
-      throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
+      throw new Error(`Mistral API failed after 3 attempts. Last code: ${responseCode}`);
     }
 
     const json    = JSON.parse(response.getContentText());
-    let   content = json.choices[0].message.content.trim()
-                        .replace(/```json|```/g, '').trim();
+    let content = json.choices[0].message.content.trim()
+                      .replace(/```json|```/g, '').trim();
+
+    // Safety net: if JSON is truncated, attempt to close it before parsing
+    if (!content.endsWith('}')) {
+      // Find the last complete skill object and close the JSON gracefully
+      const lastComplete = content.lastIndexOf('},');
+      if (lastComplete > 0) {
+        content = content.substring(0, lastComplete + 1) + '\n  ],\n  "total_score": 0,\n  "match_level": "M0"\n}';
+        Logger.log("Warning: Mistral response was truncated — JSON was repaired.");
+      }
+    }
 
     const parsed = JSON.parse(content);
 
@@ -238,7 +278,7 @@ function getOrCreateSmmRawDataSheet() {
     const headers = [
       "UID", "Date", "Company", "Position", "CV_Type",
       "Skill_Rank", "Skill_Name", "Match_Score", "JD_Importance",
-      "CV_Evidence", "Gap_Tip", "Interview_Reached"
+      "CV_Evidence", "Gap_Tip", "Interview_Reached", "Master_Category"
     ];
     sheet.getRange(1, 1, 1, headers.length)
          .setValues([headers])
@@ -252,6 +292,404 @@ function getOrCreateSmmRawDataSheet() {
   return sheet;
 }
 
+/* ============================================================
+   INDEED ALERT PROCESSOR — keyword filter config
+   ============================================================ */
+const RELEVANT_KEYWORDS = [
+  // English
+  'marketing','crm','growth','content','social media','web3','blockchain',
+  'community','automation','digital','campaign','brand','branding','seo','sea',
+  'performance','email marketing','influencer','analytics','communications',
+  'internship', 'intern ', 'fellowship',
+  'copywriter','storytelling','acquisition','retention','engagement','e-commerce',
+  // German
+  'wachstum','inhalt','gemeinschaft','automatisierung','kampagne','marke',
+  'leistung','kommunikation','öffentlichkeitsarbeit','digitalmarketing',
+  'onlinemarketing','online-marketing','markenführung','werkstudent', 'werkstudentin', 
+  'praktikum', 'praktikant', 'praktikantin','pflichtpraktikum', 'reichweite'
+];
+
+const SKIP_KEYWORDS = [
+  // English
+  'sales','engineer','software developer','software engineer','lawyer',
+  'accountant','nurse','driver','warehouse','key account','key-account',
+  'recruiter','finance controller','electrician','plumber','mechanic',
+  'chef','cook','cleaner','security guard',
+  // German
+  'vertrieb','verkauf','ingenieur','softwareentwickler','entwickler',
+  'rechtsanwalt','buchhalter','steuerberater','krankenschwester','pfleger',
+  'fahrer','lagerarbeiter','lagermitarbeiter','schlüsselkunde','key account',
+  'personalvermittler','elektriker','klempner','mechaniker','koch','reinigungskraft'
+];
+
+// Domains where fetching always fails — skip immediately
+const BLOCKED_FETCH_DOMAINS = [
+  'linkedin.com','indeed.com','glassdoor.com','monster.com','jobware.de'
+];
+
+// Extracts full text from a known URL via Tavily Extract endpoint
+function tavilyExtract(url) {
+  const key = getTavilyKey();
+  if (!key) { Logger.log('TAVILY_API_KEY not set'); return null; }
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      api_key: key,
+      urls: [url],
+      extract_depth: 'basic'
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res  = UrlFetchApp.fetch('https://api.tavily.com/extract', options);
+    const code = res.getResponseCode();
+    if (code !== 200) {
+      Logger.log(`Tavily Extract error ${code}: ${res.getContentText().substring(0, 200)}`);
+      return null;
+    }
+    const data   = JSON.parse(res.getContentText());
+    const result = data.results && data.results[0];
+    if (!result || !result.raw_content) return null;
+    const text = result.raw_content.substring(0, 5000);
+    Logger.log(`Tavily Extract OK: ${url} (${text.length} chars)`);
+    return text;
+  } catch (e) {
+    Logger.log(`Tavily Extract exception: ${e.message}`);
+    return null;
+  }
+}
+
+// Searches for a job by company + title, then extracts the best result
+function tavilySearch(company, jobTitle) {
+  const key = getTavilyKey();
+  if (!key) { Logger.log('TAVILY_API_KEY not set'); return null; }
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      api_key: key,
+      query: `${company} ${jobTitle} job`,
+      search_depth: 'basic',
+      max_results: 5,
+      include_raw_content: false,
+      exclude_domains: ['linkedin.com', 'xing.com', 'glassdoor.com', 'kununu.com']
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res  = UrlFetchApp.fetch('https://api.tavily.com/search', options);
+    const code = res.getResponseCode();
+    if (code !== 200) {
+      Logger.log(`Tavily Search error ${code}: ${res.getContentText().substring(0, 200)}`);
+      return null;
+    }
+    const data    = JSON.parse(res.getContentText());
+    const results = data.results || [];
+    Logger.log(`Tavily Search: ${results.length} results for "${company} — ${jobTitle}"`);
+
+    for (const r of results) {
+      const text = tavilyExtract(r.url);
+      if (text && text.length > 300) return text;
+      Utilities.sleep(500);
+    }
+    return null; // no partial fallback — partial JDs are useless for SMM
+  } catch (e) {
+    Logger.log(`Tavily Search exception: ${e.message}`);
+    return null;
+  }
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+
+function getOrCreateLabel(name) {
+  let label = GmailApp.getUserLabelByName(name);
+  if (!label) label = GmailApp.createLabel(name);
+  return label;
+}
+
+function isRelevantJobTitle(title) {
+  if (!title) return false;
+  const lower = title.toLowerCase();
+  // Skip takes priority
+  if (SKIP_KEYWORDS.some(k => lower.includes(k.toLowerCase()))) return false;
+  return RELEVANT_KEYWORDS.some(k => lower.includes(k.toLowerCase()));
+}
+
+function detectCvTypeFromText(text) {
+  if (!text) return 'EN Web2 Marketing Manager';
+  const lower = text.toLowerCase();
+  const web3Keys = ['web3','blockchain','crypto','defi','nft','token','dao',
+                    'smart contract','solidity','decentralized'];
+  if (web3Keys.some(k => lower.includes(k))) return 'Web3 Marketing Manager';
+  const deKeys = ['(m/w/d)','(w/m/d)','stellenanzeige','karriere','gehalt',
+                  'vollzeit','teilzeit','berufserfahrung','bewerbung'];
+  if (deKeys.some(k => lower.includes(k))) return 'DE Web2 Marketing Manager';
+  return 'EN Web2 Marketing Manager';
+}
+
+function stripHtmlToText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+    .replace(/&#\d+;/g, ' ')
+    .replace(/[ \t]{3,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .substring(0, 5000);
+}
+
+
+function extractJobsFromAlertEmail(emailBody) {
+  const systemPrompt = `You are a precise data extractor. Respond with valid JSON only. No markdown.`;
+  const userPrompt   = `Extract job listings from this Indeed alert email.
+
+EMAIL BODY:
+${emailBody.substring(0, 2000)}
+
+Return ONLY a JSON array of job title and company. No URLs. Empty array if none found:
+[{"title": "Job Title", "company": "Company Name"}]`;
+
+  const raw = callGroqApi(systemPrompt, userPrompt, 'llama-3.1-8b-instant', 400);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  } catch(e) {
+    Logger.log(`extractJobsFromAlertEmail parse error: ${e.message}`);
+    return [];
+  }
+}
+
+function buildAlertLabel(smmResult) {
+  const score    = smmResult.total_score || 0;
+  const level    = parseInt((smmResult.match_level || 'M0').replace(/\D/g, '')) || 0;
+  const skills   = smmResult.skills || [];
+  const base     = `JABA Alert/M${level}-${score}`;
+
+  if (level === 0) return base; // M0: no indicators
+
+  function indicator(importance, emoji) {
+    const group = skills.filter(s => s.importance === importance);
+    if (group.length === 0) return '-';
+    return group.every(s => (s.score || 0) >= 1) ? emoji : '0';
+  }
+
+  const c = indicator('Crucial',   '🟢');
+  const n = indicator('Necessary', '🟡');
+  const o = indicator('Optional',  '🔵');
+
+  return `${base} ${c}${n}${o}`;
+}
+/* ============================================================
+   MAIN: processIndeedAlertEmails
+   Run from Apps Script menu.
+   ============================================================ */
+function processIndeedAlertEmails() {
+  const props    = PropertiesService.getScriptProperties();
+  const timezone = CONFIG.TIMEZONE;
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+
+  // Determine scan window
+  const lastScanStr    = props.getProperty('LAST_ALERT_SCAN');
+  const sinceDate      = lastScanStr
+    ? new Date(lastScanStr)
+    : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sinceFormatted = Utilities.formatDate(sinceDate, timezone, 'yyyy/MM/dd');
+  Logger.log(`Indeed alert scan — searching since: ${sinceFormatted}`);
+
+  // Gmail labels
+  // Score labels are built dynamically by buildAlertLabel()
+// Only static labels needed upfront:
+const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
+
+  // Search for Indeed job alert emails only — exclude application/rejection threads
+  const query = [
+    'from:indeed.com',
+    `after:${sinceFormatted}`,
+    '-label:JABA Alert/Processed',
+    '-subject:Bewerbung',
+    '-subject:"Neuigkeiten zu Ihrer Bewerbung"',
+    '-subject:"Your application"',
+    '-subject:indeedapply',
+    '-subject:"Heben Sie sich"'
+  ].join(' ');
+
+  const threads = GmailApp.search(query, 0, 30);
+  Logger.log(`Found ${threads.length} alert thread(s) to process.`);
+
+  if (threads.length === 0) {
+    props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
+    if (ui) ui.alert('No new Indeed alert emails found since last scan.');
+    return;
+  }
+
+  let totalReviewed = 0;
+  let totalLow      = 0;
+  let totalSkipped  = 0;
+  const summaryLines = [];
+  const MAX_JOBS_PER_RUN = 8; // stay within 6-min GAS limit
+  let jobsProcessed = 0;
+
+  for (const thread of threads) {
+    if (jobsProcessed >= MAX_JOBS_PER_RUN) {
+      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached — run again for remaining emails.`);
+      break;
+    }
+
+    const message = thread.getMessages()[thread.getMessages().length - 1];
+    const body    = message.getPlainBody();
+    const subject = message.getSubject();
+    Logger.log(`\nEmail: "${subject}"`);
+
+    // Pre-filter by subject line — avoids Groq call for obviously irrelevant emails
+    if (!isRelevantJobTitle(subject)) {
+  Logger.log(`Subject pre-filtered: "${subject}"`);
+  const isInternship = /werkstudent|praktikum|pflichtpraktikum|internship/i.test(subject);
+  if (isInternship) {
+    thread.addLabel(labelInternship);
+  }
+  thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
+  continue;
+}
+
+    const allJobs      = extractJobsFromAlertEmail(body);
+    const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
+    Logger.log(`Jobs found: ${allJobs.length} | After keyword filter: ${relevantJobs.length}`);
+
+    if (relevantJobs.length === 0) {
+  thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
+  continue;
+}
+
+    const threadResults = [];
+
+    for (const job of relevantJobs) {
+      if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
+      Logger.log(`→ "${job.title}" at "${job.company}"`);
+
+      // Step 1: fetch full JD via Tavily
+let jdText = null;
+
+// If the email contained a direct URL, try extracting from it first (saves a search credit)
+if (job.url) {
+  Logger.log(`  Direct URL in email: ${job.url}`);
+  jdText = tavilyExtract(job.url);
+}
+
+// Fallback: search by company + title
+if (!jdText) {
+  Logger.log(`  No direct URL — searching via Tavily`);
+  jdText = tavilySearch(job.company, job.title);
+}
+
+if (!jdText) {
+  Logger.log(`  ⚠ No JD found — skipping`);
+  totalSkipped++;
+  threadResults.push({ title: job.title, company: job.company, skipped: true });
+  jobsProcessed++;
+  continue;
+}
+
+      // Step 2: detect CV profile
+      const cvType = detectCvTypeFromText(job.title + ' ' + jdText.substring(0, 500));
+
+      // Step 3: run SMM analysis
+      let smmResult;
+      try {
+        const smmRaw = analyzeSkillsMatch(jdText, cvType);
+        smmResult    = JSON.parse(smmRaw);
+        if (smmResult.error) throw new Error(smmResult.error);
+      } catch(e) {
+        Logger.log(`  ✗ SMM error: ${e.message}`);
+        totalSkipped++;
+        threadResults.push({ title: job.title, company: job.company, skipped: true });
+        jobsProcessed++;
+        Utilities.sleep(3000);
+        continue;
+      }
+
+      const score      = smmResult.total_score || 0;
+      const matchLevel = smmResult.match_level  || 'M0';
+      const skills     = smmResult.skills        || [];
+      const levelNum   = parseInt(matchLevel.replace(/\D/g, '')) || 0;
+
+      // Step 4: apply qualification rule
+      const crucialSkills  = skills.filter(s => s.importance === 'Crucial');
+      const zeroCrucial    = crucialSkills.length === 0;
+      const allCrucialPass = !zeroCrucial && crucialSkills.every(s => (s.score || 0) >= 1);
+      const qualifies      = levelNum >= 1 && allCrucialPass;
+
+      Logger.log(`  Score: ${score}/40 | ${matchLevel} | Crucial: ${crucialSkills.length} | Pass: ${allCrucialPass} | Qualifies: ${qualifies}`);
+
+      if (zeroCrucial) {
+        // Edge case: zero Crucial skills → manual review
+        totalLow++;
+        threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: false, reason: 'no-crucial' });
+        summaryLines.push(`⚠ MANUAL REVIEW (no Crucial skills): ${job.company} — ${job.title} — ${score}/40`);
+      } else if (qualifies) {
+        totalReviewed++;
+        threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: true });
+        summaryLines.push(`✅ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+      } else {
+        totalLow++;
+        threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: false, reason: 'below-threshold' });
+        summaryLines.push(`⬇ ${job.company} — ${job.title} — ${score}/40 (${matchLevel}) — below threshold`);
+      }
+
+      jobsProcessed++;
+      Utilities.sleep(2500); // respect Mistral rate limit
+    }
+
+    // Apply score label — use the best result in this thread
+const analyzed = threadResults.filter(r => r.smmResult);
+const skipped  = threadResults.filter(r => r.skipped);
+
+if (analyzed.length > 0) {
+  // Pick the highest scoring job in this thread
+  const best = analyzed.reduce((a, b) =>
+    (a.smmResult.total_score || 0) >= (b.smmResult.total_score || 0) ? a : b
+  );
+  const scoreLabel = buildAlertLabel(best.smmResult);
+  thread.addLabel(getOrCreateLabel(scoreLabel));
+} else if (skipped.length > 0 && skipped.length === threadResults.length) {
+  thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
+}
+thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
+
+    Utilities.sleep(500);
+  }
+
+  props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
+
+  const summary = [
+    '📧 Indeed Alert Scan Complete',
+    '─────────────────────────────',
+    `✅ Qualifying jobs: ${totalReviewed}`,
+    `⬇  Below threshold: ${totalLow}`,
+    `⚠  Skipped (fetch failed): ${totalSkipped}`,
+    '',
+    ...summaryLines,
+    '',
+    `Jobs processed this run: ${jobsProcessed}/${MAX_JOBS_PER_RUN}`,
+    jobsProcessed >= MAX_JOBS_PER_RUN ? 'Run again to continue with remaining emails.' : ''
+  ].join('\n');
+
+  Logger.log(summary);
+  if (ui) ui.alert(summary);
+}
+
+// Debug helper — resets the alert scan window to 7 days ago
+function resetAlertScanTimestamp() {
+  PropertiesService.getScriptProperties().deleteProperty('LAST_ALERT_SCAN');
+  Logger.log('Alert scan timestamp cleared. Next run will scan last 7 days.');
+}
 
 /* ============================================================
    NEW: Write 8 skill rows to SMM_Raw_Data
@@ -267,18 +705,19 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
       company,
       position,
       cvType,
-      i + 1,                     // Skill_Rank (1–8, ordered by JD priority)
-      s.name        || "",
-      s.score       || 0,
-      s.importance  || "",
-      s.evidence    || "",
-      s.gap_tip     || "",
-      false                      // Interview_Reached — updated later by onEdit hook (Phase 2)
+      i + 1,
+      s.name            || "",
+      s.score           || 0,
+      s.importance      || "",
+      s.evidence        || "",
+      s.gap_tip         || "",
+      false,                     // Interview_Reached
+      s.master_category || ""    // Master_Category
     ]);
 
     if (rows.length > 0) {
       const startRow = sheet.getLastRow() + 1;
-      sheet.getRange(startRow, 1, rows.length, 12).setValues(rows);
+      sheet.getRange(startRow, 1, rows.length, 13).setValues(rows);
       Logger.log(`SMM_Raw_Data: wrote ${rows.length} rows for UID ${uid} (${company})`);
     }
   } catch (e) {
@@ -286,7 +725,192 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
     // Non-fatal: do not throw — main registration should still succeed
   }
 }
+/* ============================================================
+   Phase 2: flag Interview_Reached = TRUE in SMM_Raw_Data
+   Triggered by onEdit when status changes to HR/1st Interview.
+   Matches by Company name — no UID column needed in monthly sheet.
+   ============================================================ */
+function flagSmmInterviewReached(company, appDate) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("SMM_Raw_Data");
+    if (!sheet || sheet.getLastRow() < 2) return;
 
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 13).getValues();
+    let flagged = 0;
+
+    data.forEach((row, i) => {
+      const smmCompany = row[2] ? row[2].toString().trim() : "";
+      if (smmCompany.toLowerCase() === company.toLowerCase()) {
+        sheet.getRange(i + 2, 12).setValue(true); // column 12 = Interview_Reached
+        flagged++;
+      }
+    });
+
+    if (flagged > 0) {
+      SpreadsheetApp.flush();
+      Logger.log(`Interview_Reached flagged for "${company}": ${flagged} rows updated.`);
+    }
+  } catch (e) {
+    Logger.log(`Error in flagSmmInterviewReached: ${e.toString()}`);
+  }
+}
+/* ============================================================
+   Helper: get existing Master_Category values from SMM_Raw_Data
+   Used to keep new categorisations consistent with past ones.
+   ============================================================ */
+function getExistingMasterCategories() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("SMM_Raw_Data");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+    // Master_Category is column 13
+    const values = sheet.getRange(2, 13, sheet.getLastRow() - 1, 1).getValues();
+    const unique  = [...new Set(values.flat().filter(v => v && v.toString().trim() !== ''))];
+    return unique.slice(0, 40); // cap context size
+  } catch (e) {
+    return [];
+  }
+}
+
+
+/* ============================================================
+   Groq API caller — reusable helper
+   model: e.g. "llama-3.1-8b-instant" or "llama-3.3-70b-versatile"
+   ============================================================ */
+function callGroqApi(systemPrompt, userPrompt, model, maxTokens) {
+  const groqKey = getGroqKey();
+  if (!groqKey) throw new Error("GROQ_API_KEY not set in Script Properties.");
+
+  const url     = "https://api.groq.com/openai/v1/chat/completions";
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": `Bearer ${groqKey}` },
+    payload: JSON.stringify({
+      model: model || "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userPrompt   }
+      ],
+      temperature: 0.0,
+      max_tokens:  maxTokens || 200
+    }),
+    muteHttpExceptions: true
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res  = UrlFetchApp.fetch(url, options);
+      const code = res.getResponseCode();
+      if (code === 429) {
+        Logger.log(`Groq 429 (attempt ${attempt}) — waiting ${attempt * 4}s`);
+        Utilities.sleep(attempt * 4000);
+        continue;
+      }
+      if (code !== 200) {
+        Logger.log(`Groq API error ${code}: ${res.getContentText().substring(0, 200)}`);
+        return null;
+      }
+      const json = JSON.parse(res.getContentText());
+      return json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
+    } catch (e) {
+      Logger.log(`Groq call failed (attempt ${attempt}): ${e.message}`);
+      if (attempt < 3) Utilities.sleep(3000);
+    }
+  }
+  return null;
+}
+
+
+/* ============================================================
+   Batch Refresh Master Categories
+   Re-clusters all SMM_Raw_Data rows using Groq llama-3.3-70b.
+   Only runs if >= 20 applications are registered.
+   ============================================================ */
+function batchRefreshMasterCategories() {
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+
+  // Guard: require at least 20 SMM applications (160 rows = 20 × 8 skills)
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("SMM_Raw_Data");
+  if (!sheet || sheet.getLastRow() < 161) {
+    ui.alert("Not enough data yet. Run the refresh once you have at least 20 applications registered via SMM.");
+    return;
+  }
+
+  const lastRow = sheet.getLastRow();
+  const data    = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  // Collect all unique skill + importance + current category combos
+  const skillMap = {}; // key: skill_name|importance → {rows: [...rowIndices], currentCategory}
+  data.forEach((row, i) => {
+    const skillName  = row[6]  ? row[6].toString().trim()  : "";
+    const importance = row[8]  ? row[8].toString().trim()  : "";
+    const category   = row[12] ? row[12].toString().trim() : "";
+    if (!skillName) return;
+    const key = `${skillName}|${importance}`;
+    if (!skillMap[key]) skillMap[key] = { skillName, importance, currentCategory: category, rowIndices: [] };
+    skillMap[key].rowIndices.push(i + 2); // +2 for 1-indexed + header
+  });
+
+  const uniqueSkills      = Object.values(skillMap);
+  const existingCategories = [...new Set(uniqueSkills.map(s => s.currentCategory).filter(Boolean))];
+
+  Logger.log(`Batch refresh: ${uniqueSkills.length} unique skills, ${existingCategories.length} existing categories`);
+
+  // Build prompt — send all unique skills in one call for efficiency
+  const skillList = uniqueSkills.map((s, i) =>
+    `${i + 1}. Skill: "${s.skillName}" | Importance: "${s.importance}" | Current category: "${s.currentCategory}"`
+  ).join('\n');
+
+  const systemPrompt = `You are a precise skills categorisation engine. Always respond with valid JSON only. No markdown, no explanation.`;
+
+  const userPrompt = `You are consolidating skill categories for a job application analytics dashboard.
+
+EXISTING CATEGORIES (use these first, create new ones only when truly necessary):
+${existingCategories.join(', ')}
+
+CONSTRAINT: Maximum 20 unique categories per JD_Importance level (Crucial / Necessary / Optional).
+Merge semantically similar categories (e.g. "CRM Tools" and "CRM Platforms" → "CRM & Automation").
+
+SKILLS TO CATEGORISE:
+${skillList}
+
+Respond ONLY with a JSON array. One object per skill, same order as input:
+[{"index": 1, "master_category": "Category Name"}, ...]`;
+
+  const raw = callGroqApi(systemPrompt, userPrompt, "llama-3.3-70b-versatile", 3000);
+  if (!raw) {
+    ui.alert("Groq API call failed. Check logs and try again.");
+    return;
+  }
+
+  let assignments;
+  try {
+    assignments = JSON.parse(raw);
+  } catch (e) {
+    Logger.log(`Batch refresh parse error: ${e.message}\nRaw: ${raw}`);
+    ui.alert("Could not parse Groq response. Check logs.");
+    return;
+  }
+
+  // Write updated categories back — only column 13
+  let updated = 0;
+  assignments.forEach(a => {
+    const idx  = a.index - 1; // back to 0-based
+    const skill = uniqueSkills[idx];
+    if (!skill || !a.master_category) return;
+    skill.rowIndices.forEach(rowNum => {
+      sheet.getRange(rowNum, 13).setValue(a.master_category);
+      updated++;
+    });
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log(`Batch refresh complete: ${updated} rows updated.`);
+  ui.alert(`✅ Done. ${updated} rows updated across ${assignments.length} unique skills.`);
+}
 
 /*
 CORE PROCESSOR — Step 2 (Generate & Register)
@@ -801,7 +1425,8 @@ function isLikelyJobEmail(sender, subject) {
     'quora', 'medium.com', 'booking.com', 'airbnb', 'expedia', 'trivago',
     'dhl', 'fedex', 'ups', 'hermes-europe', 'dpd', 'gls-group',
     'sparkasse', 'commerzbank', 'ing.de', 'deutsche-bank', 'comdirect',
-    'christ.de', 'zalando', 'otto.de', 'aboutyou', 'hm.com',
+    'christ.de', 'zalando', 'otto.de', 'aboutyou', 'hm.com', 
+    'match.indeed.com', 'jobalert.indeed.com',
     'lieferando', 'deliveroo', 'uber', 'mjam'
   ];
   const nonJobSubjects = [
@@ -821,83 +1446,40 @@ function isLikelyJobEmail(sender, subject) {
 Mistral API Caller for rejection detection
 */
 function callGeminiForRejection(sender, subject, body, pendingCompanyNames) {
-  const mistralKey = getMistralKey();
-  if (!mistralKey) {
-    Logger.log("MISTRAL_API_KEY not set in Script Properties.");
-    return null;
-  }
-
-  const url           = "https://api.mistral.ai/v1/chat/completions";
   const truncatedBody = body.substring(0, 1500);
 
-  const prompt = `You are analyzing a job application email.
+  const systemPrompt = `You are a precise email classifier. Always respond with valid JSON only. No markdown, no explanation.`;
+
+  const userPrompt = `You are analyzing a job application email.
 
 EMAIL:
 From: ${sender}
 Subject: ${subject}
 Body: ${truncatedBody}
 
-Answer these two questions:
-1. Is this a job application rejection email? (The company is saying they will NOT proceed with this candidate)
-2. If yes, what is the exact company name that sent this rejection?
-
+Is this a job application rejection email? (The company explicitly declines to proceed IN THIS EMAIL BODY.)
 IMPORTANT RULES:
 - Acknowledgment emails ("we received your application") are NOT rejections
 - Interview invitations are NOT rejections
-- Job alert emails from Indeed/LinkedIn are NOT rejections
-- Only return true if the company explicitly declines to proceed
+- Job alert or job suggestion emails are NOT rejections
+- Emails that only say "see attachment for feedback" ("im Anhang erhalten Sie die Rückmeldung", "in der Anlage finden Sie") WITHOUT any rejection language in the body itself are NOT rejections — you cannot read attachments
 
 Respond ONLY with valid JSON:
-{"isRejection": true, "companyName": "Exact company name from the email"}
+{"isRejection": true, "companyName": "Exact company name"}
 or
 {"isRejection": false, "companyName": null}`;
 
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    headers: { "Authorization": `Bearer ${mistralKey}` },
-    payload: JSON.stringify({
-      model: CONFIG.MISTRAL_MODEL,
-      messages: [
-        { role: "system", content: "You are a precise email classifier. Always respond with valid JSON only. No markdown, no explanation." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.0,
-      max_tokens: 100
-    }),
-    muteHttpExceptions: true
-  };
+  const raw = callGroqApi(systemPrompt, userPrompt, "llama-3.1-8b-instant", 100);
+  if (!raw) return null;
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const response     = UrlFetchApp.fetch(url, options);
-      const responseCode = response.getResponseCode();
-
-      if (responseCode === 429) {
-        const waitMs = attempt * 5000; // 5s, 10s, 15s
-        Logger.log(`Mistral 429 rate limit (attempt ${attempt}) — waiting ${waitMs/1000}s before retry.`);
-        Utilities.sleep(waitMs);
-        continue;
-      }
-
-      if (responseCode !== 200) {
-        Logger.log(`Mistral rejection API error ${responseCode}: ${response.getContentText()}`);
-        return null;
-      }
-    const json   = JSON.parse(response.getContentText());
-    const text   = json.choices[0].message.content.trim().replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(text);
-    if (parsed.companyName === "null" || parsed.companyName === "") {
-      parsed.companyName = null;
-    }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.companyName === "null" || parsed.companyName === "") parsed.companyName = null;
     return parsed;
   } catch (e) {
-      Logger.log(`Mistral rejection call failed (attempt ${attempt}): ${e.message}`);
-      if (attempt < 3) Utilities.sleep(3000);
-    }
+    Logger.log(`Rejection parse failed: ${e.message}\nRaw: ${raw}`);
+    return null;
   }
-  Logger.log('Mistral rejection: all 3 attempts failed.');
-  return null;
 }
 
 
@@ -910,6 +1492,7 @@ function findBestCompanyMatch(geminiName, pendingCompanies) {
   function normalize(name) {
     return name
       .toLowerCase()
+      .replace(/['`'']/g, '')                    // ← (removes apostrophes)
       .replace(/\s+(gmbh\s*&\s*co\.?\s*kg|gmbh|ag|se|kg|ohg|ug|ltd|inc|corp|llc|sas|bv|nv|ab)\.?/gi, '')
       .replace(/[&.,\-]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -1023,7 +1606,7 @@ function processRejectionEmails() {
 
   Logger.log(`Total threads: ${allThreads.length} | After pre-filter: ${jobThreads.length}`);
 
-  const MAX_PER_RUN     = 150;
+  const MAX_PER_RUN     = 40;
   const threadsToProcess = jobThreads.slice(0, MAX_PER_RUN);
 
   let rejectionsFound = 0;
@@ -1266,3 +1849,13 @@ function checkLabeledEmails() {
     Logger.log(`"${msg.getSubject()}" from "${msg.getFrom()}"`);
   });
 }
+function backfillInterviewReached() {
+  // Add the company names of your two interview applications here
+  const interviewCompanies = [
+    "Trailblazer Summits",  // replace with exact name from your sheet
+    "Hays AG"   // replace with exact name from your sheet
+  ];
+  interviewCompanies.forEach(company => flagSmmInterviewReached(company, null));
+  Logger.log("Backfill complete.");
+}
+
