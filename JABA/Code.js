@@ -171,8 +171,14 @@ TASK:
    - 3: The skill is described with a specific project or campaign as context.
    - 4: The skill is described with a specific project AND at least one number (%, €, users, etc.).
    - 5: The skill is described with a specific project AND two or more quantified outcomes.
-   RULE: When unsure between two scores, always choose the LOWER one.
-   RULE: A score of 0 is correct and expected when the skill is absent — never assign 1 just because a topic is vaguely related.
+   RULE: When unsure between two scores, always choose the LOWER one. This is mandatory, not optional.
+   RULE: Score 0 means the skill is explicitly absent from the CV. Give 0 even if a tangentially related skill exists. "Sort of implied" = 0. Never promote 0 to 1 through reasoning or inference.
+   RULE: To justify score 1, the exact skill keyword or a direct synonym must appear explicitly in the CV — not a related concept, not an adjacent skill, not implied by a project description.
+   RULE: To justify score 2 over 1, there must be a complete sentence about the skill — not a noun in a list, not a tool name in a skills section.
+   RULE: To justify score 3 over 2, a specific named project, campaign, or employer context must be mentioned alongside the skill in the same sentence or paragraph.
+   RULE: To justify score 4 over 3, at least one concrete number (%, €, users, months, team size) must appear in direct connection with the skill evidence.
+   RULE: To justify score 5 over 4, two or more distinct quantified outcomes must appear.
+   Applying these rules strictly prevents score inflation. Be conservative, not generous.
 3. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
 4. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
 5. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
@@ -1623,6 +1629,14 @@ function isAcknowledgmentEmail(subject, body) {
     'bestätigungscode',
     'confirm your identity',
     'eingangsbestätigung',
+    'hiermit übersende ich',
+    'hiermit bewerbe ich mich',
+    'ich bewerbe mich hiermit',
+    'anbei sende ich',
+    'anbei übersende ich',
+    'please find attached my',
+    'i am writing to apply',
+    'i would like to apply',
     'bewerbungseingang',
     'bewerbung eingegangen',
     'wir haben deine bewerbung erhalten',
@@ -1719,7 +1733,7 @@ function processRejectionEmails() {
   let label = GmailApp.getUserLabelByName(labelName);
   if (!label) label = GmailApp.createLabel(labelName);
 
-  const queryFresh = `after:${sinceFormatted} -label:${labelName} -subject:"JABA Job Report"`;
+  const queryFresh = `after:${sinceFormatted} -label:${labelName} -subject:"JABA Job Report" -in:sent`;
   const queryLabeled = `after:${sinceFormatted} label:${labelName}`;
   const freshThreads   = GmailApp.search(queryFresh,   0, 100);
   const labeledThreads = GmailApp.search(queryLabeled, 0, 50);
