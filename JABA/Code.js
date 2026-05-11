@@ -5,7 +5,7 @@ const CONFIG = {
   MISTRAL_MODEL: "mistral-medium-latest",
   TIMEZONE: "Europe/Berlin",
   MY_NAME: "Rey Chancahuaña",
-  ALLOWED_PLATFORMS: ["LinkedIn", "Cryptojobslist", "Indeed", "Cryptocurrencyjobs", "Web3career", "Stepstone"],
+  ALLOWED_PLATFORMS: ["LinkedIn", "Cryptojobslist", "Indeed", "Cryptocurrencyjobs", "Web3career", "Stepstone", "Arbeitsagentur"],
   PLATFORM_DOMAINS: {
     "linkedin.com": "LinkedIn",
     "cryptojobslist.com": "Cryptojobslist",
@@ -14,6 +14,8 @@ const CONFIG = {
     "web3career.com": "Web3career",
     "stepstone.com": "Stepstone",
     "bybit.com": "Own website",
+    "arbeitsagentur.de": "Arbeitsagentur",
+    "jobboerse.arbeitsagentur.de": "Arbeitsagentur",
   }
 };
 
@@ -90,6 +92,8 @@ function onOpen() {
     .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
     .addSeparator()
     .addItem('📧 Process Indeed Job Alerts', 'processIndeedAlertEmails')
+    .addSeparator()
+    .addItem('🔍 Run Daily Job Search', 'runDailyJobSearch')
     .addToUi();
 }
 
@@ -133,8 +137,8 @@ function analyzeSkillsMatch(jdInput, cvType) {
     }
 
     const templateText = DocumentApp.openById(templateDocId).getBody().getText();
-    const cleanedJD    = jdInput.replace(/[^\x20-\x7E\n]/g, '').substring(0, 4000);
-    const cleanedCV    = templateText.replace(/[^\x20-\x7E\n]/g, '').substring(0, 3000);
+    const cleanedJD    = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
+    const cleanedCV    = templateText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 3000);
 
     // Load existing Master_Category values to keep new ones consistent
     const existingCategories = getExistingMasterCategories();
@@ -153,6 +157,13 @@ ${categoryContext}
 
 TASK:
 1. Identify the TOP 8 most important skills from the JD, ranked strictly by the JD's own emphasis (most repeated / most described first).
+   Language requirements — apply this logic exactly:
+- German C2, "Muttersprache", "native speaker", or "verhandlungssicher": 
+  include as a skill, classify as Crucial, score it 0/5 — the candidate holds 
+  C1 which does not satisfy these levels.
+- German C1, "fließend", "fluent", "gute Kenntnisse", or any English language 
+  requirement: EXCLUDE entirely — not a differentiating factor for this candidate.
+- No language level specified: EXCLUDE entirely.
 2. For each skill score the CV from 0 to 5 using ONLY these exact criteria — no interpretation allowed:
    - 0: The exact skill or a direct synonym does NOT appear anywhere in the CV.
    - 1: The skill word appears once with no context (e.g. listed in a tools section only).
@@ -353,7 +364,7 @@ function tavilyExtract(url) {
     const data   = JSON.parse(res.getContentText());
     const result = data.results && data.results[0];
     if (!result || !result.raw_content) return null;
-    const text = result.raw_content.substring(0, 5000);
+    const text = result.raw_content.substring(0, 10000);
     Logger.log(`Tavily Extract OK: ${url} (${text.length} chars)`);
     return text;
   } catch (e) {
@@ -442,8 +453,7 @@ function stripHtmlToText(html) {
     .replace(/&#\d+;/g, ' ')
     .replace(/[ \t]{3,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .substring(0, 5000);
+    .trim();
 }
 
 
@@ -487,6 +497,51 @@ function buildAlertLabel(smmResult) {
 
   return `${base} ${c}${n}${o}`;
 }
+
+/**
+ * Extracts Indeed job URLs from an email HTML body.
+ * Looks for the jk= parameter which uniquely identifies a job posting.
+ * Returns array of clean viewjob URLs.
+ */
+function extractIndeedJobUrls(htmlBody) {
+  if (!htmlBody) return [];
+  const jkPattern = /jk=([a-zA-Z0-9]+)/g;
+  const seen = new Set();
+  const urls = [];
+  let match;
+  while ((match = jkPattern.exec(htmlBody)) !== null) {
+    const jk = match[1];
+    if (!seen.has(jk)) {
+      seen.add(jk);
+      urls.push(`https://de.indeed.com/viewjob?jk=${jk}`);
+    }
+  }
+  Logger.log(`  extractIndeedJobUrls: found ${urls.length} unique job URL(s)`);
+  return urls;
+}
+
+/**
+ * Strips HTML from an email body and removes Indeed email boilerplate,
+ * leaving only the job-relevant content (Stellenbeschreibung, tasks, etc.)
+ * Used as last-resort JD text when Tavily also fails.
+ */
+function extractJobTextFromEmailHtml(htmlBody) {
+  if (!htmlBody) return '';
+  const stripped = stripHtmlToText(htmlBody);
+  return stripped
+    .replace(/Guten Tag[,.]?/gi, '')
+    .replace(/aufgrund Ihres Profils[^.]*\./gi, '')
+    .replace(/Bitte reichen Sie[^.]*\./gi, '')
+    .replace(/Abbestellen/gi, '')
+    .replace(/Laden Sie die kostenlose App herunter/gi, '')
+    .replace(/Job anzeigen/gi, '')
+    .replace(/Passt nicht/gi, '')
+    .replace(/Mehr erfahren/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .substring(0, 8000);
+}
+
 /* ============================================================
    MAIN: processIndeedAlertEmails
    Run from Apps Script menu.
@@ -543,10 +598,15 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
       break;
     }
 
-    const message = thread.getMessages()[thread.getMessages().length - 1];
-    const body    = message.getPlainBody();
-    const subject = message.getSubject();
+    const message   = thread.getMessages()[thread.getMessages().length - 1];
+    const body      = message.getPlainBody();
+    const htmlBody  = message.getBody();
+    const subject   = message.getSubject();
     Logger.log(`\nEmail: "${subject}"`);
+
+    // Extract direct job URLs and partial JD text from email HTML
+    const emailJobUrls = extractIndeedJobUrls(htmlBody);
+    const emailJdText  = extractJobTextFromEmailHtml(htmlBody);
 
     // Pre-filter by subject line — avoids Groq call for obviously irrelevant emails
     if (!isRelevantJobTitle(subject)) {
@@ -577,20 +637,32 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
       // Step 1: fetch full JD via Tavily
 let jdText = null;
 
-// If the email contained a direct URL, try extracting from it first (saves a search credit)
-if (job.url) {
-  Logger.log(`  Direct URL in email: ${job.url}`);
-  jdText = tavilyExtract(job.url);
+// Tier 1: use URL extracted directly from the email HTML (most accurate)
+if (emailJobUrls.length > 0) {
+  // For multi-job emails use positional match; for single-job emails always use index 0
+  const urlIndex = Math.min(relevantJobs.indexOf(job), emailJobUrls.length - 1);
+  const directUrl = emailJobUrls[Math.max(0, urlIndex)];
+  Logger.log(`  Extracted email URL: ${directUrl}`);
+  jdText = tavilyExtractAdvanced(directUrl);
+  if (jdText) incrementTavilyCounter(2);
 }
 
-// Fallback: search by company + title
-if (!jdText) {
-  Logger.log(`  No direct URL — searching via Tavily`);
+// Tier 2: search by company + title (original fallback)
+if (!jdText || !looksLikeJobContent(jdText)) {
+  Logger.log(`  URL extraction insufficient — searching via Tavily`);
   jdText = tavilySearch(job.company, job.title);
 }
 
+// Tier 3: use partial JD text from the email body itself
+if (!jdText || !looksLikeJobContent(jdText)) {
+  if (emailJdText && looksLikeJobContent(emailJdText)) {
+    Logger.log(`  Using partial JD text from email body`);
+    jdText = emailJdText;
+  }
+}
+
 if (!jdText) {
-  Logger.log(`  ⚠ No JD found — skipping`);
+  Logger.log(`  ⚠ No JD found across all tiers — skipping`);
   totalSkipped++;
   threadResults.push({ title: job.title, company: job.company, skipped: true });
   jobsProcessed++;
@@ -948,7 +1020,7 @@ function mainJobProcessor(jdInput, cvType, smmDataJson) {
     }
     const templateText = DocumentApp.openById(templateDocId).getBody().getText();
 
-    const cleanedJD = jdInput.replace(/[^\x20-\x7E\n]/g, '').substring(0, 5000);
+    const cleanedJD = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
 
     const signOff = isDe ? "Mit freundlichen Grüßen" : "Best regards";
     const availabilityText = isDe
@@ -1425,15 +1497,16 @@ function isLikelyJobEmail(sender, subject) {
     'quora', 'medium.com', 'booking.com', 'airbnb', 'expedia', 'trivago',
     'dhl', 'fedex', 'ups', 'hermes-europe', 'dpd', 'gls-group',
     'sparkasse', 'commerzbank', 'ing.de', 'deutsche-bank', 'comdirect',
-    'christ.de', 'zalando', 'otto.de', 'aboutyou', 'hm.com', 
-    'match.indeed.com', 'jobalert.indeed.com',
+    'christ.de', 'zalando', 'otto.de', 'aboutyou', 'hm.com', 'notion.so',
+    'match.indeed.com', 'jobalert.indeed.com', 'hackernoon.com',
     'lieferando', 'deliveroo', 'uber', 'mjam'
   ];
   const nonJobSubjects = [
-    'newsletter', 'angebot', '% rabatt', 'sale', 'discount',
+    'newsletter', 'angebot', '% rabatt', 'sale', 'discount', 'Kontoprüfcode',
     'bestellung', 'order confirmation', 'rechnung', 'invoice',
     'digest', 'quora', 'sparangebot', 'nur heute', 'flash sale',
-    'deine lieferung', 'your delivery', 'tracking', 'versandbestatigung'
+    'deine lieferung', 'your delivery', 'tracking', 'versandbestatigung',
+    'jaba job report', 'jaba daily report'
   ];
 
   if (nonJobDomains.some(d => senderLower.includes(d)))  return false;
@@ -1462,8 +1535,10 @@ IMPORTANT RULES:
 - Acknowledgment emails ("we received your application") are NOT rejections
 - Interview invitations are NOT rejections
 - Job alert or job suggestion emails are NOT rejections
+- Emails saying "thank you for applying, we are reviewing your application, we will contact you soon" are acknowledgments, NOT rejections — even if they sound polite and final
+- Identity verification emails with a numeric code ("Bestätige deine Identität", "Code: 123456") are NOT rejections
 - Emails that only say "see attachment for feedback" ("im Anhang erhalten Sie die Rückmeldung", "in der Anlage finden Sie") WITHOUT any rejection language in the body itself are NOT rejections — you cannot read attachments
-
+- Message notification emails that only say "you have a new message from [Company] — click to view" WITHOUT showing the actual message content are NOT rejections — you cannot read what the linked message says
 Respond ONLY with valid JSON:
 {"isRejection": true, "companyName": "Exact company name"}
 or
@@ -1530,6 +1605,67 @@ function findBestCompanyMatch(geminiName, pendingCompanies) {
   return null;
 }
 
+/**
+ * Pre-filter: returns true if the email is clearly an acknowledgment,
+ * confirmation, or identity verification — never a rejection.
+ * Called BEFORE the AI to avoid false positives on small models.
+ */
+function isAcknowledgmentEmail(subject, body) {
+  const combined = (subject + ' ' + body).toLowerCase();
+
+  // Hard signals — these patterns are NEVER rejections, skip immediately
+  const hardSignals = [
+    'bestätige deine identität',
+    'bestätige dein profil',
+    'bestätige deine e-mail',
+    'verifizierungscode',
+    'verification code',
+    'bestätigungscode',
+    'confirm your identity',
+    'eingangsbestätigung',
+    'bewerbungseingang',
+    'bewerbung eingegangen',
+    'wir haben deine bewerbung erhalten',
+    'wir haben ihre bewerbung erhalten',
+    'your application has been received',
+    'we have received your application'
+  ];
+  if (hardSignals.some(s => combined.includes(s))) return true;
+
+  // Soft signals: "we're reviewing" language combined with NO rejection markers
+  const acknowledgmentPhrases = [
+    'wir freuen uns über dein interesse',
+    'wir freuen uns über ihr interesse',
+    'freuen uns, dass du teil',
+    'freuen uns, dass sie teil',
+    'danke für deine bewerbung',
+    'danke für ihre bewerbung',
+    'lieben dank für deine bewerbung',
+    'deine unterlagen werden geprüft',
+    'unterlagen werden im ersten schritt',
+    'sorgfältig prüfen',
+    'für eine rückmeldung noch etwas zeit',
+    'wir setzen uns so bald wie möglich',
+    'wir melden uns bei dir',
+    'wir melden uns bei ihnen',
+    'thank you for your application',
+    'thank you for applying',
+    'we will be in touch'
+  ];
+
+  const rejectionMarkers = [
+    'leider', 'bedauern', 'nicht weiterverfolgen', 'anderweitig besetzt',
+    'absage', 'entschieden uns für andere', 'andere bewerber', 'nicht berücksichtigen',
+    'unable to', 'not moving forward', 'will not be moving', 'unfortunately',
+    'no longer considering', 'decided not to'
+  ];
+
+  const hasAcknowledgment = acknowledgmentPhrases.some(s => combined.includes(s));
+  const hasRejection      = rejectionMarkers.some(s => combined.includes(s));
+
+  // Acknowledgment phrase present + zero rejection language = safe to skip
+  return hasAcknowledgment && !hasRejection;
+}
 
 /*
 Rejection Email Scanner — Mistral powered
@@ -1583,7 +1719,7 @@ function processRejectionEmails() {
   let label = GmailApp.getUserLabelByName(labelName);
   if (!label) label = GmailApp.createLabel(labelName);
 
-  const queryFresh   = `after:${sinceFormatted} -label:${labelName}`;
+  const queryFresh = `after:${sinceFormatted} -label:${labelName} -subject:"JABA Job Report"`;
   const queryLabeled = `after:${sinceFormatted} label:${labelName}`;
   const freshThreads   = GmailApp.search(queryFresh,   0, 100);
   const labeledThreads = GmailApp.search(queryLabeled, 0, 50);
@@ -1624,6 +1760,28 @@ function processRejectionEmails() {
     const subject = latestMessage.getSubject();
 
     Logger.log(`Processing: "${subject}" from "${sender}"`);
+    // Fix 2 — Skip interview and meeting invitation emails before calling AI
+    const MEETING_SIGNALS = [
+      'bewerbungsgespräch', 'vorstellungsgespräch',
+      'einladung zum gespräch', 'gesprächseinladung',
+      'interview einladung', 'einladung zum interview',
+      'telefoninterview', 'phone interview', 'video interview',
+      'we would like to invite', "we'd like to invite",
+      'calendar invite', 'meeting invitation', 'besprechungseinladung'
+    ];
+    if (MEETING_SIGNALS.some(sig => subject.toLowerCase().includes(sig))) {
+      Logger.log(`⏭ Interview/meeting invitation — skipped: "${subject}"`);
+      Utilities.sleep(300);
+      continue;
+    }
+
+    // Pre-filter: skip acknowledgment and identity verification emails
+    if (isAcknowledgmentEmail(subject, body.substring(0, 1500))) {
+      Logger.log(`⏭ Acknowledgment/confirmation email — skipped: "${subject}"`);
+      Utilities.sleep(300);
+      continue;
+    }
+
     const result = callGeminiForRejection(sender, subject, body, []);
 
     if (!result) { Utilities.sleep(300); continue; }
@@ -1859,3 +2017,603 @@ function backfillInterviewReached() {
   Logger.log("Backfill complete.");
 }
 
+/* ============================================================
+   AUTOMATED DAILY JOB SEARCH — Complete Section (Adzuna)
+   Paste this entire block at the end of Code.js, replacing
+   everything from this comment to the end of the file.
+   ============================================================ */
+
+
+// ── Search config ─────────────────────────────────────────────────────────────
+
+const JOB_SEARCH_KEYWORDS = [
+  'marketing manager',
+  'marketing automation',
+  'online marketing',
+  'digital marketing',
+  'crm manager',
+  'email marketing',
+  'community manager',
+  'campaign manager',
+  'web3 marketing',
+  'AI marketing',
+  'automation manager,'
+];
+
+const JOB_SEARCH_EXCLUDE_TERMS = [
+  'senior', 'sr.', 'lead ', 'head of', 'director',
+  'vp ', 'vice president', 'sales', 'vertrieb', 'ausbildung',
+  'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum', 'praktikant' 
+];
+
+const DIRECT_FETCH_BLOCKED = [
+  'linkedin.com', 'xing.com', 'glassdoor.com',
+  'monster.com', 'stepstone.de'
+];
+
+
+// ── Tavily credit counter ─────────────────────────────────────────────────────
+
+function incrementTavilyCounter(credits) {
+  if (!credits || credits <= 0) return;
+  const props = PropertiesService.getScriptProperties();
+  const now   = new Date();
+
+  const resetStr  = props.getProperty('TAVILY_COUNTER_RESET');
+  const resetDate = resetStr ? new Date(resetStr) : null;
+  if (!resetDate ||
+      now.getMonth()    !== resetDate.getMonth() ||
+      now.getFullYear() !== resetDate.getFullYear()) {
+    props.setProperty('TAVILY_CREDITS_MONTH', '0');
+    props.setProperty('TAVILY_COUNTER_RESET', now.toISOString());
+  }
+
+  const current  = parseInt(props.getProperty('TAVILY_CREDITS_MONTH') || '0');
+  const newTotal = current + credits;
+  props.setProperty('TAVILY_CREDITS_MONTH', String(newTotal));
+  Logger.log(`  📊 Tavily credits this month: ${newTotal}/1000`);
+  return newTotal;
+}
+
+function getTavilyMonthlyUsage() {
+  return parseInt(
+    PropertiesService.getScriptProperties().getProperty('TAVILY_CREDITS_MONTH') || '0'
+  );
+}
+
+
+// ── Content quality check ─────────────────────────────────────────────────────
+
+function looksLikeJobContent(text) {
+  if (!text || text.length < 150) return false;
+  const signals = [
+    'aufgaben', 'anforderungen', 'erfahrung', 'kenntnisse', 'qualifikation',
+    'requirements', 'responsibilities', 'experience', 'skills', 'qualifications',
+    'bewerb', 'stelle', 'vollzeit', 'teilzeit', 'wir suchen', 'we are looking',
+    'marketing', 'automation', 'crm', 'manager', 'kampagne', 'campaign'
+  ];
+  const lower = text.toLowerCase();
+  return signals.filter(s => lower.includes(s)).length >= 2;
+}
+
+
+// ── Tavily advanced extractor ─────────────────────────────────────────────────
+
+function tavilyExtractAdvanced(url) {
+  const key = getTavilyKey();
+  if (!key) { Logger.log('  TAVILY_API_KEY not set'); return null; }
+
+  try {
+    const res = UrlFetchApp.fetch('https://api.tavily.com/extract', {
+      method:             'post',
+      contentType:        'application/json',
+      payload:            JSON.stringify({ api_key: key, urls: [url], extract_depth: 'advanced' }),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`  Tavily advanced HTTP ${res.getResponseCode()}`);
+      return null;
+    }
+
+    const data   = JSON.parse(res.getContentText());
+    const result = data.results && data.results[0];
+    if (!result || !result.raw_content) return null;
+
+    incrementTavilyCounter(2);
+    return result.raw_content.substring(0, 10000);
+
+  } catch (e) {
+    Logger.log(`  Tavily advanced exception: ${e.message}`);
+    return null;
+  }
+}
+
+
+// ── Direct HTML fetch ─────────────────────────────────────────────────────────
+
+function fetchJobPageDirectly(url) {
+  if (!url) return null;
+  if (DIRECT_FETCH_BLOCKED.some(d => url.includes(d))) return null;
+
+  try {
+    const res = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects:    true,
+      headers: {
+        'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+        'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+
+    if (res.getResponseCode() !== 200) return null;
+
+    const text = stripHtmlToText(res.getContentText());
+    return text && text.length >= 100 ? text.substring(0, 10000) : null;
+
+  } catch (e) {
+    Logger.log(`  Direct fetch exception: ${e.message}`);
+    return null;
+  }
+}
+
+
+// ── Adzuna API ────────────────────────────────────────────────────────────────
+
+function getAdzunaAppId()  { return getScriptProperty('ADZUNA_APP_ID');  }
+function getAdzunaAppKey() { return getScriptProperty('ADZUNA_APP_KEY'); }
+
+/**
+ * Extract the most specific city from an Adzuna location object.
+ * location.area is an array like ["Germany", "Bavaria", "Munich"].
+ */
+function extractAdzunaCity(location) {
+  if (!location) return '';
+  const area = location.area || [];
+  for (let i = area.length - 1; i >= 0; i--) {
+    const part = area[i];
+    if (part && part !== 'Germany' && part !== 'Deutschland') return part;
+  }
+  return (location.display_name || '').replace(/, Germany$/, '').trim();
+}
+
+/**
+ * Search Adzuna for one keyword in Germany.
+ * Returns array of { title, company, city, url, description, id }.
+ * The description field is already clean text — used as Tier 1 JD source.
+ */
+function fetchAdzunaJobs(keyword) {
+  const appId  = getAdzunaAppId();
+  const appKey = getAdzunaAppKey();
+  if (!appId || !appKey) {
+    Logger.log('ADZUNA_APP_ID or ADZUNA_APP_KEY not set in Script Properties');
+    return [];
+  }
+
+  const url = 'https://api.adzuna.com/v1/api/jobs/de/search/1?' +
+    `app_id=${encodeURIComponent(appId)}&` +
+    `app_key=${encodeURIComponent(appKey)}&` +
+    `results_per_page=50&` +
+    `what=${encodeURIComponent(keyword)}&` +
+    `sort_by=date&` +
+    `content-type=application/json`;
+
+  try {
+    const res = UrlFetchApp.fetch(url, {
+      method:             'get',
+      headers:            { 'Accept': 'application/json' },
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`Adzuna HTTP ${res.getResponseCode()} for "${keyword}": ${res.getContentText().substring(0, 200)}`);
+      return [];
+    }
+
+    const data    = JSON.parse(res.getContentText());
+    const results = data.results || [];
+
+    const jobs = results.map(job => ({
+      title:       (job.title || '').trim(),
+      company:     (job.company && job.company.display_name ? job.company.display_name : 'Unknown').trim(),
+      city:        extractAdzunaCity(job.location),
+      url:         job.redirect_url || '',
+      description: stripHtmlToText(job.description || '').substring(0, 10000),
+      id:          String(job.id || ''),
+      pubDate:     job.created || ''
+    })).filter(j => j.title && j.url);
+
+    Logger.log(`Adzuna "${keyword}": ${jobs.length} jobs`);
+    return jobs;
+
+  } catch (e) {
+    Logger.log(`Adzuna error for "${keyword}": ${e.message}`);
+    return [];
+  }
+}
+
+/** Fetch all keywords, merge, deduplicate by Adzuna job ID. */
+function fetchAllAdzunaJobs() {
+  const seenIds = new Set();
+  const all     = [];
+
+  for (const keyword of JOB_SEARCH_KEYWORDS) {
+    for (const job of fetchAdzunaJobs(keyword)) {
+      if (!seenIds.has(job.id)) {
+        seenIds.add(job.id);
+        all.push(job);
+      }
+    }
+    Utilities.sleep(400);
+  }
+
+  Logger.log(`Adzuna total (deduplicated): ${all.length} jobs`);
+  return all;
+}
+
+
+// ── Smart JD extractor ────────────────────────────────────────────────────────
+// Tier 1: Adzuna API description (free, already fetched — covers most cases)
+// Tier 2: Direct UrlFetchApp HTML fetch (free, unlimited)
+// Tier 3: Tavily advanced (2 credits — only fires when tiers 1 & 2 fail)
+
+function smartExtractJD(url, apiDescription) {
+  // Adzuna descriptions are truncated snippets (~300-600 chars) — too short
+  // for accurate SMM. Always fetch the full JD from the source URL.
+  // Log the snippet length for visibility but don't use it for scoring.
+  if (apiDescription) {
+    Logger.log(`  Adzuna snippet: ${apiDescription.length} chars (skipping — fetching full JD)`);
+  }
+
+  // Tier 1 — Direct UrlFetchApp (free, unlimited)
+  const direct = fetchJobPageDirectly(url);
+  if (direct && looksLikeJobContent(direct)) {
+    Logger.log(`  ✓ Direct fetch OK (${direct.length} chars)`);
+    return { text: direct, source: 'direct' };
+  }
+
+  Logger.log(`  Direct fetch insufficient — falling back to Tavily advanced`);
+
+  // Tier 2 — Tavily advanced (2 credits, follows redirects to source page)
+  const tavily = tavilyExtractAdvanced(url);
+  if (tavily && looksLikeJobContent(tavily)) {
+    Logger.log(`  ✓ Tavily advanced OK`);
+    return { text: tavily, source: 'tavily_advanced' };
+  }
+
+  Logger.log(`  ✗ Both tiers failed for: ${url}`);
+  return null;
+}
+
+
+// ── Title filter ──────────────────────────────────────────────────────────────
+
+function isValidJobTitleForSearch(title) {
+  if (!title) return false;
+  const lower = title.toLowerCase();
+  return !JOB_SEARCH_EXCLUDE_TERMS.some(t => lower.includes(t));
+}
+
+
+// ── CV type detector (DE / EN only) ──────────────────────────────────────────
+
+function detectCvTypeForSearch(jdText, jobTitle) {
+  const combined = ((jobTitle || '') + ' ' + (jdText || '').substring(0, 800)).toLowerCase();
+  const deSignals = [
+    '(m/w/d)', '(w/m/d)', 'vollzeit', 'teilzeit', 'bewerbung',
+    'berufserfahrung', 'kenntnisse', 'aufgaben', 'anforderungen',
+    'stellenanzeige', 'gehalt', 'karriere', 'erfahrung'
+  ];
+  return deSignals.some(s => combined.includes(s))
+    ? 'DE Web2 Marketing Manager'
+    : 'EN Web2 Marketing Manager';
+}
+
+
+// ── Job_Search_Cache tab ──────────────────────────────────────────────────────
+
+function getOrCreateJobCacheSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Job_Search_Cache');
+  if (!sheet) {
+    sheet = ss.insertSheet('Job_Search_Cache');
+    const headers = ['Date', 'Company', 'Job_Title', 'URL', 'CV_Type', 'Match_Level', 'Score', 'Fetch_Source'];
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers])
+         .setBackground('#34a853')
+         .setFontColor('white')
+         .setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
+    Logger.log('Job_Search_Cache sheet created.');
+  }
+  return sheet;
+}
+
+function cleanJobCache() {
+  const sheet = getOrCreateJobCacheSheet();
+  if (sheet.getLastRow() < 2) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+
+  const dates    = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  const toDelete = [];
+  dates.forEach((row, i) => {
+    if (row[0] && new Date(row[0]) < cutoff) toDelete.push(i + 2);
+  });
+
+  for (let i = toDelete.length - 1; i >= 0; i--) sheet.deleteRow(toDelete[i]);
+
+  if (toDelete.length > 0) {
+    SpreadsheetApp.flush();
+    Logger.log(`Job cache: removed ${toDelete.length} entries older than 30 days.`);
+  }
+}
+
+function isJobInCache(company, title) {
+  const sheet = getOrCreateJobCacheSheet();
+  if (sheet.getLastRow() < 2) return false;
+  const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+  const nc   = company.toLowerCase().trim();
+  const nt   = title.toLowerCase().trim();
+  return data.some(r =>
+    r[0].toString().toLowerCase().trim() === nc &&
+    r[1].toString().toLowerCase().trim() === nt
+  );
+}
+
+function isJobAlreadyApplied(company) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const nc = company.toLowerCase().trim();
+  const skipSheets = new Set(['Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Job_Search_Cache']);
+
+  for (const sheet of ss.getSheets()) {
+    const name = sheet.getName();
+    if (skipSheets.has(name) || !/\d{4}/.test(name)) continue;
+    if (sheet.getLastRow() < 2) continue;
+    const companies = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();
+    if (companies.some(r => r[0].toString().toLowerCase().trim() === nc)) return true;
+  }
+  return false;
+}
+
+function addJobToCache(job, smmResult, cvType, fetchSource) {
+  const sheet   = getOrCreateJobCacheSheet();
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
+  sheet.appendRow([
+    dateStr,
+    job.company  || '',
+    job.title    || '',
+    job.url      || '',
+    cvType       || '',
+    smmResult.match_level  || 'M0',
+    smmResult.total_score  || 0,
+    fetchSource  || ''
+  ]);
+}
+
+
+// ── Email report builder ──────────────────────────────────────────────────────
+
+function buildJobDots(smmResult) {
+  const skills = smmResult.skills || [];
+  function check(imp, dot) {
+    const g = skills.filter(s => s.importance === imp);
+    return g.length > 0 && g.every(s => (s.score || 0) >= 1) ? dot : '';
+  }
+  return check('Crucial', '🟢') + check('Necessary', '🟡') + check('Optional', '🔵');
+}
+
+function escapeHtmlEmail(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildJobReportHtml(jobs) {
+  const dateStr     = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
+  const tavilyMonth = getTavilyMonthlyUsage();
+  const impDot      = { 'Crucial': '🟢', 'Necessary': '🟡', 'Optional': '🔵' };
+
+  function levelColor(score) {
+    if (score >= 36) return '#34a853';
+    if (score >= 30) return '#4fc3f7';
+    if (score >= 21) return '#f4b400';
+    return '#ff6d00';
+  }
+
+  const cards = jobs.map(job => {
+    const smm    = job.smmResult;
+    const score  = smm.total_score || 0;
+    const level  = smm.match_level || 'M0';
+    const dots   = buildJobDots(smm);
+    const color  = levelColor(score);
+    const skills = smm.skills || [];
+
+    const skillRows = skills.map(s => `
+      <tr>
+        <td style="padding:5px 10px;font-size:13px;color:#3c4043;border-bottom:1px solid #f1f3f4;">${escapeHtmlEmail(s.name)}</td>
+        <td style="padding:5px 10px;font-size:13px;font-weight:700;color:#3c4043;text-align:center;border-bottom:1px solid #f1f3f4;white-space:nowrap;">${s.score || 0}/5</td>
+        <td style="padding:5px 10px;font-size:12px;text-align:center;border-bottom:1px solid #f1f3f4;white-space:nowrap;">${impDot[s.importance] || '⚪'} ${escapeHtmlEmail(s.importance)}</td>
+      </tr>`).join('');
+
+    return `
+    <div style="background:#ffffff;border-radius:10px;border:1px solid #e0e0e0;padding:18px 20px;margin-bottom:22px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+      <div style="font-size:16px;font-weight:700;color:#202124;margin-bottom:4px;">
+        🏢 ${escapeHtmlEmail(job.title)} – ${escapeHtmlEmail(job.company)}
+      </div>
+      <div style="font-size:13px;color:#5f6368;margin-bottom:8px;">
+        📍 ${escapeHtmlEmail(job.city || 'Germany')}
+        &nbsp;|&nbsp;
+        <span style="font-weight:700;color:${color};">Score: ${score}/40 &nbsp;|&nbsp; ${level}</span>
+        &nbsp;${dots}
+      </div>
+      <div style="margin-bottom:14px;">
+        <a href="${escapeHtmlEmail(job.url)}" style="display:inline-block;background:#4285f4;color:white;font-size:13px;font-weight:700;padding:6px 14px;border-radius:6px;text-decoration:none;">🔗 View &amp; Apply →</a>
+      </div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f8f9fa;">
+            <th style="padding:7px 10px;font-size:11px;color:#5f6368;text-align:left;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Skill</th>
+            <th style="padding:7px 10px;font-size:11px;color:#5f6368;text-align:center;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Score</th>
+            <th style="padding:7px 10px;font-size:11px;color:#5f6368;text-align:center;text-transform:uppercase;letter-spacing:0.4px;font-weight:600;">Importance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${skillRows}
+          <tr style="background:#f8f9fa;">
+            <td colspan="2" style="padding:7px 10px;font-size:13px;font-weight:700;text-align:right;color:#3c4043;">Total</td>
+            <td style="padding:7px 10px;font-size:15px;font-weight:800;text-align:center;color:${color};">${score}/40</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<body style="font-family:'Segoe UI',Arial,sans-serif;background:#f8f9fa;padding:20px;margin:0;">
+<div style="max-width:660px;margin:0 auto;">
+  <div style="background:#4285f4;border-radius:10px;padding:18px 22px;margin-bottom:24px;">
+    <h2 style="color:white;margin:0 0 4px;font-size:18px;">🤖 JABA Job Report — ${escapeHtmlEmail(dateStr)}</h2>
+    <div style="color:rgba(255,255,255,0.88);font-size:13px;">
+      ${jobs.length} job(s) at M2 or above &nbsp;·&nbsp; Tavily this month: ${tavilyMonth}/1000 credits
+    </div>
+  </div>
+  ${cards}
+  <div style="font-size:11px;color:#9aa0a6;text-align:center;margin-top:12px;padding-bottom:20px;">
+    Generated by JABA · Only M2 / M3 / M4 matches shown
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+function sendJobReportEmail(htmlBody) {
+  const recipient = getScriptProperty('REPORT_EMAIL');
+  if (!recipient) {
+    Logger.log('⚠ REPORT_EMAIL not set in Script Properties — email not sent.');
+    return;
+  }
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
+  GmailApp.sendEmail(recipient, `JABA Job Report ${dateStr}`, '', { htmlBody, name: 'JABA 🤖' });
+  Logger.log(`Job report sent to ${recipient}`);
+}
+
+
+// ── Main orchestrator ─────────────────────────────────────────────────────────
+
+function runDailyJobSearch() {
+  const MAX_JOBS = 10;
+
+  Logger.log('=== JABA Daily Job Search started ===');
+  Logger.log(`Tavily credits at start of run: ${getTavilyMonthlyUsage()}/1000`);
+
+  // Step 1 — clean cache entries older than 30 days
+  cleanJobCache();
+
+  // Step 2 — fetch all Adzuna jobs (deduplicated by job ID)
+  const allJobs = fetchAllAdzunaJobs();
+
+  if (allJobs.length === 0) {
+    Logger.log('No Adzuna jobs returned today. Exiting.');
+    return;
+  }
+
+  // Step 3 — apply filters: title exclusions + dedup against cache + applied sheet
+  const candidates = [];
+  for (const job of allJobs) {
+    if (!isValidJobTitleForSearch(job.title)) {
+      Logger.log(`  ✗ Excluded: "${job.title}"`);
+      continue;
+    }
+    if (isJobInCache(job.company, job.title)) {
+      Logger.log(`  ✗ In cache: "${job.title}" @ ${job.company}`);
+      continue;
+    }
+    if (isJobAlreadyApplied(job.company)) {
+      Logger.log(`  ✗ Already applied: ${job.company}`);
+      continue;
+    }
+    candidates.push(job);
+    if (candidates.length >= MAX_JOBS * 2) break;
+  }
+
+  Logger.log(`Candidates after filtering: ${candidates.length}`);
+
+  if (candidates.length === 0) {
+    Logger.log('No new candidates today — no email sent.');
+    return;
+  }
+
+  // Step 4 — extract JD, run SMM, collect M2+ results
+  const reportJobs = [];
+  let   processed  = 0;
+
+  for (const job of candidates) {
+    if (processed >= MAX_JOBS) break;
+
+    Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company}`);
+
+    // Tier 1 uses Adzuna description; tiers 2-3 fetch from URL if needed
+    const extracted = smartExtractJD(job.url, job.description);
+    if (!extracted) {
+      Logger.log(`  ✗ JD fetch failed — skipping`);
+      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
+      processed++;
+      Utilities.sleep(500);
+      continue;
+    }
+
+    const cvType = detectCvTypeForSearch(extracted.text, job.title);
+    Logger.log(`  CV type: ${cvType}`);
+
+    let smmResult;
+    try {
+      const raw = analyzeSkillsMatch(extracted.text, cvType);
+      smmResult = JSON.parse(raw);
+      if (smmResult.error) throw new Error(smmResult.error);
+    } catch (e) {
+      Logger.log(`  ✗ SMM error: ${e.message}`);
+      processed++;
+      Utilities.sleep(3000);
+      continue;
+    }
+
+    const score    = smmResult.total_score || 0;
+    const level    = smmResult.match_level  || 'M0';
+    const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
+
+    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
+
+    // Always cache to prevent reprocessing
+    addJobToCache(job, smmResult, cvType, extracted.source);
+
+    // Only include M2+ in the email report
+    if (levelNum >= 2) {
+      reportJobs.push({ ...job, smmResult, cvType });
+      Logger.log(`  ✓ Added to report (${level})`);
+    }
+
+    processed++;
+    Utilities.sleep(1500); // Mistral rate limit
+  }
+
+  Logger.log(`\n— Processed: ${processed} | M2+ for report: ${reportJobs.length}`);
+  Logger.log(`— Tavily credits this month: ${getTavilyMonthlyUsage()}/1000`);
+
+  // Step 5 — send email if any M2+ found
+  if (reportJobs.length > 0) {
+    const html = buildJobReportHtml(reportJobs);
+    sendJobReportEmail(html);
+    Logger.log(`Report email sent with ${reportJobs.length} job(s).`);
+  } else {
+    Logger.log('No M2+ jobs found today — no email sent.');
+  }
+
+  Logger.log('=== JABA Daily Job Search complete ===');
+}
