@@ -2458,39 +2458,49 @@ function isCompleteJobDescription(text) {
  * Returns true if the fetched text is actually about the right job.
  * Prevents JABA from using a competitor's careers page or unrelated content.
  */
-function isJdRelevantToJob(text, company, jobTitle) {
+function isJdRelevantToJob(text, company, jobTitle, trustedSource) {
   if (!text || text.length < 200) return false;
   const lower = text.toLowerCase();
-
+ 
+  const titleWords = jobTitle
+    .toLowerCase()
+    .replace(/\(m\/w\/d\)|\(w\/m\/d\)|\(w\/d\/m\)|\(f\/m\/d\)/gi, '')
+    .split(/\s+/)
+    .filter(w => w.length > 4);
+ 
+  // ── Trusted source path (Remotive, Jobicy, Arbeitnow, RemoteOK) ───────────
+  // Company name is often stripped from raw API descriptions.
+  // Title match alone is sufficient evidence.
+  if (trustedSource) {
+    const titleMatch = titleWords.some(w => lower.includes(w));
+    if (!titleMatch) {
+      Logger.log(`  ✗ Relevance (trusted): no title words from "${jobTitle}" in text`);
+    }
+    return titleMatch;
+  }
+ 
+  // ── External/fetched source path — require both company AND title ──────────
   const companyWords = company
     .toLowerCase()
-    .replace(/\s+(gmbh|ag|se|kg|ltd|inc|llc|bv|sas|co\.)\b/gi, '')
+    .replace(/\s+(gmbh\s*&\s*co\.?\s*kg|gmbh|ag|se|kg|ohg|ug|ltd|inc|corp|llc|sas|bv|nv|ab)\.?/gi, '')
     .replace(/[&.,\-]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length > 3);
-
-  const titleWords = jobTitle
-    .toLowerCase()
-    .replace(/\(m\/w\/d\)|\(w\/m\/d\)|\(f\/m\/d\)/gi, '')
-    .split(/\s+/)
-    .filter(w => w.length > 4);
-
-  // Company name MUST appear — no company match = wrong page, full stop
+ 
   const companyMatch = companyWords.length > 0 &&
     companyWords.some(w => lower.includes(w));
-
+ 
   if (!companyMatch) {
     Logger.log(`  ✗ Relevance: company "${company}" not found in fetched text`);
     return false;
   }
-
-  // With company confirmed, require at least one title word too
+ 
   const titleMatch = titleWords.some(w => lower.includes(w));
   if (!titleMatch) {
     Logger.log(`  ✗ Relevance: company found but no title words from "${jobTitle}"`);
     return false;
   }
-
+ 
   return true;
 }
 
@@ -3100,11 +3110,17 @@ function isValidJobTitleForSearch(title) {
 
 function detectCvTypeForSearch(jdText, jobTitle) {
   const combined = ((jobTitle || '') + ' ' + (jdText || '').substring(0, 800)).toLowerCase();
-  const web3Signals = ['web3','blockchain','crypto','defi','nft','token','dao'];
+ 
+  const web3Signals = ['web3', 'blockchain', 'crypto', 'defi', 'nft', 'token', 'dao'];
   if (web3Signals.some(s => combined.includes(s))) return 'Web3 Marketing Manager';
-  const deSignals = ['(m/w/d)','vollzeit','bewerbung','berufserfahrung','aufgaben'];
+ 
+  const deSignals = [
+    '(m/w/d)', '(w/m/d)', '(w/d/m)',   // ← added two variants
+    'vollzeit', 'bewerbung', 'berufserfahrung', 'aufgaben'
+  ];
   if (deSignals.some(s => combined.includes(s))) return 'DE Web2 Marketing Manager';
-  return 'EN Web2 Marketing Manager'; // default for international
+ 
+  return 'EN Web2 Marketing Manager';
 }
 
 
@@ -3131,21 +3147,33 @@ function getOrCreateJobCacheSheet() {
 function cleanJobCache() {
   const sheet = getOrCreateJobCacheSheet();
   if (sheet.getLastRow() < 2) return;
-
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-
-  const dates    = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+ 
+  const now            = new Date();
+  const cutoffAnalyzed = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days
+  const cutoffSkip     = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000); //  7 days
+ 
+  // Columns: Date(1), Company(2), Job_Title(3), URL(4), CV_Type(5), Match_Level(6), Score(7), Fetch_Source(8)
+  // Read 6 columns so index 5 = Match_Level
+  const data     = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
   const toDelete = [];
-  dates.forEach((row, i) => {
-    if (row[0] && new Date(row[0]) < cutoff) toDelete.push(i + 2);
+ 
+  data.forEach((row, i) => {
+    const dateVal    = row[0];
+    const matchLevel = (row[5] || '').toString().toUpperCase().trim();
+    if (!dateVal) return;
+ 
+    const entryDate  = new Date(dateVal);
+    const isSkip     = matchLevel === 'SKIP';
+    const cutoff     = isSkip ? cutoffSkip : cutoffAnalyzed;
+ 
+    if (entryDate < cutoff) toDelete.push(i + 2); // +2: 1-indexed + header row
   });
-
+ 
   for (let i = toDelete.length - 1; i >= 0; i--) sheet.deleteRow(toDelete[i]);
-
+ 
   if (toDelete.length > 0) {
     SpreadsheetApp.flush();
-    Logger.log(`Job cache: removed ${toDelete.length} entries older than 30 days.`);
+    Logger.log(`Job cache cleaned: ${toDelete.length} entries removed (SKIP > 7d or analyzed > 30d).`);
   }
 }
 
@@ -3161,17 +3189,24 @@ function isJobInCache(company, title) {
   );
 }
 
-function isJobAlreadyApplied(company) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const nc = company.toLowerCase().trim();
+function isJobAlreadyApplied(company, title) {
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const nc  = company.toLowerCase().trim();
+  const nt  = normalizeJobTitle(title || '').toLowerCase().trim();
   const skipSheets = new Set(['Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Job_Search_Cache']);
-
+ 
   for (const sheet of ss.getSheets()) {
     const name = sheet.getName();
     if (skipSheets.has(name) || !/\d{4}/.test(name)) continue;
     if (sheet.getLastRow() < 2) continue;
-    const companies = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();
-    if (companies.some(r => r[0].toString().toLowerCase().trim() === nc)) return true;
+ 
+    // Read company (col B) + position (col C) together
+    const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+    if (data.some(r => {
+      const rc = (r[0] || '').toString().toLowerCase().trim();
+      const rt = normalizeJobTitle((r[1] || '').toString()).toLowerCase().trim();
+      return rc === nc && rt === nt;
+    })) return true;
   }
   return false;
 }
@@ -3301,6 +3336,28 @@ function sendJobReportEmail(htmlBody) {
   Logger.log(`Job report sent to ${recipient}`);
 }
 
+function scoreJobTitleQuality(title) {
+  if (!title) return 0;
+  const lower = title.toLowerCase();
+ 
+  const highValue = [
+    'growth', 'performance', 'crm', 'lifecycle', 'retention',
+    'automation', 'marketing manager', 'email marketing',
+    'marketing automation', 'digital marketing', 'campaign manager',
+    'acquisition', 'demand generation', 'go-to-market', 'gtm',
+    'lead generation', 'paid', 'seo', 'performance marketing'
+  ];
+  const lowValue = [
+    'copywriter', 'content creator', 'influencer',
+    'junior', 'assistant', 'design director', 'designer',
+    'support', 'analyst', 'coordinator'
+  ];
+ 
+  let score = 0;
+  highValue.forEach(t => { if (lower.includes(t)) score += 2; });
+  lowValue.forEach(t  => { if (lower.includes(t)) score -= 1; });
+  return score;
+}
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
@@ -3310,9 +3367,10 @@ function sendJobReportEmail(htmlBody) {
 // when no M2+ jobs found. All filtering logic identical.
  
 function runDailyJobSearch() {
-  const MAX_JOBS = 6; // unchanged
+  const MAX_JOBS      = 15; // ← was 6
+  const CANDIDATE_CAP = 40; // ← was MAX_JOBS * 2 = 12
  
-  // ── diagnostics counter object ────────────────────────────────────────────
+  // Diagnostics counters (unchanged from Phase 1)
   const diag = {
     fetched_total:      0,
     excluded_title:     0,
@@ -3331,18 +3389,15 @@ function runDailyJobSearch() {
     tavily_start:       0,
     tavily_end:         0
   };
-  // ── end diagnostics setup ─────────────────────────────────────────────────
  
   Logger.log('=== JABA Daily Job Search started ===');
-  diag.tavily_start = getTavilyMonthlyUsage(); // ← record start credits
+  diag.tavily_start = getTavilyMonthlyUsage();
   Logger.log(`Tavily credits at start of run: ${diag.tavily_start}/1000`);
  
-  // Step 1 — clean cache entries older than 30 days
   cleanJobCache();
  
-  // Step 2 — fetch all jobs (deduplicated by job ID)
   const allJobs = fetchAllJobSources();
-  diag.fetched_total = allJobs.length; // ← total from all sources
+  diag.fetched_total = allJobs.length;
  
   if (allJobs.length === 0) {
     Logger.log('No jobs returned today. Exiting.');
@@ -3351,54 +3406,66 @@ function runDailyJobSearch() {
     return;
   }
  
-  // Step 3 — apply filters
+  // ── Step 3: filter candidates ─────────────────────────────────────────────
   const candidates = [];
   for (const job of allJobs) {
+ 
     if (!isRelevantJobTitle(job.title)) {
       Logger.log(`  ✗ [title] "${job.title}"`);
-      diag.excluded_title++; // ← title gate
+      diag.excluded_title++;
       continue;
     }
+ 
     if (!job.descriptionFull) {
-      const inGermany   = isGermanLocation(job.city || '');
-      const titleLower  = job.title.toLowerCase();
-      const descLower   = (job.description || '').toLowerCase();
+      const inGermany     = isGermanLocation(job.city || '');
+      const titleLower    = job.title.toLowerCase();
+      const descLower     = (job.description || '').toLowerCase();
       const mentionsRemote = titleLower.includes('remote') ||
                              descLower.includes('remote')  ||
                              descLower.includes('homeoffice') ||
                              descLower.includes('home office');
       if (!inGermany && !mentionsRemote) {
         Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city}`);
-        diag.excluded_geo++; // ← geo gate
+        diag.excluded_geo++;
         continue;
       }
     }
+ 
     if (isJobInCache(job.company, job.title)) {
       Logger.log(`  ✗ [cache] "${job.title}" @ ${job.company}`);
-      diag.excluded_cache++; // ← cache gate
+      diag.excluded_cache++;
       continue;
     }
-    if (isJobAlreadyApplied(job.company)) {
-      Logger.log(`  ✗ [applied] ${job.company}`);
-      diag.excluded_applied++; // ← applied gate
+ 
+    // ← FIX: pass job.title as second argument (was company-only)
+    if (isJobAlreadyApplied(job.company, job.title)) {
+      Logger.log(`  ✗ [applied] "${job.title}" @ ${job.company}`);
+      diag.excluded_applied++;
       continue;
     }
+ 
     candidates.push(job);
-    if (candidates.length >= MAX_JOBS * 2) break;
+    if (candidates.length >= CANDIDATE_CAP) break; // ← fixed cap of 40
   }
  
-  diag.candidate_selected = candidates.length; // ← candidates that passed all gates
+  // ── Sort by title quality — best candidates processed first ───────────────
+  candidates.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
+  if (candidates.length > 0) {
+    Logger.log(`Top 5 after sort: ${candidates.slice(0, 5).map(j => `"${j.title}"`).join(' | ')}`);
+  }
+ 
+  diag.candidate_selected = candidates.length;
   Logger.log(`Candidates after filtering: ${candidates.length}`);
  
   if (candidates.length === 0) {
     Logger.log('No new candidates today — no email sent.');
     diag.tavily_end = getTavilyMonthlyUsage();
     emitDiagnosticsSummary(diag);
-    sendDebugDiagnosticsEmail(diag); // ← debug email even when candidates = 0
+    // No debug email here — nothing was scored, nothing to diagnose
     return;
   }
  
-  // Step 4 — extract JD, run SMM, collect M2+ results
+  // ── Step 4: extract JD, score, collect M2+ ───────────────────────────────
   const reportJobs = [];
   let   processed  = 0;
  
@@ -3410,16 +3477,18 @@ function runDailyJobSearch() {
     const extracted = smartExtractJD(job.url, job.description, job.descriptionFull);
     if (!extracted) {
       Logger.log(`  ✗ JD fetch failed — skipping`);
-      diag.jd_fetch_failed++; // ← JD fetch gate
+      diag.jd_fetch_failed++;
       addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
       processed++;
       Utilities.sleep(500);
       continue;
     }
  
-    if (!isJdRelevantToJob(extracted.text, job.company, job.title)) {
+    // ← FIX: pass trustedSource flag — relaxes relevance check for API full-text sources
+    const isTrustedSource = job.descriptionFull === true || extracted.source === 'api_full';
+    if (!isJdRelevantToJob(extracted.text, job.company, job.title, isTrustedSource)) {
       Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
-      diag.jd_irrelevant++; // ← relevance gate
+      diag.jd_irrelevant++;
       addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
       processed++;
       Utilities.sleep(500);
@@ -3436,7 +3505,7 @@ function runDailyJobSearch() {
       if (smmResult.error) throw new Error(smmResult.error);
     } catch (e) {
       Logger.log(`  ✗ SMM error: ${e.message}`);
-      diag.smm_failed++; // ← SMM gate
+      diag.smm_failed++;
       processed++;
       Utilities.sleep(3000);
       continue;
@@ -3446,11 +3515,9 @@ function runDailyJobSearch() {
     const level    = smmResult.match_level  || 'M0';
     const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
  
-    // ── score bucket ────────────────────────────────────────────────────────
     if      (levelNum === 0) diag.scored_m0++;
     else if (levelNum === 1) diag.scored_m1++;
     else                     diag.scored_m2_plus++;
-    // ── end score bucket ────────────────────────────────────────────────────
  
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
  
@@ -3467,19 +3534,20 @@ function runDailyJobSearch() {
  
   diag.processed_count   = processed;
   diag.report_jobs_count = reportJobs.length;
-  diag.tavily_end        = getTavilyMonthlyUsage(); // ← record end credits
+  diag.tavily_end        = getTavilyMonthlyUsage();
  
-  // ── emit structured diagnostics to log ───────────────────────────────────
   emitDiagnosticsSummary(diag);
  
-  // Step 5 — send email
   if (reportJobs.length > 0) {
     const html = buildJobReportHtml(reportJobs);
     sendJobReportEmail(html);
     Logger.log(`Report email sent with ${reportJobs.length} job(s).`);
   } else {
     Logger.log('No M2+ jobs found today — no email sent.');
-    sendDebugDiagnosticsEmail(diag); // ← debug email with full breakdown
+    // ← Debug email only when something was actually scored (Rey's rule)
+    if (diag.scored_m0 + diag.scored_m1 > 0) {
+      sendDebugDiagnosticsEmail(diag);
+    }
   }
  
   Logger.log('=== JABA Daily Job Search complete ===');
