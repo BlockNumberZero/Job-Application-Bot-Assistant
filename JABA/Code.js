@@ -5,19 +5,83 @@ const CONFIG = {
   MISTRAL_MODEL: "mistral-medium-latest",
   TIMEZONE: "Europe/Berlin",
   MY_NAME: "Rey Chancahuaña",
-  ALLOWED_PLATFORMS: ["LinkedIn", "Cryptojobslist", "Indeed", "Cryptocurrencyjobs", "Web3career", "Stepstone", "Arbeitsagentur"],
-  PLATFORM_DOMAINS: {
-    "linkedin.com": "LinkedIn",
-    "cryptojobslist.com": "Cryptojobslist",
-    "indeed.com": "Indeed",
-    "cryptocurrencyjobs.co": "Cryptocurrencyjobs",
-    "web3career.com": "Web3career",
-    "stepstone.com": "Stepstone",
-    "bybit.com": "Own website",
-    "arbeitsagentur.de": "Arbeitsagentur",
-    "jobboerse.arbeitsagentur.de": "Arbeitsagentur",
-  }
+  ALLOWED_PLATFORMS: [
+  "LinkedIn", "Cryptojobslist", "Indeed", "Cryptocurrencyjobs",
+  "Web3career", "Stepstone", "Arbeitsagentur", "Remotive",
+  "Jobicy", "Himalayas", "WeWorkRemotely", "EuroJobs"
+],
+PLATFORM_DOMAINS: {
+  "linkedin.com":           "LinkedIn",
+  "cryptojobslist.com":     "Cryptojobslist",
+  "indeed.com":             "Indeed",
+  "cryptocurrencyjobs.co":  "Cryptocurrencyjobs",
+  "web3career.com":         "Web3career",
+  "stepstone.com":          "Stepstone",
+  "stepstone.de":           "Stepstone",
+  "arbeitsagentur.de":      "Arbeitsagentur",
+  "jobboerse.arbeitsagentur.de": "Arbeitsagentur",
+  "remotive.com":           "Remotive",
+  "jobicy.com":             "Jobicy",
+  "himalayas.app":          "Himalayas",
+  "weworkremotely.com":     "WeWorkRemotely",
+  "eurojobs.com":           "EuroJobs",
+  "bybit.com":              "Own website"
+},
 };
+
+const PROMPT_VERSIONS = {
+  SMM:           'v1.4',
+  REJECTION:     'v1.2',
+  COVER_LETTER:  'v1.3'
+};
+
+/**
+ * Attempts to parse potentially malformed JSON from Mistral/Groq.
+ * Handles: trailing content, truncation at end, truncation mid-object,
+ * and extra text before the JSON object.
+ */
+function repairAndParseSmm(raw) {
+  if (!raw) throw new Error('Empty SMM response');
+  let content = raw.replace(/```json|```/g, '').trim();
+
+  // Strip any leading text before the first {
+  const firstBrace = content.indexOf('{');
+  if (firstBrace > 0) content = content.substring(firstBrace);
+
+  // Try direct parse first
+  try { return JSON.parse(content); } catch(e) {}
+
+  // Truncated at end — find last complete skill object
+  if (!content.endsWith('}')) {
+    const lastClose = content.lastIndexOf('},');
+    if (lastClose > 0) {
+      const repaired = content.substring(0, lastClose + 1) +
+        '\n  ],\n  "total_score": 0,\n  "match_level": "M0"\n}';
+      try {
+        Logger.log('SMM JSON: repaired end-truncation');
+        return JSON.parse(repaired);
+      } catch(e2) {}
+    }
+  }
+
+  // Mid-object corruption — try to extract valid skills array
+  const skillsMatch = content.match(/"skills"\s*:\s*(\[[\s\S]*?\])/);
+  if (skillsMatch) {
+    try {
+      const skills = JSON.parse(skillsMatch[1]);
+      Logger.log(`SMM JSON: extracted ${skills.length} skills from corrupted response`);
+      return { skills, total_score: 0, match_level: 'M0' };
+    } catch(e3) {}
+  }
+
+  throw new Error(`Could not repair SMM JSON. Preview: ${content.substring(0, 100)}`);
+}
+
+function getSmmCacheKey(jdText, cvType) {
+  const input   = cvType + '|' + jdText.replace(/\s+/g, ' ').substring(0, 3000);
+  const digest  = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, input);
+  return 'smm_' + digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
 
 // Central helper: replaces any "remote" or "home office" variant with "Sassnitz"
 function normalizeLocation(city) {
@@ -137,7 +201,21 @@ function analyzeSkillsMatch(jdInput, cvType) {
     }
 
     const templateText = DocumentApp.openById(templateDocId).getBody().getText();
-    const cleanedJD    = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
+    const cleanedJD = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
+
+// Guard: JD too short for meaningful SMM analysis
+if (cleanedJD.length < 300) {
+  Logger.log(`SMM skipped — JD too short: ${cleanedJD.length} chars`);
+  return JSON.stringify({ error: 'JD too short for SMM analysis (< 300 chars). Try fetching the full job page.' });
+}
+        // Check cache before calling Mistral
+    const cacheKey    = getSmmCacheKey(cleanedJD, cvType);
+    const scriptCache = CacheService.getScriptCache();
+    const cached      = scriptCache.get(cacheKey);
+    if (cached) {
+      Logger.log(`SMM cache hit — skipping Mistral call`);
+      return cached;
+    }
     const cleanedCV    = templateText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 3000);
 
     // Load existing Master_Category values to keep new ones consistent
@@ -231,37 +309,52 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
       muteHttpExceptions: true
     };
 
-    let response, responseCode;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      response     = UrlFetchApp.fetch(url, options);
-      responseCode = response.getResponseCode();
-      if (responseCode === 200) break;
-      if (responseCode === 429 || responseCode === 503) {
-        Logger.log(`Mistral SMM rate limit (attempt ${attempt}) — waiting ${attempt * 15}s`);
-        Utilities.sleep(attempt * 15000);
-      } else {
-        throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
-      }
-    }
-    if (responseCode !== 200) {
-      throw new Error(`Mistral API failed after 3 attempts. Last code: ${responseCode}`);
-    }
+    // REPLACE this block inside analyzeSkillsMatch (the retry loop + response handling):
+
+let response, responseCode;
+const RETRY_DELAYS = [20000, 45000, 90000]; // 20s, 45s, 90s
+for (let attempt = 1; attempt <= 3; attempt++) {
+  response     = UrlFetchApp.fetch(url, options);
+  responseCode = response.getResponseCode();
+  if (responseCode === 200) break;
+  if (responseCode === 429 || responseCode === 503) {
+    const wait = RETRY_DELAYS[attempt - 1];
+    Logger.log(`Mistral SMM ${responseCode} (attempt ${attempt}) — waiting ${wait/1000}s`);
+    Utilities.sleep(wait);
+  } else {
+    throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
+  }
+}
+
+// If Mistral is still failing after 3 attempts, try Groq as fallback
+if (responseCode !== 200) {
+  Logger.log(`Mistral SMM failed after 3 attempts (code ${responseCode}) — trying Groq fallback`);
+  const groqRaw = callGroqApi(
+    "You are a precise recruitment skills analyst. Always respond with valid JSON only. No markdown, no code blocks, no explanation whatsoever.",
+    prompt,
+    "llama-3.3-70b-versatile",
+    3000
+  );
+  if (!groqRaw) throw new Error(`Both Mistral and Groq failed for SMM analysis.`);
+  let content = groqRaw.replace(/```json|```/g, '').trim();
+  const parsed = repairAndParseSmm(content); // uses the new helper below
+  // recalculate totals
+  if (parsed.skills && parsed.skills.length > 0) {
+    parsed.total_score = parsed.skills.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
+    if      (parsed.total_score <= 10) parsed.match_level = "M0";
+    else if (parsed.total_score <= 20) parsed.match_level = "M1";
+    else if (parsed.total_score <= 29) parsed.match_level = "M2";
+    else if (parsed.total_score <= 35) parsed.match_level = "M3";
+    else                               parsed.match_level = "M4";
+  }
+  Logger.log(`Groq fallback SMM — Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
+  return JSON.stringify(parsed);
+}
 
     const json    = JSON.parse(response.getContentText());
     let content = json.choices[0].message.content.trim()
-                      .replace(/```json|```/g, '').trim();
-
-    // Safety net: if JSON is truncated, attempt to close it before parsing
-    if (!content.endsWith('}')) {
-      // Find the last complete skill object and close the JSON gracefully
-      const lastComplete = content.lastIndexOf('},');
-      if (lastComplete > 0) {
-        content = content.substring(0, lastComplete + 1) + '\n  ],\n  "total_score": 0,\n  "match_level": "M0"\n}';
-        Logger.log("Warning: Mistral response was truncated — JSON was repaired.");
-      }
-    }
-
-    const parsed = JSON.parse(content);
+                  .replace(/```json|```/g, '').trim();
+const parsed = repairAndParseSmm(content);
 
     // Server-side validation: recalculate total and match level to prevent AI drift
     if (parsed.skills && parsed.skills.length > 0) {
@@ -275,7 +368,9 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
     }
 
     Logger.log(`SMM Analysis complete — ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
-    return JSON.stringify(parsed);
+    const resultStr = JSON.stringify(parsed);
+scriptCache.put(cacheKey, resultStr, 43200); // cache for 12 hours
+return resultStr;
 
   } catch (e) {
     Logger.log(`Error in analyzeSkillsMatch: ${e.toString()}\nStack: ${e.stack}`);
@@ -295,7 +390,8 @@ function getOrCreateSmmRawDataSheet() {
     const headers = [
       "UID", "Date", "Company", "Position", "CV_Type",
       "Skill_Rank", "Skill_Name", "Match_Score", "JD_Importance",
-      "CV_Evidence", "Gap_Tip", "Interview_Reached", "Master_Category"
+      "CV_Evidence", "Gap_Tip", "Interview_Reached", "Master_Category",
+      "Prompt_Version"             // ← new
     ];
     sheet.getRange(1, 1, 1, headers.length)
          .setValues([headers])
@@ -317,13 +413,11 @@ const RELEVANT_KEYWORDS = [
   'marketing','crm','growth','content','social media','web3','blockchain',
   'community','automation','digital','campaign','brand','branding','seo','sea',
   'performance','email marketing','influencer','analytics','communications',
-  'internship', 'intern ', 'fellowship',
   'copywriter','storytelling','acquisition','retention','engagement','e-commerce',
   // German
   'wachstum','inhalt','gemeinschaft','automatisierung','kampagne','marke',
   'leistung','kommunikation','öffentlichkeitsarbeit','digitalmarketing',
-  'onlinemarketing','online-marketing','markenführung','werkstudent', 'werkstudentin', 
-  'praktikum', 'praktikant', 'praktikantin','pflichtpraktikum', 'reichweite'
+  'onlinemarketing','online-marketing','markenführung','reichweite'
 ];
 
 const SKIP_KEYWORDS = [
@@ -331,12 +425,12 @@ const SKIP_KEYWORDS = [
   'sales','engineer','software developer','software engineer','lawyer',
   'accountant','nurse','driver','warehouse','key account','key-account',
   'recruiter','finance controller','electrician','plumber','mechanic',
-  'chef','cook','cleaner','security guard',
+  'chef','cook','cleaner','internship','intern ','fellowship','security guard',
   // German
   'vertrieb','verkauf','ingenieur','softwareentwickler','entwickler',
   'rechtsanwalt','buchhalter','steuerberater','krankenschwester','pfleger',
   'fahrer','lagerarbeiter','lagermitarbeiter','schlüsselkunde','key account',
-  'personalvermittler','elektriker','klempner','mechaniker','koch','reinigungskraft'
+  'personalvermittler','werkstudent','werkstudentin','praktikum','praktikant','praktikantin','pflichtpraktikum','elektriker','klempner','mechaniker','koch','reinigungskraft'
 ];
 
 // Domains where fetching always fails — skip immediately
@@ -421,6 +515,56 @@ function tavilySearch(company, jobTitle) {
   }
 }
 
+/**
+ * Searches Tavily for a job, but validates each result is actually
+ * about the right company/role before returning it.
+ */
+function tavilySearchValidated(company, jobTitle) {
+  const key = getTavilyKey();
+  if (!key) return null;
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      api_key: key,
+      query: `"${company}" ${jobTitle} Stellenanzeige`,
+      query: `"${company}" ${jobTitle} Stelle`,
+      search_depth: 'basic',
+      max_results: 5,
+      include_raw_content: false,
+      exclude_domains: ['linkedin.com', 'xing.com', 'glassdoor.com', 'kununu.com', 'navvis.com']
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res  = UrlFetchApp.fetch('https://api.tavily.com/search', options);
+    const code = res.getResponseCode();
+    if (code !== 200) return null;
+
+    const data    = JSON.parse(res.getContentText());
+    const results = data.results || [];
+
+    for (const r of results) {
+      const text = tavilyExtract(r.url);
+      if (!text || !looksLikeJobContent(text)) { Utilities.sleep(400); continue; }
+      if (!isJdRelevantToJob(text, company, jobTitle)) {
+        Logger.log(`  Tavily result rejected (irrelevant): ${r.url}`);
+        Utilities.sleep(400);
+        continue;
+      }
+      Logger.log(`  Tavily search validated OK: ${r.url}`);
+      return text;
+    }
+    return null;
+
+  } catch (e) {
+    Logger.log(`tavilySearchValidated exception: ${e.message}`);
+    return null;
+  }
+}
+
 /* ── Helpers ─────────────────────────────────────────────── */
 
 function getOrCreateLabel(name) {
@@ -481,6 +625,72 @@ Return ONLY a JSON array of job title and company. No URLs. Empty array if none 
     Logger.log(`extractJobsFromAlertEmail parse error: ${e.message}`);
     return [];
   }
+}
+
+/**
+ * Extracts ALL job listings from an Indeed alert email HTML body.
+ * Uses href jk= pattern — reliable regardless of email length or batch size.
+ * Replaces Groq-based extractJobsFromAlertEmail.
+ */
+function extractJobListingsFromHtml(htmlBody) {
+  if (!htmlBody) return [];
+  const jobs = [];
+  const seen = new Set();
+
+  // Normalise HTML entities before parsing
+  const html = htmlBody
+    .replace(/&amp;/g, '&').replace(/&#38;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&#\d+;/g, ' ').replace(/&nbsp;/g, ' ');
+
+  // Each Indeed job link: <a href="...jk=ID...">Job Title</a>
+  const pattern = /href="[^"]*jk=([a-zA-Z0-9]+)[^"]*"[^>]*>([\s\S]{4,150}?)<\/a>/gi;
+  let match;
+
+  while ((match = pattern.exec(html)) !== null) {
+    const jk       = match[1];
+    const rawTitle = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+    if (seen.has(jk)) continue;
+    if (!rawTitle || rawTitle.length < 4) continue;
+    // Skip action/navigation links
+    if (/^(bewerb|apply|view|mehr|weiter|vollständig|see |anzeigen|abmeld|unsubscrib|alle jobs|job alert)/i
+        .test(rawTitle)) continue;
+    if (/^https?:|^\d+$/.test(rawTitle)) continue;
+
+    seen.add(jk);
+
+    // Extract company from the HTML that immediately follows the job title link
+    const afterLink = html.substring(match.index + match[0].length,
+                                     match.index + match[0].length + 600);
+    const company   = extractCompanyFromHtmlContext(afterLink) || 'Unknown';
+
+    jobs.push({
+      title:   rawTitle,
+      company: company,
+      url:     `https://de.indeed.com/viewjob?jk=${jk}`,
+      jk:      jk
+    });
+  }
+
+  Logger.log(`  HTML extraction: ${jobs.length} job(s) found in email`);
+  return jobs;
+}
+
+/**
+ * Extracts the most likely company name from the HTML immediately after a job title.
+ */
+function extractCompanyFromHtmlContext(contextHtml) {
+  const chunks = contextHtml
+    .replace(/<[^>]+>/g, '\n')
+    .split('\n')
+    .map(s => s.trim())
+    .filter(s => s.length > 2 && s.length < 80)
+    .filter(s => !/^https?:\/\//.test(s))
+    .filter(s => !/^\d/.test(s))
+    .filter(s => !/^(Vollzeit|Teilzeit|Minijob|Remote|Hybrid|Vor Ort|Homeoffice|Berlin|Hamburg|München|Frankfurt|Köln|Stuttgart|Düsseldorf|Dresden|Leipzig|Deutschland|Germany|Anzeige|Gesponsert|vor \d|seit \d|\+\d)/i
+                 .test(s));
+  return chunks[0] || null;
 }
 
 function buildAlertLabel(smmResult) {
@@ -595,7 +805,7 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
   let totalLow      = 0;
   let totalSkipped  = 0;
   const summaryLines = [];
-  const MAX_JOBS_PER_RUN = 8; // stay within 6-min GAS limit
+  const MAX_JOBS_PER_RUN = 10; // stay within 6-min GAS limit
   let jobsProcessed = 0;
 
   for (const thread of threads) {
@@ -625,9 +835,9 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
   continue;
 }
 
-    const allJobs      = extractJobsFromAlertEmail(body);
-    const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
-    Logger.log(`Jobs found: ${allJobs.length} | After keyword filter: ${relevantJobs.length}`);
+    const allJobs      = extractJobListingsFromHtml(htmlBody);
+const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
+Logger.log(`Jobs in email: ${allJobs.length} | After keyword filter: ${relevantJobs.length}`);
 
     if (relevantJobs.length === 0) {
   thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
@@ -640,37 +850,43 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
       if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
       Logger.log(`→ "${job.title}" at "${job.company}"`);
 
-      // Step 1: fetch full JD via Tavily
-let jdText = null;
+// ── JD Fetch: company page → web search → skip (no email body fallback) ──
+let jdText   = null;
+let jdSource = 'unknown';
 
-// Tier 1: use URL extracted directly from the email HTML (most accurate)
-if (emailJobUrls.length > 0) {
-  // For multi-job emails use positional match; for single-job emails always use index 0
-  const urlIndex = Math.min(relevantJobs.indexOf(job), emailJobUrls.length - 1);
-  const directUrl = emailJobUrls[Math.max(0, urlIndex)];
-  Logger.log(`  Extracted email URL: ${directUrl}`);
-  jdText = tavilyExtractAdvanced(directUrl);
-  if (jdText) incrementTavilyCounter(2);
+// Tier 1: Fetch the Indeed job page directly via Tavily
+Logger.log(`  Tier 1: fetching ${job.url}`);
+const t1 = tavilyExtractAdvanced(job.url);
+if (t1 && looksLikeJobContent(t1) &&
+    isJdRelevantToJob(t1, job.company, job.title) &&
+    isCompleteJobDescription(t1)) {
+  jdText  = t1;
+  jdSource = 'indeed_direct';
+  incrementTavilyCounter(2);
+} else if (t1) {
+  Logger.log(`  Tier 1 result discarded (relevance or truncation check failed)`);
 }
 
-// Tier 2: search by company + title (original fallback)
-if (!jdText || !looksLikeJobContent(jdText)) {
-  Logger.log(`  URL extraction insufficient — searching via Tavily`);
-  jdText = tavilySearch(job.company, job.title);
-}
-
-// Tier 3: use partial JD text from the email body itself
-if (!jdText || !looksLikeJobContent(jdText)) {
-  if (emailJdText && looksLikeJobContent(emailJdText)) {
-    Logger.log(`  Using partial JD text from email body`);
-    jdText = emailJdText;
+// Tier 2: Targeted web search — quoted company name for precision
+if (!jdText) {
+  Logger.log(`  Tier 2: searching web for "${job.company}" + "${job.title}"`);
+  const t2 = tavilySearchValidated(job.company, job.title);
+  if (t2 && isCompleteJobDescription(t2)) {
+    jdText  = t2;
+    jdSource = 'web_search';
   }
 }
 
+// No JD found — skip cleanly, no SMM, no fake score
 if (!jdText) {
-  Logger.log(`  ⚠ No JD found across all tiers — skipping`);
+  Logger.log(`  ⚠ No valid complete JD found — skipping (no fake score)`);
   totalSkipped++;
-  threadResults.push({ title: job.title, company: job.company, skipped: true });
+  threadResults.push({
+    title:   job.title,
+    company: job.company,
+    skipped: true,
+    reason:  'no_jd'
+  });
   jobsProcessed++;
   continue;
 }
@@ -728,6 +944,9 @@ if (!jdText) {
     // Apply score label — use the best result in this thread
 const analyzed = threadResults.filter(r => r.smmResult);
 const skipped  = threadResults.filter(r => r.skipped);
+    const analyzed  = threadResults.filter(r => r.smmResult);
+    const noJd      = threadResults.filter(r => r.skipped && r.reason === 'no_jd');
+    const otherSkip = threadResults.filter(r => r.skipped && r.reason !== 'no_jd');
 
 if (analyzed.length > 0) {
   // Pick the highest scoring job in this thread
@@ -739,6 +958,19 @@ if (analyzed.length > 0) {
 } else if (skipped.length > 0 && skipped.length === threadResults.length) {
   thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
 }
+    if (analyzed.length > 0) {
+      // Pick the highest scoring job in this thread
+      const best = analyzed.reduce((a, b) =>
+        (a.smmResult.total_score || 0) >= (b.smmResult.total_score || 0) ? a : b
+      );
+      const scoreLabel = buildAlertLabel(best.smmResult);
+      thread.addLabel(getOrCreateLabel(scoreLabel));
+    } else if (noJd.length > 0 && analyzed.length === 0) {
+      thread.addLabel(getOrCreateLabel('JABA Alert/⏭ No JD Found'));
+    } else if (otherSkip.length > 0 && analyzed.length === 0) {
+      thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
+    }
+
 thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
 
     Utilities.sleep(500);
@@ -790,7 +1022,8 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
       s.evidence        || "",
       s.gap_tip         || "",
       false,                     // Interview_Reached
-      s.master_category || ""    // Master_Category
+      s.master_category || "",    // Master_Category
+      PROMPT_VERSIONS.SMM          // ← new column 14
     ]);
 
     if (rows.length > 0) {
@@ -1130,9 +1363,10 @@ COVER LETTER RULES:
       if (salaryMatch && salaryMatch[1]) {
         cleanedSalary = salaryMatch[1];
       } else {
-        cleanedSalary = salary;
-        Logger.log(`Potential unparsable salary: "${salary}" for ${companyName}`);
-      }
+  // Only keep if it contains at least one digit — discard pure text hallucinations
+  cleanedSalary = /\d/.test(salary) ? salary : '';
+  Logger.log(`Potential unparsable salary: "${salary}" for ${companyName}`);
+}
     }
 
     // ── Determine final match level ──
@@ -1521,44 +1755,168 @@ function isLikelyJobEmail(sender, subject) {
 }
 
 
-/*
-Mistral API Caller for rejection detection
-*/
-function callGeminiForRejection(sender, subject, body, pendingCompanyNames) {
+/**
+ * Tier 1: deterministic rule-based rejection detection.
+ * Returns 'rejection', 'not_rejection', or 'uncertain'.
+ */
+function classifyRejectionByRules(subject, body) {
+  const combined = (subject + ' ' + body).toLowerCase().substring(0, 3000);
+
+  // Hard rejection signals — any one of these = confirmed rejection
+  const rejectionPhrases = [
+    'leider müssen wir ihnen mitteilen',
+    'leider können wir ihre bewerbung',
+    'leider können wir ihnen',
+    'leider müssen wir ihnen',
+    'nicht weiterverfolgen',
+    'anderweitig besetzt',
+    'haben uns für andere kandidaten',
+    'haben uns für andere bewerber',
+    'entschieden wir uns für',
+    'kein passendes profil',
+    'entspricht nicht dem gesuchten profil',
+    'nicht dem anforderungsprofil',
+    'bedauern wir ihnen mitteilen',
+    'bedauern, ihnen mitteilen',
+    'absage für ihre bewerbung',
+    'ihre bewerbung war leider nicht erfolgreich',
+    'bewerbung nicht berücksichtigen',
+    'im auswahlverfahren nicht',
+    'an dieser stelle beenden',
+    'bewerbungsprozess beenden',
+    'leider keine möglichkeit',
+    'not moving forward with your application',
+    'not moving forward with your candidacy',
+    'will not be moving forward',
+    'unable to move your application forward',
+    'not selected for',
+    'decided to move forward with other',
+    'went with another candidate',
+    'position has been filled',
+    'no longer considering your application',
+    'we won\'t be proceeding',
+    'unfortunately we will not',
+    'unfortunately, we will not',
+    'unfortunately we\'re unable to',
+    'unfortunately, we\'re unable to',
+    'regret to inform you',
+    'nach reiflicher überlegung',
+    'nach sorgfältiger prüfung',
+    'nach eingehender prüfung',
+    'anderen kandidaten den vorzug',
+    'anderen bewerbern den vorzug'
+  ];
+
+  // Hard non-rejection signals — any one of these = definitely not rejection
+  const nonRejectionPhrases = [
+    'einladung zum vorstellungsgespräch',
+    'einladung zum gespräch',
+    'wir möchten sie zu einem gespräch einladen',
+    'wir möchten dich zu einem gespräch einladen',
+    'bewerbungsgespräch vereinbaren',
+    'we would like to invite you',
+    "we'd like to schedule",
+    'interview invitation',
+    'bitte reichen sie',         // document request
+    'bitte schicken sie uns',
+    'unterlagen nachzureichen',
+    'fehlen uns noch',
+    'fehlende unterlagen',
+    'arbeitszeugnisse',
+    'wir haben ihre bewerbung erhalten',
+    'wir haben deine bewerbung erhalten',
+    'your application has been received',
+    'bewerbungseingang',
+    'eingangsbestätigung',
+    'bestätige deine identität',
+    'verifizierungscode',
+    'code:',                     // identity verification codes
+    'wir prüfen ihre unterlagen',
+    'wir prüfen deine unterlagen',
+    'werden uns bei ihnen melden',
+    'werden uns bei dir melden',
+    'we will be in touch',
+    'we\'ll be in touch',
+    'assessment',
+    'online-test',
+    'online test einladung',
+    'talentpool',
+    'talent pool',
+    'talent-pool'
+  ];
+
+  if (nonRejectionPhrases.some(p => combined.includes(p))) return 'not_rejection';
+  if (rejectionPhrases.some(p => combined.includes(p))) return 'rejection';
+  return 'uncertain';
+}
+
+/**
+ * Main rejection classifier: rules first, AI only for uncertain cases.
+ * Uses llama-3.3-70b (more accurate than 3.1-8b, still free on Groq).
+ */
+function classifyRejectionEmail(sender, subject, body) {
   const truncatedBody = body.substring(0, 1500);
+  const ruleResult    = classifyRejectionByRules(subject, truncatedBody);
 
-  const systemPrompt = `You are a precise email classifier. Always respond with valid JSON only. No markdown, no explanation.`;
+  if (ruleResult === 'not_rejection') {
+    Logger.log(`  Rules: NOT rejection`);
+    return { isRejection: false, companyName: null };
+  }
 
-  const userPrompt = `You are analyzing a job application email.
+  if (ruleResult === 'rejection') {
+    // Rules confirmed rejection — still need company name, use AI for extraction only
+    Logger.log(`  Rules: REJECTION confirmed — extracting company name`);
+    const prompt = `This email is a job application rejection. Extract only the company name that sent it.
+From: ${sender}
+Subject: ${subject}
+Body: ${truncatedBody.substring(0, 500)}
+Respond ONLY with JSON: {"companyName": "Company Name"} or {"companyName": null} if unclear.`;
 
-EMAIL:
+    const raw = callGroqApi(
+      "Extract the company name from this rejection email. JSON only.",
+      prompt,
+      "llama-3.1-8b-instant",
+      30
+    );
+    try {
+      const parsed = JSON.parse(raw || '{}');
+      return { isRejection: true, companyName: parsed.companyName || null };
+    } catch(e) {
+      return { isRejection: true, companyName: null };
+    }
+  }
+
+  // Uncertain: use AI with better model for full classification
+  Logger.log(`  Rules: uncertain — calling llama-3.3-70b`);
+  const prompt = `Classify this job application email.
 From: ${sender}
 Subject: ${subject}
 Body: ${truncatedBody}
 
-Is this a job application rejection email? (The company explicitly declines to proceed IN THIS EMAIL BODY.)
-IMPORTANT RULES:
-- Acknowledgment emails ("we received your application") are NOT rejections
-- Interview invitations are NOT rejections
-- Job alert or job suggestion emails are NOT rejections
-- Emails saying "thank you for applying, we are reviewing your application, we will contact you soon" are acknowledgments, NOT rejections — even if they sound polite and final
-- Identity verification emails with a numeric code ("Bestätige deine Identität", "Code: 123456") are NOT rejections
-- Emails that only say "see attachment for feedback" ("im Anhang erhalten Sie die Rückmeldung", "in der Anlage finden Sie") WITHOUT any rejection language in the body itself are NOT rejections — you cannot read attachments
-- Message notification emails that only say "you have a new message from [Company] — click to view" WITHOUT showing the actual message content are NOT rejections — you cannot read what the linked message says
-Respond ONLY with valid JSON:
-{"isRejection": true, "companyName": "Exact company name"}
+Rules:
+- Rejection = company explicitly declines to proceed in this email body
+- Document requests ("please send us missing documents") = NOT rejection
+- Acknowledgments ("we received your application") = NOT rejection
+- Interview invitations = NOT rejection
+- Verification codes = NOT rejection
+
+Respond ONLY with JSON:
+{"isRejection": true, "companyName": "Company Name"}
 or
 {"isRejection": false, "companyName": null}`;
 
-  const raw = callGroqApi(systemPrompt, userPrompt, "llama-3.1-8b-instant", 100);
-  if (!raw) return null;
-
+  const raw = callGroqApi(
+    "Classify job emails. JSON only.",
+    prompt,
+    "llama-3.3-70b-versatile",
+    60
+  );
   try {
-    const parsed = JSON.parse(raw);
-    if (parsed.companyName === "null" || parsed.companyName === "") parsed.companyName = null;
+    const parsed = JSON.parse(raw || '{}');
+    if (parsed.companyName === 'null') parsed.companyName = null;
     return parsed;
-  } catch (e) {
-    Logger.log(`Rejection parse failed: ${e.message}\nRaw: ${raw}`);
+  } catch(e) {
+    Logger.log(`  Classification parse failed: ${e.message}`);
     return null;
   }
 }
@@ -1638,6 +1996,23 @@ function isAcknowledgmentEmail(subject, body) {
     'i am writing to apply',
     'i would like to apply',
     'bewerbungseingang',
+    'fehlen uns noch folgende',
+'fehlende unterlagen',
+'unterlagen nachzureichen',
+'unterlagen nachreichen',
+'nachzureichen als antwort',
+'bitte reichen sie',
+'bitte senden sie uns',
+'bitte schicken sie',
+'folgende dokument',
+'arbeitszeugnisse',
+'missing document',
+'please provide the following',
+'please send us the following',
+'additional documents required',
+'wir benötigen noch',
+'wir bitten dich um',
+'bitten wir dich, uns',
     'bewerbung eingegangen',
     'wir haben deine bewerbung erhalten',
     'wir haben ihre bewerbung erhalten',
@@ -1756,7 +2131,7 @@ function processRejectionEmails() {
 
   Logger.log(`Total threads: ${allThreads.length} | After pre-filter: ${jobThreads.length}`);
 
-  const MAX_PER_RUN     = 40;
+  const MAX_PER_RUN     = 60;
   const threadsToProcess = jobThreads.slice(0, MAX_PER_RUN);
 
   let rejectionsFound = 0;
@@ -1796,7 +2171,7 @@ function processRejectionEmails() {
       continue;
     }
 
-    const result = callGeminiForRejection(sender, subject, body, []);
+    const result = classifyRejectionEmail(sender, subject, body);
 
     if (!result) { Utilities.sleep(300); continue; }
 
@@ -2057,7 +2432,9 @@ const JOB_SEARCH_KEYWORDS = [
 const JOB_SEARCH_EXCLUDE_TERMS = [
   'senior', 'sr.', 'lead ', 'head of', 'director',
   'vp ', 'vice president', 'sales', 'vertrieb', 'ausbildung',
-  'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum', 'praktikant' 
+  'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum', 
+  'praktikant', 'werkstudent', 'werkstudentin',
+  'internship', 'intern ' 
 ];
 
 const DIRECT_FETCH_BLOCKED = [
@@ -2110,6 +2487,94 @@ function looksLikeJobContent(text) {
   return signals.filter(s => lower.includes(s)).length >= 2;
 }
 
+/**
+ * Returns false if the text is clearly a partial/truncated job description.
+ * Aggregator sites often show excerpts ending with "read more" links.
+ */
+function isCompleteJobDescription(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  const partialSignals = [
+    'zur kompletten stellenbeschreibung',
+    'zur vollständigen stellenbeschreibung',
+    'vollständige stellenbeschreibung',
+    'zum vollständigen stellenangebot',
+    'vollständige jobbeschreibung',
+    'zur jobbeschreibung',
+    'see full job description',
+    'view full job',
+    'read the full',
+    'weiterlesen',
+    'mehr anzeigen',
+    'show more',
+    'jobviewtrack.com',      // known redirect tracker used by aggregators
+    'klicken sie hier für'
+  ];
+  const isPartial = partialSignals.some(s => lower.includes(s));
+  if (isPartial) Logger.log(`  ✗ Truncated JD detected — discarding`);
+  return !isPartial;
+}
+
+/**
+ * Returns true if the fetched text is actually about the right job.
+ * Prevents JABA from using a competitor's careers page or unrelated content.
+ */
+function isJdRelevantToJob(text, company, jobTitle) {
+  if (!text || text.length < 200) return false;
+  const lower = text.toLowerCase();
+
+  const companyWords = company
+    .toLowerCase()
+    .replace(/\s+(gmbh|ag|se|kg|ltd|inc|llc|bv|sas|co\.)\b/gi, '')
+    .replace(/[&.,\-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3);
+
+  const titleWords = jobTitle
+    .toLowerCase()
+    .replace(/\(m\/w\/d\)|\(w\/m\/d\)|\(f\/m\/d\)/gi, '')
+    .split(/\s+/)
+    .filter(w => w.length > 4);
+
+  // Company name MUST appear — no company match = wrong page, full stop
+  const companyMatch = companyWords.length > 0 &&
+    companyWords.some(w => lower.includes(w));
+
+  if (!companyMatch) {
+    Logger.log(`  ✗ Relevance: company "${company}" not found in fetched text`);
+    return false;
+  }
+
+  // With company confirmed, require at least one title word too
+  const titleMatch = titleWords.some(w => lower.includes(w));
+  if (!titleMatch) {
+    Logger.log(`  ✗ Relevance: company found but no title words from "${jobTitle}"`);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Returns true if a job location string indicates Germany.
+ * Used to decide whether remote-only filter applies.
+ */
+function isGermanLocation(location) {
+  if (!location || location.trim() === '') return true; // no location = assume Germany
+  const lower = location.toLowerCase();
+  const germanSignals = [
+    'deutschland', 'germany', 'berlin', 'münchen', 'munich', 'hamburg',
+    'frankfurt', 'köln', 'cologne', 'stuttgart', 'düsseldorf', 'dortmund',
+    'essen', 'bremen', 'hannover', 'nürnberg', 'nuremberg', 'leipzig',
+    'dresden', 'bonn', 'mannheim', 'karlsruhe', 'augsburg', 'wiesbaden',
+    'freiburg', 'mainz', 'rostock', 'kassel', 'potsdam', 'saarbrücken',
+    'darmstadt', 'heidelberg', 'regensburg', 'würzburg', 'wolfsburg',
+    'ulm', 'heilbronn', 'erfurt', 'magdeburg', 'kiel', 'lübeck',
+    'osnabrück', 'oldenburg', 'braunschweig', 'aachen', 'sassnitz',
+    ' de,', ', de', '(de)', ' de '
+  ];
+  return germanSignals.some(s => lower.includes(s));
+}
 
 // ── Tavily advanced extractor ─────────────────────────────────────────────────
 
@@ -2247,56 +2712,292 @@ function fetchAdzunaJobs(keyword) {
   }
 }
 
-/** Fetch all keywords, merge, deduplicate by Adzuna job ID. */
-function fetchAllAdzunaJobs() {
+function fetchAllJobSources() {
   const seenIds = new Set();
   const all     = [];
 
-  for (const keyword of JOB_SEARCH_KEYWORDS) {
-    for (const job of fetchAdzunaJobs(keyword)) {
+  function addJobs(jobs, sourceName) {
+    let added = 0;
+    for (const job of jobs) {
       if (!seenIds.has(job.id)) {
         seenIds.add(job.id);
         all.push(job);
+        added++;
       }
     }
-    Utilities.sleep(400);
+    Logger.log(`  ${sourceName}: +${added} new (${jobs.length} fetched)`);
   }
 
-  Logger.log(`Adzuna total (deduplicated): ${all.length} jobs`);
+  Logger.log('--- Fetching job sources ---');
+
+  // Full-JD sources (no Tavily needed)
+  addJobs(fetchRemotiveJobs(),   'Remotive');
+  Utilities.sleep(500);
+  addJobs(fetchJobicyJobs(),     'Jobicy');
+  Utilities.sleep(500);
+  addJobs(fetchArbeitnowJobs(),  'Arbeitnow');
+  Utilities.sleep(500);
+  addJobs(fetchRemoteOkJobs(),   'Remote OK');
+  Utilities.sleep(500);
+
+  // Adzuna multi-country (snippet, Tavily used when needed)
+  Logger.log('Fetching Adzuna multi-country...');
+  const adzunaKeywords = [
+    'marketing manager', 'digital marketing',
+    'crm manager', 'marketing automation'
+  ];
+  for (const keyword of adzunaKeywords) {
+    for (const country of ADZUNA_SEARCH_COUNTRIES) {
+      addJobs(fetchAdzunaJobsForCountry(keyword, country), `Adzuna-${country}`);
+      Utilities.sleep(300);
+    }
+  }
+
+  Logger.log(`Total jobs all sources (deduplicated): ${all.length}`);
   return all;
 }
 
+/* ── Remotive API (free, full JD, remote-first) ── */
+function fetchRemotiveJobs() {
+  const categories = ['marketing', 'business'];
+  const seenIds = new Set();
+  const all = [];
+
+  for (const cat of categories) {
+    try {
+      const res = UrlFetchApp.fetch(
+        `https://remotive.com/api/remote-jobs?category=${cat}&limit=50`,
+        { muteHttpExceptions: true }
+      );
+      if (res.getResponseCode() !== 200) continue;
+      const data = JSON.parse(res.getContentText());
+      for (const job of (data.jobs || [])) {
+        const id = 'remotive_' + job.id;
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        all.push({
+          title:           (job.title || '').trim(),
+          company:         (job.company_name || 'Unknown').trim(),
+          city:            'Remote',
+          url:             job.url || '',
+          description:     stripHtmlToText(job.description || '').substring(0, 10000),
+          id:              id,
+          pubDate:         job.publication_date || '',
+          descriptionFull: true   // ← full JD, skip Tavily
+        });
+      }
+      Utilities.sleep(300);
+    } catch(e) {
+      Logger.log(`Remotive error (${cat}): ${e.message}`);
+    }
+  }
+  Logger.log(`Remotive: ${all.length} jobs`);
+  return all;
+}
+
+/* ── Jobicy API (free, full JD, remote) ── */
+function fetchJobicyJobs() {
+  try {
+    const res = UrlFetchApp.fetch(
+      'https://jobicy.com/api/v0/remote-jobs?count=50&industry=marketing',
+      { muteHttpExceptions: true }
+    );
+    if (res.getResponseCode() !== 200) return [];
+    const data = JSON.parse(res.getContentText());
+    return (data.jobs || []).map(job => ({
+      title:           (job.jobTitle || '').trim(),
+      company:         (job.companyName || 'Unknown').trim(),
+      city:            'Remote',
+      url:             job.url || '',
+      description:     stripHtmlToText(job.jobDescription || '').substring(0, 10000),
+      id:              'jobicy_' + (job.id || Math.random()),
+      pubDate:         job.pubDate || '',
+      descriptionFull: true
+    }));
+  } catch(e) {
+    Logger.log(`Jobicy error: ${e.message}`);
+    return [];
+  }
+}
+
+/* ── Arbeitnow API (free, EU jobs, full JD) ── */
+function fetchArbeitnowJobs() {
+  const allJobs = [];
+  const seenIds = new Set();
+
+  for (let page = 1; page <= 3; page++) {
+    try {
+      const res = UrlFetchApp.fetch(
+        `https://www.arbeitnow.com/api/job-board-api?page=${page}`,
+        { muteHttpExceptions: true }
+      );
+      if (res.getResponseCode() !== 200) {
+        Logger.log(`Arbeitnow page ${page}: HTTP ${res.getResponseCode()}`);
+        break;
+      }
+
+      const data = JSON.parse(res.getContentText());
+      const jobs  = data.data || [];
+      if (jobs.length === 0) break;
+
+      for (const job of jobs) {
+        const id    = 'arbeitnow_' + (job.slug || '');
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+
+        const title    = (job.title || '').trim();
+        const location = (job.location || '').trim();
+        const isRemote = job.remote === true;
+        const inGermany = isGermanLocation(location);
+
+        // Geographic rule: Germany = all jobs; abroad = remote only
+        if (!inGermany && !isRemote) continue;
+
+        // Keyword relevance filter
+        if (!isRelevantJobTitle(title)) continue;
+
+        allJobs.push({
+          title:           title,
+          company:         (job.company_name || 'Unknown').trim(),
+          city:            location || (inGermany ? 'Germany' : 'Remote'),
+          url:             job.url || '',
+          description:     stripHtmlToText(job.description || '').substring(0, 10000),
+          id:              id,
+          pubDate:         job.created_at || '',
+          descriptionFull: true
+        });
+      }
+      Utilities.sleep(400);
+
+    } catch(e) {
+      Logger.log(`Arbeitnow page ${page} error: ${e.message}`);
+      break;
+    }
+  }
+
+  Logger.log(`Arbeitnow: ${allJobs.length} relevant jobs`);
+  return allJobs;
+}
+
+/* ── Remote OK API (free, international remote, full JD) ── */
+function fetchRemoteOkJobs() {
+  try {
+    const res = UrlFetchApp.fetch('https://remoteok.com/api', {
+      muteHttpExceptions: true,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; personal job search bot)'
+      }
+    });
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`Remote OK HTTP ${res.getResponseCode()}`);
+      return [];
+    }
+
+    const data = JSON.parse(res.getContentText());
+    // First element is API metadata — skip it
+    const jobs = Array.isArray(data) ? data.slice(1) : [];
+
+    const results = [];
+    for (const job of jobs) {
+      const title = (job.position || '').trim();
+      const tags  = Array.isArray(job.tags) ? job.tags.join(' ').toLowerCase() : '';
+
+      // All Remote OK jobs are remote by nature — filter only by relevance
+      if (!isRelevantJobTitle(title) &&
+          !RELEVANT_KEYWORDS.some(k => tags.includes(k.toLowerCase()))) continue;
+
+      results.push({
+        title:           title,
+        company:         (job.company || 'Unknown').trim(),
+        city:            'Remote',
+        url:             job.url || `https://remoteok.com/l/${job.slug || ''}`,
+        description:     stripHtmlToText(job.description || '').substring(0, 10000),
+        id:              'remoteok_' + (job.id || Math.random()),
+        pubDate:         job.date || '',
+        descriptionFull: true
+      });
+    }
+
+    Logger.log(`Remote OK: ${results.length} relevant jobs`);
+    return results;
+
+  } catch(e) {
+    Logger.log(`Remote OK error: ${e.message}`);
+    return [];
+  }
+}
+
+/* ── Adzuna multi-country (remote filter) ── */
+const ADZUNA_SEARCH_COUNTRIES = [
+  'gb', 'nl', 'se', 'no', 'be', 'at', 'ch', 'es', 'pl', 'fr', 'de'
+];
+
+function fetchAdzunaJobsForCountry(keyword, countryCode) {
+  const appId  = getAdzunaAppId();
+  const appKey = getAdzunaAppKey();
+  if (!appId || !appKey) return [];
+
+  const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?` +
+    `app_id=${encodeURIComponent(appId)}&` +
+    `app_key=${encodeURIComponent(appKey)}&` +
+    `results_per_page=20&` +
+    `what=${encodeURIComponent(countryCode === 'de' ? keyword : keyword + ' remote')}&` +
+    `sort_by=date&` +
+    `content-type=application/json`;
+
+  try {
+    const res = UrlFetchApp.fetch(url, { method: 'get', muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return [];
+    const data = JSON.parse(res.getContentText());
+    return (data.results || []).map(job => ({
+      title:           (job.title || '').trim(),
+      company:         (job.company?.display_name || 'Unknown').trim(),
+      city:            extractAdzunaCity(job.location) || countryCode.toUpperCase(),
+      url:             job.redirect_url || '',
+      description:     stripHtmlToText(job.description || '').substring(0, 10000),
+      id:              `adzuna_${countryCode}_${job.id}`,
+      pubDate:         job.created || '',
+      descriptionFull: false
+    })).filter(j => j.title && j.url);
+  } catch(e) {
+    Logger.log(`Adzuna ${countryCode} error for "${keyword}": ${e.message}`);
+    return [];
+  }
+}
 
 // ── Smart JD extractor ────────────────────────────────────────────────────────
 // Tier 1: Adzuna API description (free, already fetched — covers most cases)
 // Tier 2: Direct UrlFetchApp HTML fetch (free, unlimited)
 // Tier 3: Tavily advanced (2 credits — only fires when tiers 1 & 2 fail)
 
-function smartExtractJD(url, apiDescription) {
-  // Adzuna descriptions are truncated snippets (~300-600 chars) — too short
-  // for accurate SMM. Always fetch the full JD from the source URL.
-  // Log the snippet length for visibility but don't use it for scoring.
-  if (apiDescription) {
-    Logger.log(`  Adzuna snippet: ${apiDescription.length} chars (skipping — fetching full JD)`);
+function smartExtractJD(url, apiDescription, descriptionFull) {
+  // Remotive and Jobicy return complete JDs — use directly, no fetching needed
+  if (descriptionFull && apiDescription && looksLikeJobContent(apiDescription)) {
+    Logger.log(`  ✓ Using full API description (${apiDescription.length} chars)`);
+    return { text: apiDescription, source: 'api_full' };
   }
 
-  // Tier 1 — Direct UrlFetchApp (free, unlimited)
+  // Tier 1 — Direct UrlFetchApp
   const direct = fetchJobPageDirectly(url);
   if (direct && looksLikeJobContent(direct)) {
     Logger.log(`  ✓ Direct fetch OK (${direct.length} chars)`);
     return { text: direct, source: 'direct' };
   }
 
-  Logger.log(`  Direct fetch insufficient — falling back to Tavily advanced`);
-
-  // Tier 2 — Tavily advanced (2 credits, follows redirects to source page)
+  // Tier 2 — Tavily advanced
   const tavily = tavilyExtractAdvanced(url);
   if (tavily && looksLikeJobContent(tavily)) {
     Logger.log(`  ✓ Tavily advanced OK`);
     return { text: tavily, source: 'tavily_advanced' };
   }
 
-  Logger.log(`  ✗ Both tiers failed for: ${url}`);
+  // Tier 3 — Adzuna snippet fallback
+  if (apiDescription && apiDescription.length > 200 && looksLikeJobContent(apiDescription)) {
+    Logger.log(`  ✓ Using API snippet fallback (${apiDescription.length} chars)`);
+    return { text: apiDescription, source: 'api_snippet' };
+  }
+
+  Logger.log(`  ✗ All tiers failed for: ${url}`);
   return null;
 }
 
@@ -2314,14 +3015,11 @@ function isValidJobTitleForSearch(title) {
 
 function detectCvTypeForSearch(jdText, jobTitle) {
   const combined = ((jobTitle || '') + ' ' + (jdText || '').substring(0, 800)).toLowerCase();
-  const deSignals = [
-    '(m/w/d)', '(w/m/d)', 'vollzeit', 'teilzeit', 'bewerbung',
-    'berufserfahrung', 'kenntnisse', 'aufgaben', 'anforderungen',
-    'stellenanzeige', 'gehalt', 'karriere', 'erfahrung'
-  ];
-  return deSignals.some(s => combined.includes(s))
-    ? 'DE Web2 Marketing Manager'
-    : 'EN Web2 Marketing Manager';
+  const web3Signals = ['web3','blockchain','crypto','defi','nft','token','dao'];
+  if (web3Signals.some(s => combined.includes(s))) return 'Web3 Marketing Manager';
+  const deSignals = ['(m/w/d)','vollzeit','bewerbung','berufserfahrung','aufgaben'];
+  if (deSignals.some(s => combined.includes(s))) return 'DE Web2 Marketing Manager';
+  return 'EN Web2 Marketing Manager'; // default for international
 }
 
 
@@ -2522,7 +3220,7 @@ function sendJobReportEmail(htmlBody) {
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
 function runDailyJobSearch() {
-  const MAX_JOBS = 10;
+  const MAX_JOBS = 6;
 
   Logger.log('=== JABA Daily Job Search started ===');
   Logger.log(`Tavily credits at start of run: ${getTavilyMonthlyUsage()}/1000`);
@@ -2531,7 +3229,7 @@ function runDailyJobSearch() {
   cleanJobCache();
 
   // Step 2 — fetch all Adzuna jobs (deduplicated by job ID)
-  const allJobs = fetchAllAdzunaJobs();
+  const allJobs = fetchAllJobSources();
 
   if (allJobs.length === 0) {
     Logger.log('No Adzuna jobs returned today. Exiting.');
@@ -2541,10 +3239,26 @@ function runDailyJobSearch() {
   // Step 3 — apply filters: title exclusions + dedup against cache + applied sheet
   const candidates = [];
   for (const job of allJobs) {
-    if (!isValidJobTitleForSearch(job.title)) {
+    if (!isRelevantJobTitle(job.title)) {
       Logger.log(`  ✗ Excluded: "${job.title}"`);
       continue;
     }
+      // Geographic rule for Adzuna non-German results
+      // (Remotive/Jobicy/RemoteOK/Arbeitnow already filtered at source)
+      if (!job.descriptionFull) {
+        const inGermany = isGermanLocation(job.city || '');
+        const titleLower = job.title.toLowerCase();
+        const descLower = (job.description || '').toLowerCase();
+        const mentionsRemote = titleLower.includes('remote') ||
+                              descLower.includes('remote') ||
+                              descLower.includes('homeoffice') ||
+                              descLower.includes('home office');
+        if (!inGermany && !mentionsRemote) {
+          Logger.log(`  ✗ Non-German job with no remote mention: "${job.title}" @ ${job.city}`);
+          continue;
+        }
+      }
+
     if (isJobInCache(job.company, job.title)) {
       Logger.log(`  ✗ In cache: "${job.title}" @ ${job.company}`);
       continue;
@@ -2574,14 +3288,23 @@ function runDailyJobSearch() {
     Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company}`);
 
     // Tier 1 uses Adzuna description; tiers 2-3 fetch from URL if needed
-    const extracted = smartExtractJD(job.url, job.description);
-    if (!extracted) {
-      Logger.log(`  ✗ JD fetch failed — skipping`);
-      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
-      processed++;
-      Utilities.sleep(500);
-      continue;
-    }
+    const extracted = smartExtractJD(job.url, job.description, job.descriptionFull);
+if (!extracted) {
+  Logger.log(`  ✗ JD fetch failed — skipping`);
+  addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
+  processed++;
+  Utilities.sleep(500);
+  continue;
+}
+
+// Validate the fetched content is actually about this job
+if (!isJdRelevantToJob(extracted.text, job.company, job.title)) {
+  Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
+  addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
+  processed++;
+  Utilities.sleep(500);
+  continue;
+}
 
     const cvType = detectCvTypeForSearch(extracted.text, job.title);
     Logger.log(`  CV type: ${cvType}`);
