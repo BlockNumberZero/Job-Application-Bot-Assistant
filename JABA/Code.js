@@ -714,7 +714,6 @@ function buildAlertLabel(smmResult) {
 }
 
 
-
 /* ============================================================
    MAIN: processIndeedAlertEmails
    Run from Apps Script menu.
@@ -2652,10 +2651,15 @@ function fetchAdzunaJobs(keyword) {
   }
 }
 
+// ── REPLACE fetchAllJobSources() ─────────────────────────────────────────────
+// Change: added sourceStats tracking + structured summary log at end.
+// Everything else identical.
+ 
 function fetchAllJobSources() {
-  const seenIds = new Set();
-  const all     = [];
-
+  const seenIds    = new Set();
+  const all        = [];
+  const sourceStats = {}; // ← new: per-source diagnostics
+ 
   function addJobs(jobs, sourceName) {
     let added = 0;
     for (const job of jobs) {
@@ -2665,11 +2669,12 @@ function fetchAllJobSources() {
         added++;
       }
     }
+    sourceStats[sourceName] = { fetched: jobs.length, added }; // ← new
     Logger.log(`  ${sourceName}: +${added} new (${jobs.length} fetched)`);
   }
-
+ 
   Logger.log('--- Fetching job sources ---');
-
+ 
   // Full-JD sources (no Tavily needed)
   addJobs(fetchRemotiveJobs(),   'Remotive');
   Utilities.sleep(500);
@@ -2679,7 +2684,7 @@ function fetchAllJobSources() {
   Utilities.sleep(500);
   addJobs(fetchRemoteOkJobs(),   'Remote OK');
   Utilities.sleep(500);
-
+ 
   // Adzuna multi-country (snippet, Tavily used when needed)
   Logger.log('Fetching Adzuna multi-country...');
   const adzunaKeywords = [
@@ -2688,13 +2693,153 @@ function fetchAllJobSources() {
   ];
   for (const keyword of adzunaKeywords) {
     for (const country of ADZUNA_SEARCH_COUNTRIES) {
-      addJobs(fetchAdzunaJobsForCountry(keyword, country), `Adzuna-${country}`);
+      addJobs(fetchAdzunaJobsForCountry(keyword, country), `Adzuna-${country}-${keyword}`);
       Utilities.sleep(300);
     }
   }
-
+ 
+  // ── NEW: emit per-source summary ──────────────────────────────────────────
+  let totalFetched = 0;
+  let totalAdded   = 0;
+  const sourceLines = Object.entries(sourceStats).map(([src, s]) => {
+    totalFetched += s.fetched;
+    totalAdded   += s.added;
+    return `    ${src.padEnd(32)}: fetched=${String(s.fetched).padStart(3)}  added=${String(s.added).padStart(3)}`;
+  });
+  Logger.log([
+    '',
+    '━━━ SOURCE SUMMARY ━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ...sourceLines,
+    `    ${'TOTAL'.padEnd(32)}: fetched=${String(totalFetched).padStart(3)}  added(dedup)=${String(totalAdded).padStart(3)}`,
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ''
+  ].join('\n'));
+  // ── END NEW ───────────────────────────────────────────────────────────────
+ 
   Logger.log(`Total jobs all sources (deduplicated): ${all.length}`);
   return all;
+}
+
+// ── ADD NEW HELPER: emitDiagnosticsSummary() ─────────────────────────────────
+// Add this as a new standalone function anywhere in Code.js (e.g. after fetchAllJobSources).
+ 
+function emitDiagnosticsSummary(diag) {
+  const delta = (diag.tavily_end || 0) - (diag.tavily_start || 0);
+  Logger.log([
+    '',
+    '━━━ RUN DIAGNOSTICS ━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '  ── pipeline gates ─────────────────────────',
+    `  fetched_total     : ${diag.fetched_total}`,
+    `  excluded_title    : ${diag.excluded_title}`,
+    `  excluded_geo      : ${diag.excluded_geo}`,
+    `  excluded_cache    : ${diag.excluded_cache}`,
+    `  excluded_applied  : ${diag.excluded_applied}`,
+    `  candidate_selected: ${diag.candidate_selected}`,
+    '  ── processing ──────────────────────────────',
+    `  processed_count   : ${diag.processed_count}`,
+    `  jd_fetch_failed   : ${diag.jd_fetch_failed}`,
+    `  jd_irrelevant     : ${diag.jd_irrelevant}`,
+    `  smm_failed        : ${diag.smm_failed}`,
+    '  ── scores ──────────────────────────────────',
+    `  scored_m0         : ${diag.scored_m0}`,
+    `  scored_m1         : ${diag.scored_m1}`,
+    `  scored_m2_plus    : ${diag.scored_m2_plus}`,
+    `  report_jobs_count : ${diag.report_jobs_count}`,
+    '  ── tavily ──────────────────────────────────',
+    `  tavily_start      : ${diag.tavily_start}/1000`,
+    `  tavily_end        : ${diag.tavily_end}/1000`,
+    `  tavily_delta      : +${delta} credits this run`,
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ''
+  ].join('\n'));
+}
+
+// ── ADD NEW HELPER: sendDebugDiagnosticsEmail() ──────────────────────────────
+// Called when a run completes with zero M2+ jobs.
+// Uses REPORT_EMAIL script property (same one the job report uses).
+ 
+function sendDebugDiagnosticsEmail(diag) {
+  const recipient = getScriptProperty('REPORT_EMAIL');
+  if (!recipient) {
+    Logger.log('⚠ REPORT_EMAIL not set — debug email skipped.');
+    return;
+  }
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
+  const delta   = (diag.tavily_end || 0) - (diag.tavily_start || 0);
+ 
+  function row(label, value, highlight) {
+    const style = highlight
+      ? 'padding:6px 12px;font-weight:700;color:#ea4335;'
+      : 'padding:6px 12px;color:#5f6368;';
+    return `<tr>
+      <td style="${style}">${label}</td>
+      <td style="padding:6px 12px;font-weight:700;text-align:right;">${value}</td>
+    </tr>`;
+  }
+ 
+  function section(title) {
+    return `<tr style="background:#f8f9fa;">
+      <td colspan="2" style="padding:8px 12px;font-weight:700;font-size:12px;
+        color:#3c4043;text-transform:uppercase;letter-spacing:0.4px;">${title}</td>
+    </tr>`;
+  }
+ 
+  const html = `<!DOCTYPE html>
+<html>
+<body style="font-family:'Segoe UI',Arial,sans-serif;background:#f8f9fa;padding:20px;margin:0;">
+<div style="max-width:520px;margin:0 auto;">
+ 
+  <div style="background:#ea4335;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+    <h2 style="color:white;margin:0 0 4px;font-size:17px;">🤖 JABA — No M2+ Jobs Found</h2>
+    <div style="color:rgba(255,255,255,0.85);font-size:13px;">${dateStr}</div>
+  </div>
+ 
+  <div style="background:white;border-radius:10px;border:1px solid #e0e0e0;
+    padding:4px 0;margin-bottom:16px;">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+ 
+      ${section('Pipeline gates')}
+      ${row('Total fetched',       diag.fetched_total)}
+      ${row('Excluded — title',    diag.excluded_title,   diag.excluded_title > 20)}
+      ${row('Excluded — geo',      diag.excluded_geo,     diag.excluded_geo > 10)}
+      ${row('Excluded — cache',    diag.excluded_cache,   diag.excluded_cache > 20)}
+      ${row('Excluded — applied',  diag.excluded_applied, diag.excluded_applied > 10)}
+      ${row('Candidates selected', diag.candidate_selected)}
+ 
+      ${section('Processing')}
+      ${row('Processed',           diag.processed_count)}
+      ${row('JD fetch failed',     diag.jd_fetch_failed,  diag.jd_fetch_failed > 2)}
+      ${row('JD irrelevant',       diag.jd_irrelevant,    diag.jd_irrelevant > 2)}
+      ${row('SMM failed',          diag.smm_failed,       diag.smm_failed > 1)}
+ 
+      ${section('Score distribution')}
+      ${row('M0 (0–10)',           diag.scored_m0)}
+      ${row('M1 (11–20)',          diag.scored_m1)}
+      ${row('M2+ (21+) ✓',        diag.scored_m2_plus)}
+ 
+      ${section('Tavily')}
+      ${row('Credits used this run', '+' + delta)}
+      ${row('Total this month',      diag.tavily_end + '/1000',
+            diag.tavily_end > 900)}
+ 
+    </table>
+  </div>
+ 
+  <div style="font-size:11px;color:#9aa0a6;text-align:center;padding-bottom:20px;">
+    JABA 🤖 · Phase 1 Diagnostics · Values in red exceeded expected thresholds
+  </div>
+ 
+</div>
+</body>
+</html>`;
+ 
+  GmailApp.sendEmail(
+    recipient,
+    `JABA Debug — No M2+ jobs · ${dateStr}`,
+    '',
+    { htmlBody: html, name: 'JABA 🤖' }
+  );
+  Logger.log(`Debug diagnostics email sent to ${recipient}`);
 }
 
 /* ── Remotive API (free, full JD, remote-first) ── */
@@ -3159,96 +3304,131 @@ function sendJobReportEmail(htmlBody) {
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
+// ── REPLACE runDailyJobSearch() ──────────────────────────────────────────────
+// Changes: added diag counter object; increment at each gate;
+// call emitDiagnosticsSummary() at end; call sendDebugDiagnosticsEmail()
+// when no M2+ jobs found. All filtering logic identical.
+ 
 function runDailyJobSearch() {
-  const MAX_JOBS = 6;
-
+  const MAX_JOBS = 6; // unchanged
+ 
+  // ── diagnostics counter object ────────────────────────────────────────────
+  const diag = {
+    fetched_total:      0,
+    excluded_title:     0,
+    excluded_geo:       0,
+    excluded_cache:     0,
+    excluded_applied:   0,
+    candidate_selected: 0,
+    jd_fetch_failed:    0,
+    jd_irrelevant:      0,
+    smm_failed:         0,
+    scored_m0:          0,
+    scored_m1:          0,
+    scored_m2_plus:     0,
+    report_jobs_count:  0,
+    processed_count:    0,
+    tavily_start:       0,
+    tavily_end:         0
+  };
+  // ── end diagnostics setup ─────────────────────────────────────────────────
+ 
   Logger.log('=== JABA Daily Job Search started ===');
-  Logger.log(`Tavily credits at start of run: ${getTavilyMonthlyUsage()}/1000`);
-
+  diag.tavily_start = getTavilyMonthlyUsage(); // ← record start credits
+  Logger.log(`Tavily credits at start of run: ${diag.tavily_start}/1000`);
+ 
   // Step 1 — clean cache entries older than 30 days
   cleanJobCache();
-
-  // Step 2 — fetch all Adzuna jobs (deduplicated by job ID)
+ 
+  // Step 2 — fetch all jobs (deduplicated by job ID)
   const allJobs = fetchAllJobSources();
-
+  diag.fetched_total = allJobs.length; // ← total from all sources
+ 
   if (allJobs.length === 0) {
-    Logger.log('No Adzuna jobs returned today. Exiting.');
+    Logger.log('No jobs returned today. Exiting.');
+    diag.tavily_end = getTavilyMonthlyUsage();
+    emitDiagnosticsSummary(diag);
     return;
   }
-
-  // Step 3 — apply filters: title exclusions + dedup against cache + applied sheet
+ 
+  // Step 3 — apply filters
   const candidates = [];
   for (const job of allJobs) {
     if (!isRelevantJobTitle(job.title)) {
-      Logger.log(`  ✗ Excluded: "${job.title}"`);
+      Logger.log(`  ✗ [title] "${job.title}"`);
+      diag.excluded_title++; // ← title gate
       continue;
     }
-      // Geographic rule for Adzuna non-German results
-      // (Remotive/Jobicy/RemoteOK/Arbeitnow already filtered at source)
-      if (!job.descriptionFull) {
-        const inGermany = isGermanLocation(job.city || '');
-        const titleLower = job.title.toLowerCase();
-        const descLower = (job.description || '').toLowerCase();
-        const mentionsRemote = titleLower.includes('remote') ||
-                              descLower.includes('remote') ||
-                              descLower.includes('homeoffice') ||
-                              descLower.includes('home office');
-        if (!inGermany && !mentionsRemote) {
-          Logger.log(`  ✗ Non-German job with no remote mention: "${job.title}" @ ${job.city}`);
-          continue;
-        }
+    if (!job.descriptionFull) {
+      const inGermany   = isGermanLocation(job.city || '');
+      const titleLower  = job.title.toLowerCase();
+      const descLower   = (job.description || '').toLowerCase();
+      const mentionsRemote = titleLower.includes('remote') ||
+                             descLower.includes('remote')  ||
+                             descLower.includes('homeoffice') ||
+                             descLower.includes('home office');
+      if (!inGermany && !mentionsRemote) {
+        Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city}`);
+        diag.excluded_geo++; // ← geo gate
+        continue;
       }
-
+    }
     if (isJobInCache(job.company, job.title)) {
-      Logger.log(`  ✗ In cache: "${job.title}" @ ${job.company}`);
+      Logger.log(`  ✗ [cache] "${job.title}" @ ${job.company}`);
+      diag.excluded_cache++; // ← cache gate
       continue;
     }
     if (isJobAlreadyApplied(job.company)) {
-      Logger.log(`  ✗ Already applied: ${job.company}`);
+      Logger.log(`  ✗ [applied] ${job.company}`);
+      diag.excluded_applied++; // ← applied gate
       continue;
     }
     candidates.push(job);
     if (candidates.length >= MAX_JOBS * 2) break;
   }
-
+ 
+  diag.candidate_selected = candidates.length; // ← candidates that passed all gates
   Logger.log(`Candidates after filtering: ${candidates.length}`);
-
+ 
   if (candidates.length === 0) {
     Logger.log('No new candidates today — no email sent.');
+    diag.tavily_end = getTavilyMonthlyUsage();
+    emitDiagnosticsSummary(diag);
+    sendDebugDiagnosticsEmail(diag); // ← debug email even when candidates = 0
     return;
   }
-
+ 
   // Step 4 — extract JD, run SMM, collect M2+ results
   const reportJobs = [];
   let   processed  = 0;
-
+ 
   for (const job of candidates) {
     if (processed >= MAX_JOBS) break;
-
+ 
     Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company}`);
-
-    // Tier 1 uses Adzuna description; tiers 2-3 fetch from URL if needed
+ 
     const extracted = smartExtractJD(job.url, job.description, job.descriptionFull);
-if (!extracted) {
-  Logger.log(`  ✗ JD fetch failed — skipping`);
-  addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
-  processed++;
-  Utilities.sleep(500);
-  continue;
-}
-
-// Validate the fetched content is actually about this job
-if (!isJdRelevantToJob(extracted.text, job.company, job.title)) {
-  Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
-  addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
-  processed++;
-  Utilities.sleep(500);
-  continue;
-}
-
+    if (!extracted) {
+      Logger.log(`  ✗ JD fetch failed — skipping`);
+      diag.jd_fetch_failed++; // ← JD fetch gate
+      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
+      processed++;
+      Utilities.sleep(500);
+      continue;
+    }
+ 
+    if (!isJdRelevantToJob(extracted.text, job.company, job.title)) {
+      Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
+      diag.jd_irrelevant++; // ← relevance gate
+      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
+      processed++;
+      Utilities.sleep(500);
+      continue;
+    }
+ 
     const cvType = detectCvTypeForSearch(extracted.text, job.title);
     Logger.log(`  CV type: ${cvType}`);
-
+ 
     let smmResult;
     try {
       const raw = analyzeSkillsMatch(extracted.text, cvType);
@@ -3256,41 +3436,51 @@ if (!isJdRelevantToJob(extracted.text, job.company, job.title)) {
       if (smmResult.error) throw new Error(smmResult.error);
     } catch (e) {
       Logger.log(`  ✗ SMM error: ${e.message}`);
+      diag.smm_failed++; // ← SMM gate
       processed++;
       Utilities.sleep(3000);
       continue;
     }
-
+ 
     const score    = smmResult.total_score || 0;
     const level    = smmResult.match_level  || 'M0';
     const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
-
+ 
+    // ── score bucket ────────────────────────────────────────────────────────
+    if      (levelNum === 0) diag.scored_m0++;
+    else if (levelNum === 1) diag.scored_m1++;
+    else                     diag.scored_m2_plus++;
+    // ── end score bucket ────────────────────────────────────────────────────
+ 
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
-
-    // Always cache to prevent reprocessing
+ 
     addJobToCache(job, smmResult, cvType, extracted.source);
-
-    // Only include M2+ in the email report
+ 
     if (levelNum >= 2) {
       reportJobs.push({ ...job, smmResult, cvType });
       Logger.log(`  ✓ Added to report (${level})`);
     }
-
+ 
     processed++;
-    Utilities.sleep(1500); // Mistral rate limit
+    Utilities.sleep(1500);
   }
-
-  Logger.log(`\n— Processed: ${processed} | M2+ for report: ${reportJobs.length}`);
-  Logger.log(`— Tavily credits this month: ${getTavilyMonthlyUsage()}/1000`);
-
-  // Step 5 — send email if any M2+ found
+ 
+  diag.processed_count   = processed;
+  diag.report_jobs_count = reportJobs.length;
+  diag.tavily_end        = getTavilyMonthlyUsage(); // ← record end credits
+ 
+  // ── emit structured diagnostics to log ───────────────────────────────────
+  emitDiagnosticsSummary(diag);
+ 
+  // Step 5 — send email
   if (reportJobs.length > 0) {
     const html = buildJobReportHtml(reportJobs);
     sendJobReportEmail(html);
     Logger.log(`Report email sent with ${reportJobs.length} job(s).`);
   } else {
     Logger.log('No M2+ jobs found today — no email sent.');
+    sendDebugDiagnosticsEmail(diag); // ← debug email with full breakdown
   }
-
+ 
   Logger.log('=== JABA Daily Job Search complete ===');
 }
