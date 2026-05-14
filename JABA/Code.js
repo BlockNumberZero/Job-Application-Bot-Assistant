@@ -528,7 +528,6 @@ function tavilySearchValidated(company, jobTitle) {
     contentType: 'application/json',
     payload: JSON.stringify({
       api_key: key,
-      query: `"${company}" ${jobTitle} Stellenanzeige`,
       query: `"${company}" ${jobTitle} Stelle`,
       search_depth: 'basic',
       max_results: 5,
@@ -714,49 +713,7 @@ function buildAlertLabel(smmResult) {
   return `${base} ${c}${n}${o}`;
 }
 
-/**
- * Extracts Indeed job URLs from an email HTML body.
- * Looks for the jk= parameter which uniquely identifies a job posting.
- * Returns array of clean viewjob URLs.
- */
-function extractIndeedJobUrls(htmlBody) {
-  if (!htmlBody) return [];
-  const jkPattern = /jk=([a-zA-Z0-9]+)/g;
-  const seen = new Set();
-  const urls = [];
-  let match;
-  while ((match = jkPattern.exec(htmlBody)) !== null) {
-    const jk = match[1];
-    if (!seen.has(jk)) {
-      seen.add(jk);
-      urls.push(`https://de.indeed.com/viewjob?jk=${jk}`);
-    }
-  }
-  Logger.log(`  extractIndeedJobUrls: found ${urls.length} unique job URL(s)`);
-  return urls;
-}
 
-/**
- * Strips HTML from an email body and removes Indeed email boilerplate,
- * leaving only the job-relevant content (Stellenbeschreibung, tasks, etc.)
- * Used as last-resort JD text when Tavily also fails.
- */
-function extractJobTextFromEmailHtml(htmlBody) {
-  if (!htmlBody) return '';
-  const stripped = stripHtmlToText(htmlBody);
-  return stripped
-    .replace(/Guten Tag[,.]?/gi, '')
-    .replace(/aufgrund Ihres Profils[^.]*\./gi, '')
-    .replace(/Bitte reichen Sie[^.]*\./gi, '')
-    .replace(/Abbestellen/gi, '')
-    .replace(/Laden Sie die kostenlose App herunter/gi, '')
-    .replace(/Job anzeigen/gi, '')
-    .replace(/Passt nicht/gi, '')
-    .replace(/Mehr erfahren/gi, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .substring(0, 8000);
-}
 
 /* ============================================================
    MAIN: processIndeedAlertEmails
@@ -819,10 +776,6 @@ const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
     const htmlBody  = message.getBody();
     const subject   = message.getSubject();
     Logger.log(`\nEmail: "${subject}"`);
-
-    // Extract direct job URLs and partial JD text from email HTML
-    const emailJobUrls = extractIndeedJobUrls(htmlBody);
-    const emailJdText  = extractJobTextFromEmailHtml(htmlBody);
 
     // Pre-filter by subject line — avoids Groq call for obviously irrelevant emails
     if (!isRelevantJobTitle(subject)) {
@@ -941,12 +894,9 @@ if (!jdText) {
       Utilities.sleep(2500); // respect Mistral rate limit
     }
 
-    // Apply score label — use the best result in this thread
-const analyzed = threadResults.filter(r => r.smmResult);
-const skipped  = threadResults.filter(r => r.skipped);
     const analyzed  = threadResults.filter(r => r.smmResult);
-    const noJd      = threadResults.filter(r => r.skipped && r.reason === 'no_jd');
-    const otherSkip = threadResults.filter(r => r.skipped && r.reason !== 'no_jd');
+const noJd      = threadResults.filter(r => r.skipped && r.reason === 'no_jd');
+const otherSkip = threadResults.filter(r => r.skipped && r.reason !== 'no_jd');
 
 if (analyzed.length > 0) {
   // Pick the highest scoring job in this thread
@@ -955,21 +905,11 @@ if (analyzed.length > 0) {
   );
   const scoreLabel = buildAlertLabel(best.smmResult);
   thread.addLabel(getOrCreateLabel(scoreLabel));
-} else if (skipped.length > 0 && skipped.length === threadResults.length) {
+} else if (noJd.length > 0 && analyzed.length === 0) {
+  thread.addLabel(getOrCreateLabel('JABA Alert/⏭ No JD Found'));
+} else if (otherSkip.length > 0 && analyzed.length === 0) {
   thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
 }
-    if (analyzed.length > 0) {
-      // Pick the highest scoring job in this thread
-      const best = analyzed.reduce((a, b) =>
-        (a.smmResult.total_score || 0) >= (b.smmResult.total_score || 0) ? a : b
-      );
-      const scoreLabel = buildAlertLabel(best.smmResult);
-      thread.addLabel(getOrCreateLabel(scoreLabel));
-    } else if (noJd.length > 0 && analyzed.length === 0) {
-      thread.addLabel(getOrCreateLabel('JABA Alert/⏭ No JD Found'));
-    } else if (otherSkip.length > 0 && analyzed.length === 0) {
-      thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
-    }
 
 thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
 
