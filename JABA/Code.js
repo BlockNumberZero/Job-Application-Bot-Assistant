@@ -410,14 +410,20 @@ function getOrCreateSmmRawDataSheet() {
    ============================================================ */
 const RELEVANT_KEYWORDS = [
   // English
-  'marketing','crm','growth','content','social media','web3','blockchain',
-  'community','automation','digital','campaign','brand','branding','seo','sea',
-  'performance','email marketing','influencer','analytics','communications',
-  'copywriter','storytelling','acquisition','retention','engagement','e-commerce',
+  'marketing', 'crm', 'growth', 'content', 'social media', 'web3', 'blockchain',
+  'community', 'automation', 'digital', 'campaign', 'brand', 'branding', 'seo', 'sea',
+  'performance', 'email marketing', 'influencer', 'analytics', 'communications',
+  'copywriter', 'storytelling', 'acquisition', 'retention', 'engagement', 'e-commerce',
+  // ← new English additions
+  'lifecycle', 'martech', 'growth marketer', 'demand generation', 'demand gen',
+  'b2b marketing', 'b2c marketing', 'marketing operations', 'marketing automation',
+  'digital marketing manager', 'online marketing',
   // German
-  'wachstum','inhalt','gemeinschaft','automatisierung','kampagne','marke',
-  'leistung','kommunikation','öffentlichkeitsarbeit','digitalmarketing',
-  'onlinemarketing','online-marketing','markenführung','reichweite'
+  'wachstum', 'inhalt', 'gemeinschaft', 'automatisierung', 'kampagne', 'marke',
+  'leistung', 'kommunikation', 'öffentlichkeitsarbeit', 'digitalmarketing',
+  'onlinemarketing', 'online-marketing', 'markenführung', 'reichweite',
+  // ← new German additions
+  'wachstumsmarketing', 'kundenbindung', 'lifecycle-marketing'
 ];
 
 const SKIP_KEYWORDS = [
@@ -2369,11 +2375,14 @@ const JOB_SEARCH_KEYWORDS = [
 ];
 
 const JOB_SEARCH_EXCLUDE_TERMS = [
+  // English
   'senior', 'sr.', 'lead ', 'head of', 'director',
   'vp ', 'vice president', 'sales', 'vertrieb', 'ausbildung',
-  'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum', 
+  'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum',
   'praktikant', 'werkstudent', 'werkstudentin',
-  'internship', 'intern ' 
+  'internship', 'intern ',
+  // ← new: consistently score M0 for Rey's profile
+  'product marketing', 'field marketing'
 ];
 
 const DIRECT_FETCH_BLOCKED = [
@@ -3031,7 +3040,7 @@ function fetchAdzunaJobsForCountry(keyword, countryCode) {
   const appId  = getAdzunaAppId();
   const appKey = getAdzunaAppKey();
   if (!appId || !appKey) return [];
-
+ 
   const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?` +
     `app_id=${encodeURIComponent(appId)}&` +
     `app_key=${encodeURIComponent(appKey)}&` +
@@ -3039,7 +3048,7 @@ function fetchAdzunaJobsForCountry(keyword, countryCode) {
     `what=${encodeURIComponent(countryCode === 'de' ? keyword : keyword + ' remote')}&` +
     `sort_by=date&` +
     `content-type=application/json`;
-
+ 
   try {
     const res = UrlFetchApp.fetch(url, { method: 'get', muteHttpExceptions: true });
     if (res.getResponseCode() !== 200) return [];
@@ -3048,6 +3057,7 @@ function fetchAdzunaJobsForCountry(keyword, countryCode) {
       title:           (job.title || '').trim(),
       company:         (job.company?.display_name || 'Unknown').trim(),
       city:            extractAdzunaCity(job.location) || countryCode.toUpperCase(),
+      country:         countryCode,   // ← NEW: store country code directly
       url:             job.redirect_url || '',
       description:     stripHtmlToText(job.description || '').substring(0, 10000),
       id:              `adzuna_${countryCode}_${job.id}`,
@@ -3341,21 +3351,53 @@ function scoreJobTitleQuality(title) {
   const lower = title.toLowerCase();
  
   const highValue = [
-    'growth', 'performance', 'crm', 'lifecycle', 'retention',
-    'automation', 'marketing manager', 'email marketing',
-    'marketing automation', 'digital marketing', 'campaign manager',
-    'acquisition', 'demand generation', 'go-to-market', 'gtm',
-    'lead generation', 'paid', 'seo', 'performance marketing'
-  ];
-  const lowValue = [
-    'copywriter', 'content creator', 'influencer',
-    'junior', 'assistant', 'design director', 'designer',
-    'support', 'analyst', 'coordinator'
+    // Core strength areas — double weight where most specific
+    'crm',                    // direct match
+    'lifecycle',              // strongest signal
+    'retention',              // strong signal
+    'email marketing',        // specific match
+    'marketing automation',   // specific match
+    'automation manager',     // specific match
+    'growth marketing',       // good fit
+    'performance marketing',  // decent fit
+    'digital marketing',      // broad but relevant
+    'demand generation',      // good fit
+    'demand gen',
+    'acquisition',
+    'martech',
+    'onlinemarketing',        // German equivalent
+    'online marketing',
+    'campaign manager',
+    'campaign marketing',
+    'b2b marketing',
+    'wachstum',               // German: growth
   ];
  
+  const lowValue = [
+    // Specialized roles that score M0 for Rey's CV
+    'copywriter',
+    'content creator',
+    'influencer',
+    'field marketing',
+    'junior',
+    'assistant',
+    'design director',
+    'designer',
+    'support specialist',
+    'shopper',
+    'coordinator',
+    'community manager',  // lower signal — too narrow
+  ];
+ 
+  // Weighted scoring: high-value terms worth more if specific
   let score = 0;
-  highValue.forEach(t => { if (lower.includes(t)) score += 2; });
-  lowValue.forEach(t  => { if (lower.includes(t)) score -= 1; });
+  const highSpecific = ['crm', 'lifecycle', 'retention', 'email marketing', 'marketing automation'];
+  highValue.forEach(t => {
+    if (lower.includes(t)) score += highSpecific.includes(t) ? 3 : 2;
+  });
+  lowValue.forEach(t => {
+    if (lower.includes(t)) score -= 1;
+  });
   return score;
 }
 
@@ -3367,10 +3409,12 @@ function scoreJobTitleQuality(title) {
 // when no M2+ jobs found. All filtering logic identical.
  
 function runDailyJobSearch() {
-  const MAX_JOBS      = 15; // ← was 6
-  const CANDIDATE_CAP = 40; // ← was MAX_JOBS * 2 = 12
+  const MAX_JOBS        = 10;           // realistic for 6-min GAS limit
+  const CANDIDATE_CAP   = 40;
+  const TIME_BUDGET_MS  = 290000;       // 4.8 min — stop before GAS hard-kills at 6 min
+  const runStart        = Date.now();
  
-  // Diagnostics counters (unchanged from Phase 1)
+  // Diagnostics counters
   const diag = {
     fetched_total:      0,
     excluded_title:     0,
@@ -3416,16 +3460,24 @@ function runDailyJobSearch() {
       continue;
     }
  
+    // ── Geo filter (Adzuna non-full-description sources only) ────────────────
     if (!job.descriptionFull) {
-      const inGermany     = isGermanLocation(job.city || '');
-      const titleLower    = job.title.toLowerCase();
-      const descLower     = (job.description || '').toLowerCase();
+      // FIX: check stored country code first (Adzuna jobs know their country)
+      // Falls back to city-name heuristic + title scan for edge cases
+      const countryCode    = (job.country || '').toLowerCase();
+      const inGermany      = countryCode === 'de' ||            // ← direct country check
+                             isGermanLocation(job.city  || '') || // city-name heuristic
+                             isGermanLocation(job.title || '');   // title fallback (e.g. "Job in Deutschland (Rostock)...")
+ 
+      const titleLower     = job.title.toLowerCase();
+      const descLower      = (job.description || '').toLowerCase();
       const mentionsRemote = titleLower.includes('remote') ||
                              descLower.includes('remote')  ||
                              descLower.includes('homeoffice') ||
                              descLower.includes('home office');
+ 
       if (!inGermany && !mentionsRemote) {
-        Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city}`);
+        Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city} [${countryCode || '?'}]`);
         diag.excluded_geo++;
         continue;
       }
@@ -3437,7 +3489,6 @@ function runDailyJobSearch() {
       continue;
     }
  
-    // ← FIX: pass job.title as second argument (was company-only)
     if (isJobAlreadyApplied(job.company, job.title)) {
       Logger.log(`  ✗ [applied] "${job.title}" @ ${job.company}`);
       diag.excluded_applied++;
@@ -3445,10 +3496,10 @@ function runDailyJobSearch() {
     }
  
     candidates.push(job);
-    if (candidates.length >= CANDIDATE_CAP) break; // ← fixed cap of 40
+    if (candidates.length >= CANDIDATE_CAP) break;
   }
  
-  // ── Sort by title quality — best candidates processed first ───────────────
+  // Sort best candidates first
   candidates.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
   if (candidates.length > 0) {
     Logger.log(`Top 5 after sort: ${candidates.slice(0, 5).map(j => `"${j.title}"`).join(' | ')}`);
@@ -3461,7 +3512,6 @@ function runDailyJobSearch() {
     Logger.log('No new candidates today — no email sent.');
     diag.tavily_end = getTavilyMonthlyUsage();
     emitDiagnosticsSummary(diag);
-    // No debug email here — nothing was scored, nothing to diagnose
     return;
   }
  
@@ -3472,7 +3522,14 @@ function runDailyJobSearch() {
   for (const job of candidates) {
     if (processed >= MAX_JOBS) break;
  
-    Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company}`);
+    // ── Time budget guard — stop gracefully before GAS 6-min kill ───────────
+    const elapsed = Date.now() - runStart;
+    if (elapsed > TIME_BUDGET_MS) {
+      Logger.log(`⏱ Time budget reached (${Math.round(elapsed/1000)}s) after ${processed} jobs — stopping gracefully`);
+      break;
+    }
+ 
+    Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company} [${job.country || 'remote'}]`);
  
     const extracted = smartExtractJD(job.url, job.description, job.descriptionFull);
     if (!extracted) {
@@ -3484,7 +3541,6 @@ function runDailyJobSearch() {
       continue;
     }
  
-    // ← FIX: pass trustedSource flag — relaxes relevance check for API full-text sources
     const isTrustedSource = job.descriptionFull === true || extracted.source === 'api_full';
     if (!isJdRelevantToJob(extracted.text, job.company, job.title, isTrustedSource)) {
       Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
@@ -3544,7 +3600,6 @@ function runDailyJobSearch() {
     Logger.log(`Report email sent with ${reportJobs.length} job(s).`);
   } else {
     Logger.log('No M2+ jobs found today — no email sent.');
-    // ← Debug email only when something was actually scored (Rey's rule)
     if (diag.scored_m0 + diag.scored_m1 > 0) {
       sendDebugDiagnosticsEmail(diag);
     }
