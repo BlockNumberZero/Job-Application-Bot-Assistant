@@ -77,9 +77,11 @@ function repairAndParseSmm(raw) {
   throw new Error(`Could not repair SMM JSON. Preview: ${content.substring(0, 100)}`);
 }
 
-function getSmmCacheKey(jdText, cvType) {
-  const input   = cvType + '|' + jdText.replace(/\s+/g, ' ').substring(0, 3000);
-  const digest  = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, input);
+function getSmmCacheKey(jdText, cvType, cvText) {
+  const input = cvType + '|' +
+                jdText.replace(/\s+/g, ' ').substring(0, 3000) + '|' +
+                (cvText || '').replace(/\s+/g, ' ').substring(0, 500);
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, input);
   return 'smm_' + digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
 }
 
@@ -209,7 +211,7 @@ if (cleanedJD.length < 300) {
   return JSON.stringify({ error: 'JD too short for SMM analysis (< 300 chars). Try fetching the full job page.' });
 }
         // Check cache before calling Mistral
-    const cacheKey    = getSmmCacheKey(cleanedJD, cvType);
+    const cacheKey = getSmmCacheKey(cleanedJD, cvType, templateText);
     const scriptCache = CacheService.getScriptCache();
     const cached      = scriptCache.get(cacheKey);
     if (cached) {
@@ -378,6 +380,10 @@ return resultStr;
   }
 }
 
+function clearSmmCache() {
+  CacheService.getScriptCache().removeAll();
+  Logger.log('SMM cache cleared. Next analysis will call Mistral fresh.');
+}
 
 /* ============================================================
    NEW: SMM_Raw_Data sheet — create or retrieve
@@ -428,15 +434,19 @@ const RELEVANT_KEYWORDS = [
 
 const SKIP_KEYWORDS = [
   // English
-  'sales','engineer','software developer','software engineer','lawyer',
-  'accountant','nurse','driver','warehouse','key account','key-account',
-  'recruiter','finance controller','electrician','plumber','mechanic',
-  'chef','cook','cleaner','internship','intern ','fellowship','security guard',
+  'sales', 'engineer', 'software developer', 'software engineer', 'lawyer',
+  'accountant', 'nurse', 'driver', 'warehouse', 'key account', 'key-account',
+  'recruiter', 'finance controller', 'electrician', 'plumber', 'mechanic',
+  'chef', 'cook', 'cleaner', 'internship', 'intern ', 'fellowship', 'security guard',
+  // ← new
+  'customer success',
   // German
-  'vertrieb','verkauf','ingenieur','softwareentwickler','entwickler',
-  'rechtsanwalt','buchhalter','steuerberater','krankenschwester','pfleger',
-  'fahrer','lagerarbeiter','lagermitarbeiter','schlüsselkunde','key account',
-  'personalvermittler','werkstudent','werkstudentin','praktikum','praktikant','praktikantin','pflichtpraktikum','elektriker','klempner','mechaniker','koch','reinigungskraft'
+  'vertrieb', 'verkauf', 'ingenieur', 'softwareentwickler', 'entwickler',
+  'rechtsanwalt', 'buchhalter', 'steuerberater', 'krankenschwester', 'pfleger',
+  'fahrer', 'lagerarbeiter', 'lagermitarbeiter', 'schlüsselkunde', 'key account',
+  'personalvermittler', 'werkstudent', 'werkstudentin', 'praktikum', 'praktikant',
+  'praktikantin', 'pflichtpraktikum', 'elektriker', 'klempner', 'mechaniker',
+  'koch', 'reinigungskraft'
 ];
 
 // Domains where fetching always fails — skip immediately
@@ -1208,8 +1218,8 @@ function mainJobProcessor(jdInput, cvType, smmDataJson) {
 
     const signOff = isDe ? "Mit freundlichen Grüßen" : "Best regards";
     const availabilityText = isDe
-      ? "Ich bin bereit umzuziehen (falls erforderlich) und stehe kurzfristig mit einer Kündigungsfrist von einer Woche zur Verfügung."
-      : "I am fully open to relocation if required and am available to start within a one-week notice period.";
+  ? "Ich bin bereit umzuziehen (falls erforderlich) und stehe kurzfristig mit einer Kündigungsfrist von zwei Wochen zur Verfügung."
+  : "I am fully open to relocation if required and am available to start within a two-week notice period.";
 
     // ── Mistral prompt — Step 2 focuses ONLY on cover letter + metadata ──
     // MATCH is still in the output format so parsing stays consistent,
@@ -1269,8 +1279,9 @@ COVER LETTER RULES:
     letterText = letterText.replace(startDE, '').trim();
     letterText = letterText.replace(startEN, '').trim();
 
-    letterText = letterText.replace(/—/g, ',');
-    letterText = letterText.replace(/–/g, ',');
+    letterText = letterText.replace(/\s*—\s*/g, ', ');  // em-dash → comma
+    letterText = letterText.replace(/\s*–\s*/g, ', ');  // en-dash → comma
+    letterText = letterText.replace(/ - /g, ', ');       // connector hyphen → comma (compound words untouched)
     letterText = letterText.replace(/\n{3,}/g, '\n\n');
     letterText = `${letterText}\n\n${availabilityText}\n\n${signOff}\n\n${CONFIG.MY_NAME}`;
 
@@ -2381,8 +2392,9 @@ const JOB_SEARCH_EXCLUDE_TERMS = [
   'verkauf', 'key account', 'leiter', 'leitung', 'cmo', 'praktikum',
   'praktikant', 'werkstudent', 'werkstudentin',
   'internship', 'intern ',
-  // ← new: consistently score M0 for Rey's profile
-  'product marketing', 'field marketing'
+  'product marketing', 'field marketing',
+  // ← new: non-marketing roles confirmed M0
+  'customer success', 'account executive', 'revops'
 ];
 
 const DIRECT_FETCH_BLOCKED = [
@@ -3125,7 +3137,9 @@ function detectCvTypeForSearch(jdText, jobTitle) {
   if (web3Signals.some(s => combined.includes(s))) return 'Web3 Marketing Manager';
  
   const deSignals = [
-    '(m/w/d)', '(w/m/d)', '(w/d/m)',   // ← added two variants
+    '(m/w/d)', '(w/m/d)', '(w/d/m)',
+    '(m/w/x)',   // ← new: Allianz, Deutsche companies
+    '(m/f/d)',   // ← new: EN-in-DE postings
     'vollzeit', 'bewerbung', 'berufserfahrung', 'aufgaben'
   ];
   if (deSignals.some(s => combined.includes(s))) return 'DE Web2 Marketing Manager';
@@ -3351,53 +3365,55 @@ function scoreJobTitleQuality(title) {
   const lower = title.toLowerCase();
  
   const highValue = [
-    // Core strength areas — double weight where most specific
-    'crm',                    // direct match
-    'lifecycle',              // strongest signal
-    'retention',              // strong signal
-    'email marketing',        // specific match
-    'marketing automation',   // specific match
-    'automation manager',     // specific match
-    'growth marketing',       // good fit
-    'performance marketing',  // decent fit
-    'digital marketing',      // broad but relevant
-    'demand generation',      // good fit
-    'demand gen',
-    'acquisition',
-    'martech',
-    'onlinemarketing',        // German equivalent
-    'online marketing',
-    'campaign manager',
-    'campaign marketing',
-    'b2b marketing',
-    'wachstum',               // German: growth
+    'crm', 'lifecycle', 'retention', 'email marketing', 'marketing automation',
+    'automation manager', 'growth marketing', 'performance marketing',
+    'digital marketing', 'demand generation', 'demand gen', 'acquisition',
+    'martech', 'onlinemarketing', 'online marketing', 'campaign manager',
+    'campaign marketing', 'b2b marketing', 'wachstum', 'email-marketing',
+    'marketing manager', 'digital manager'
   ];
  
   const lowValue = [
-    // Specialized roles that score M0 for Rey's CV
-    'copywriter',
-    'content creator',
-    'influencer',
-    'field marketing',
-    'junior',
-    'assistant',
-    'design director',
-    'designer',
-    'support specialist',
-    'shopper',
-    'coordinator',
-    'community manager',  // lower signal — too narrow
+    'field marketing', 'design director', 'designer',
+    'support specialist', 'shopper', 'coordinator'
   ];
  
-  // Weighted scoring: high-value terms worth more if specific
-  let score = 0;
+  // Base scoring
   const highSpecific = ['crm', 'lifecycle', 'retention', 'email marketing', 'marketing automation'];
+  let score = 0;
   highValue.forEach(t => {
     if (lower.includes(t)) score += highSpecific.includes(t) ? 3 : 2;
   });
   lowValue.forEach(t => {
     if (lower.includes(t)) score -= 1;
   });
+ 
+  // ── Conditional penalties ────────────────────────────────────────────────
+ 
+  // "Account manager" is a sales role UNLESS it contains marketing/growth context
+  if (lower.includes('account manager')) {
+    const hasMarketingContext = ['crm', 'lifecycle', 'retention', 'automation', 'marketing', 'growth']
+      .some(t => lower.includes(t));
+    if (!hasMarketingContext) score -= 4; // push below marketing roles
+  }
+ 
+  // "Freelance" without a specific marketing discipline = low priority
+  if (lower.includes('freelance')) {
+    const hasMarketingDiscipline = ['marketing', 'crm', 'email', 'digital', 'campaign', 'growth']
+      .some(t => lower.includes(t));
+    if (!hasMarketingDiscipline) score -= 3;
+    else score -= 1; // small penalty even with discipline (vs. permanent role)
+  }
+ 
+  // "Content creator" — consistently M0 in scoring history, deprioritize hard
+  if (lower.includes('content creator')) score -= 4;
+ 
+  // "Community manager" alone — too narrow, unlikely M2+
+  if (lower.includes('community manager') &&
+      !['crm', 'growth', 'lifecycle', 'retention'].some(t => lower.includes(t))) {
+    score -= 2;
+  }
+ 
   return score;
 }
 
@@ -3409,12 +3425,12 @@ function scoreJobTitleQuality(title) {
 // when no M2+ jobs found. All filtering logic identical.
  
 function runDailyJobSearch() {
-  const MAX_JOBS        = 10;           // realistic for 6-min GAS limit
-  const CANDIDATE_CAP   = 40;
-  const TIME_BUDGET_MS  = 290000;       // 4.8 min — stop before GAS hard-kills at 6 min
-  const runStart        = Date.now();
+  const MAX_JOBS       = 10;
+  const CANDIDATE_CAP  = 40;
+  const TIME_BUDGET_MS = 290000; // 4.8 min
  
-  // Diagnostics counters
+  const runStart = Date.now();
+ 
   const diag = {
     fetched_total:      0,
     excluded_title:     0,
@@ -3422,6 +3438,7 @@ function runDailyJobSearch() {
     excluded_cache:     0,
     excluded_applied:   0,
     candidate_selected: 0,
+    candidates_deduped: 0, // ← new counter
     jd_fetch_failed:    0,
     jd_irrelevant:      0,
     smm_failed:         0,
@@ -3460,22 +3477,17 @@ function runDailyJobSearch() {
       continue;
     }
  
-    // ── Geo filter (Adzuna non-full-description sources only) ────────────────
     if (!job.descriptionFull) {
-      // FIX: check stored country code first (Adzuna jobs know their country)
-      // Falls back to city-name heuristic + title scan for edge cases
       const countryCode    = (job.country || '').toLowerCase();
-      const inGermany      = countryCode === 'de' ||            // ← direct country check
-                             isGermanLocation(job.city  || '') || // city-name heuristic
-                             isGermanLocation(job.title || '');   // title fallback (e.g. "Job in Deutschland (Rostock)...")
- 
+      const inGermany      = countryCode === 'de' ||
+                             isGermanLocation(job.city  || '') ||
+                             isGermanLocation(job.title || '');
       const titleLower     = job.title.toLowerCase();
       const descLower      = (job.description || '').toLowerCase();
       const mentionsRemote = titleLower.includes('remote') ||
                              descLower.includes('remote')  ||
                              descLower.includes('homeoffice') ||
                              descLower.includes('home office');
- 
       if (!inGermany && !mentionsRemote) {
         Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city} [${countryCode || '?'}]`);
         diag.excluded_geo++;
@@ -3499,16 +3511,33 @@ function runDailyJobSearch() {
     if (candidates.length >= CANDIDATE_CAP) break;
   }
  
+  // ── NEW: deduplicate candidates by normalized company + title ─────────────
+  // Prevents two Adzuna listings for the same role from consuming two slots.
+  const dedupSeen = new Set();
+  const dedupedCandidates = [];
+  for (const job of candidates) {
+    const key = `${job.company.toLowerCase().trim()}||${normalizeJobTitle(job.title).toLowerCase().trim()}`;
+    if (!dedupSeen.has(key)) {
+      dedupSeen.add(key);
+      dedupedCandidates.push(job);
+    }
+  }
+  diag.candidates_deduped = candidates.length - dedupedCandidates.length;
+  if (diag.candidates_deduped > 0) {
+    Logger.log(`  Removed ${diag.candidates_deduped} duplicate candidate(s) before scoring`);
+  }
+  // ── END dedup ─────────────────────────────────────────────────────────────
+ 
   // Sort best candidates first
-  candidates.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
-  if (candidates.length > 0) {
-    Logger.log(`Top 5 after sort: ${candidates.slice(0, 5).map(j => `"${j.title}"`).join(' | ')}`);
+  dedupedCandidates.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
+  if (dedupedCandidates.length > 0) {
+    Logger.log(`Top 5 after sort: ${dedupedCandidates.slice(0, 5).map(j => `"${j.title}"`).join(' | ')}`);
   }
  
-  diag.candidate_selected = candidates.length;
-  Logger.log(`Candidates after filtering: ${candidates.length}`);
+  diag.candidate_selected = dedupedCandidates.length;
+  Logger.log(`Candidates after filtering + dedup: ${dedupedCandidates.length}`);
  
-  if (candidates.length === 0) {
+  if (dedupedCandidates.length === 0) {
     Logger.log('No new candidates today — no email sent.');
     diag.tavily_end = getTavilyMonthlyUsage();
     emitDiagnosticsSummary(diag);
@@ -3519,10 +3548,9 @@ function runDailyJobSearch() {
   const reportJobs = [];
   let   processed  = 0;
  
-  for (const job of candidates) {
+  for (const job of dedupedCandidates) {
     if (processed >= MAX_JOBS) break;
  
-    // ── Time budget guard — stop gracefully before GAS 6-min kill ───────────
     const elapsed = Date.now() - runStart;
     if (elapsed > TIME_BUDGET_MS) {
       Logger.log(`⏱ Time budget reached (${Math.round(elapsed/1000)}s) after ${processed} jobs — stopping gracefully`);
