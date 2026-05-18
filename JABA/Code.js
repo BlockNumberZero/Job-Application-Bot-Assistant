@@ -154,12 +154,15 @@ function onOpen() {
     .addItem('Scan Gmail for Applications', 'processGmailApplications')
     .addItem('Scan Gmail for Rejections', 'processRejectionEmails')
     .addSeparator()
+    .addItem('📧 Process Indeed Job Alerts', 'processIndeedAlertEmails')
+    .addItem('📧 Process BA Job Alerts', 'processArbeitsagenturAlertEmails')
+    .addSeparator()
     .addItem('🔄 Refresh Dashboard Data', 'refreshAllData')
     .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
     .addSeparator()
-    .addItem('📧 Process Indeed Job Alerts', 'processIndeedAlertEmails')
-    .addSeparator()
     .addItem('🔍 Run Daily Job Search', 'runDailyJobSearch')
+    .addSeparator()
+    .addItem('🗑️ Clear Job Search Cache (run once)', 'clearAllJobCache')
     .addToUi();
 }
 
@@ -188,7 +191,7 @@ function showSidebar() {
    Called from sidebar when user clicks a DE/EN/Web3 SMM button.
    Returns a JSON string with 8 skills, scores, and match level.
    ============================================================ */
-function analyzeSkillsMatch(jdInput, cvType) {
+function analyzeSkillsMatch(jdInput, cvType, runStart, timeBudgetMs) {
   try {
     // Load the correct CV template
     let templateDocId;
@@ -321,6 +324,15 @@ for (let attempt = 1; attempt <= 3; attempt++) {
   if (responseCode === 200) break;
   if (responseCode === 429 || responseCode === 503) {
     const wait = RETRY_DELAYS[attempt - 1];
+    // ── Time-budget guard (automated runs only) ──────────────────────────
+    if (runStart && timeBudgetMs) {
+      const remaining = timeBudgetMs - (Date.now() - runStart);
+      if (remaining < wait + 45000) { // need wait + 45s safety buffer
+        Logger.log(`⏱ SMM 429 — only ${Math.round(remaining/1000)}s left in budget, aborting retry → Groq`);
+        break; // fall through to Groq fallback below
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────
     Logger.log(`Mistral SMM ${responseCode} (attempt ${attempt}) — waiting ${wait/1000}s`);
     Utilities.sleep(wait);
   } else {
@@ -737,6 +749,8 @@ function buildAlertLabel(smmResult) {
 function processIndeedAlertEmails() {
   const props    = PropertiesService.getScriptProperties();
   const timezone = CONFIG.TIMEZONE;
+  const runStart = Date.now();
+  const ALERT_TIME_BUDGET_MS = 280000; // 4.67 minutes
   const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
 
   // Determine scan window
@@ -816,6 +830,12 @@ Logger.log(`Jobs in email: ${allJobs.length} | After keyword filter: ${relevantJ
 
     for (const job of relevantJobs) {
       if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
+      // Time budget check
+      if (Date.now() - runStart > ALERT_TIME_BUDGET_MS - 60000) {
+        Logger.log(`⏱ Alert scan: time budget nearly exhausted — stopping gracefully`);
+        break;
+      }
+
       Logger.log(`→ "${job.title}" at "${job.company}"`);
 
 // ── JD Fetch: company page → web search → skip (no email body fallback) ──
@@ -865,7 +885,7 @@ if (!jdText) {
       // Step 3: run SMM analysis
       let smmResult;
       try {
-        const smmRaw = analyzeSkillsMatch(jdText, cvType);
+        const smmRaw = analyzeSkillsMatch(jdText, cvType, runStart, ALERT_TIME_BUDGET_MS);
         smmResult    = JSON.parse(smmRaw);
         if (smmResult.error) throw new Error(smmResult.error);
       } catch(e) {
@@ -3173,7 +3193,7 @@ function cleanJobCache() {
   if (sheet.getLastRow() < 2) return;
  
   const now            = new Date();
-  const cutoffAnalyzed = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days
+  const cutoffAnalyzed = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000); // 14 days
   const cutoffSkip     = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000); //  7 days
  
   // Columns: Date(1), Company(2), Job_Title(3), URL(4), CV_Type(5), Match_Level(6), Score(7), Fetch_Source(8)
@@ -3581,10 +3601,18 @@ function runDailyJobSearch() {
  
     const cvType = detectCvTypeForSearch(extracted.text, job.title);
     Logger.log(`  CV type: ${cvType}`);
- 
+
+    // ── Pre-SMM time budget check ─────────────────────────────────────────
+    const preSmm = Date.now() - runStart;
+    if (preSmm > TIME_BUDGET_MS - 90000) {
+      Logger.log(`⏱ Pre-SMM: only ${Math.round((TIME_BUDGET_MS - preSmm)/1000)}s left — stopping run`);
+      break;
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     let smmResult;
     try {
-      const raw = analyzeSkillsMatch(extracted.text, cvType);
+      const raw = analyzeSkillsMatch(extracted.text, cvType, runStart, TIME_BUDGET_MS);
       smmResult = JSON.parse(raw);
       if (smmResult.error) throw new Error(smmResult.error);
     } catch (e) {
@@ -3634,4 +3662,312 @@ function runDailyJobSearch() {
   }
  
   Logger.log('=== JABA Daily Job Search complete ===');
+}
+/* ============================================================
+   CACHE UTILITIES
+   ============================================================ */
+
+/**
+ * Wipes the entire Job_Search_Cache sheet.
+ * Run once from the menu to clear cache saturation.
+ * After running, the next daily search will evaluate fresh candidates.
+ */
+function clearAllJobCache() {
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+  const sheet = getOrCreateJobCacheSheet();
+  if (sheet.getLastRow() < 2) {
+    if (ui) ui.alert('Job cache is already empty.');
+    return;
+  }
+  const count = sheet.getLastRow() - 1;
+  sheet.deleteRows(2, count);
+  SpreadsheetApp.flush();
+  Logger.log(`Job cache cleared: ${count} entries removed.`);
+  if (ui) ui.alert(`✅ Job cache cleared — ${count} entries removed.\nThe next daily search run will evaluate fresh candidates.`);
+}
+
+
+/* ============================================================
+   BA (BUNDESAGENTUR FÜR ARBEIT) JOB ALERT PROCESSOR
+   Processes email alerts from jobsuche@arbeitsagentur.de
+   Separate label tree: JABA BA Alert/
+   Separate timestamp cursor: LAST_BA_ALERT_SCAN
+   ============================================================ */
+
+/**
+ * Extracts job listings from a BA alert email HTML body.
+ * Matches any arbeitsagentur.de href links that look like job titles.
+ */
+function extractBAJobListingsFromHtml(htmlBody) {
+  if (!htmlBody) return [];
+  const jobs = [];
+  const seen = new Set();
+
+  // Normalise HTML entities
+  const html = htmlBody
+    .replace(/&amp;/g, '&').replace(/&#38;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&#\d+;/g, ' ').replace(/&nbsp;/g, ' ');
+
+  // Primary: arbeitsagentur.de job detail / redirect links
+  const pattern = /href="([^"]*arbeitsagentur\.de[^"]+)"\s*[^>]*>([\s\S]{4,200}?)<\/a>/gi;
+  let match;
+
+  while ((match = pattern.exec(html)) !== null) {
+    const rawUrl  = match[1].trim();
+    const rawText = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+    if (!rawText || rawText.length < 4) continue;
+    // Skip navigation / utility anchor text
+    if (/^(anmelden|registrieren|hilfe|datenschutz|impressum|abonnieren|abmelden|alle|mehr|weiter|zurück|suche|jobalarm|zur startseite|cookie)/i.test(rawText)) continue;
+    if (/^https?:|^\d+$/.test(rawText)) continue;
+
+    // Deduplicate by URL (strip utm params)
+    const urlKey = rawUrl.replace(/[?&]utm[^&]*/gi, '').replace(/&?ref=[^&]*/gi, '').trim();
+    if (seen.has(urlKey)) continue;
+    seen.add(urlKey);
+
+    // Company: extract from HTML immediately after the link
+    const afterLink = html.substring(match.index + match[0].length,
+                                     match.index + match[0].length + 600);
+    const company   = extractCompanyFromHtmlContext(afterLink) || 'Unknown';
+
+    jobs.push({
+      title:   rawText,
+      company: company,
+      url:     rawUrl,
+      id:      'ba_' + urlKey.substring(urlKey.lastIndexOf('/') + 1).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)
+    });
+  }
+
+  // Fallback: if primary pattern found nothing, try any link whose anchor text
+  // looks like a job title (catches tracking/redirect URLs in some BA formats)
+  if (jobs.length === 0) {
+    Logger.log('  BA: no arbeitsagentur.de hrefs found — trying broad link fallback');
+    const broad = /href="(https?:\/\/[^"]{10,})"[^>]*>([\s\S]{4,200}?)<\/a>/gi;
+    while ((match = broad.exec(html)) !== null) {
+      const rawText = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      if (!isRelevantJobTitle(rawText)) continue;
+      const rawUrl  = match[1].trim();
+      if (seen.has(rawUrl)) continue;
+      seen.add(rawUrl);
+      const afterLink = html.substring(match.index + match[0].length,
+                                       match.index + match[0].length + 600);
+      jobs.push({
+        title:   rawText,
+        company: extractCompanyFromHtmlContext(afterLink) || 'Unknown',
+        url:     rawUrl,
+        id:      'ba_fallback_' + rawUrl.substring(rawUrl.lastIndexOf('/') + 1).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)
+      });
+    }
+  }
+
+  Logger.log(`  BA HTML extraction: ${jobs.length} job(s) found`);
+  return jobs;
+}
+
+/**
+ * Main BA alert processor.
+ * Run from the menu or via a time-based trigger.
+ */
+function processArbeitsagenturAlertEmails() {
+  const props    = PropertiesService.getScriptProperties();
+  const timezone = CONFIG.TIMEZONE;
+  const runStart = Date.now();
+  const TIME_BUDGET_MS = 280000; // 4.67 minutes
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+
+  // ── Timestamp cursor ──────────────────────────────────────────────────────
+  const lastScanStr = props.getProperty('LAST_BA_ALERT_SCAN');
+  const sinceDate   = lastScanStr
+    ? new Date(lastScanStr)
+    : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sinceFormatted = Utilities.formatDate(sinceDate, timezone, 'yyyy/MM/dd');
+  Logger.log(`BA alert scan — searching since: ${sinceFormatted}`);
+
+  const labelInternship = getOrCreateLabel('JABA BA Alert/🎓 Internship');
+
+  const query = [
+    'from:jobsuche@arbeitsagentur.de',
+    `after:${sinceFormatted}`,
+    '-label:JABA BA Alert/Processed'
+  ].join(' ');
+
+  const threads = GmailApp.search(query, 0, 30);
+  Logger.log(`Found ${threads.length} BA alert thread(s) to process.`);
+
+  if (threads.length === 0) {
+    props.setProperty('LAST_BA_ALERT_SCAN', new Date().toISOString());
+    if (ui) ui.alert('No new BA alert emails found since last scan.');
+    return;
+  }
+
+  let totalReviewed = 0;
+  let totalLow      = 0;
+  let totalSkipped  = 0;
+  const summaryLines  = [];
+  const MAX_JOBS_PER_RUN = 10;
+  let jobsProcessed   = 0;
+
+  for (const thread of threads) {
+    if (jobsProcessed >= MAX_JOBS_PER_RUN) {
+      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached — run again for remaining emails.`);
+      break;
+    }
+
+    const message  = thread.getMessages()[thread.getMessages().length - 1];
+    const htmlBody = message.getBody();
+    const subject  = message.getSubject();
+    Logger.log(`\nBA Email: "${subject}"`);
+
+    const allJobs      = extractBAJobListingsFromHtml(htmlBody);
+    const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
+    Logger.log(`BA jobs: ${allJobs.length} total | ${relevantJobs.length} passed keyword filter`);
+
+    if (relevantJobs.length === 0) {
+      const hasInternship = allJobs.some(j =>
+        /werkstudent|praktikum|pflichtpraktikum|internship/i.test(j.title));
+      if (hasInternship) thread.addLabel(labelInternship);
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
+      continue;
+    }
+
+    const threadResults = [];
+
+    for (const job of relevantJobs) {
+      if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
+
+      // ── Time budget check ───────────────────────────────────────────────
+      if (Date.now() - runStart > TIME_BUDGET_MS - 60000) {
+        Logger.log(`⏱ BA scan: time budget nearly exhausted — stopping gracefully`);
+        break;
+      }
+
+      Logger.log(`→ "${job.title}" at "${job.company}"`);
+
+      // ── JD fetch: direct → Tavily ───────────────────────────────────────
+      let jdText   = null;
+      let jdSource = 'unknown';
+
+      // Tier 1: direct UrlFetchApp (BA pages are public)
+      const direct = fetchJobPageDirectly(job.url);
+      if (direct && looksLikeJobContent(direct) && isCompleteJobDescription(direct)) {
+        jdText   = direct;
+        jdSource = 'direct';
+        Logger.log(`  Tier 1 (direct) OK: ${direct.length} chars`);
+      }
+
+      // Tier 2: Tavily advanced
+      if (!jdText) {
+        Logger.log(`  Tier 2: Tavily extract for BA job`);
+        const tavily = tavilyExtractAdvanced(job.url);
+        if (tavily && looksLikeJobContent(tavily) && isCompleteJobDescription(tavily)) {
+          jdText   = tavily;
+          jdSource = 'tavily';
+          Logger.log(`  Tier 2 (Tavily) OK: ${tavily.length} chars`);
+        }
+      }
+
+      if (!jdText) {
+        Logger.log(`  ⚠ No valid JD found — skipping`);
+        totalSkipped++;
+        threadResults.push({ title: job.title, company: job.company, skipped: true, reason: 'no_jd' });
+        jobsProcessed++;
+        continue;
+      }
+
+      // ── CV type detection ───────────────────────────────────────────────
+      const cvType = detectCvTypeFromText(job.title + ' ' + jdText.substring(0, 500));
+
+      // ── SMM analysis ────────────────────────────────────────────────────
+      let smmResult;
+      try {
+        const smmRaw = analyzeSkillsMatch(jdText, cvType, runStart, TIME_BUDGET_MS);
+        smmResult    = JSON.parse(smmRaw);
+        if (smmResult.error) throw new Error(smmResult.error);
+      } catch(e) {
+        Logger.log(`  ✗ SMM error: ${e.message}`);
+        totalSkipped++;
+        threadResults.push({ title: job.title, company: job.company, skipped: true });
+        jobsProcessed++;
+        Utilities.sleep(3000);
+        continue;
+      }
+
+      const score      = smmResult.total_score || 0;
+      const matchLevel = smmResult.match_level  || 'M0';
+      const skills     = smmResult.skills        || [];
+      const levelNum   = parseInt(matchLevel.replace(/\D/g, '')) || 0;
+
+      const crucialSkills  = skills.filter(s => s.importance === 'Crucial');
+      const zeroCrucial    = crucialSkills.length === 0;
+      const allCrucialPass = !zeroCrucial && crucialSkills.every(s => (s.score || 0) >= 1);
+      const qualifies      = levelNum >= 1 && allCrucialPass;
+
+      Logger.log(`  Score: ${score}/40 | ${matchLevel} | Crucial: ${crucialSkills.length} | Pass: ${allCrucialPass} | Qualifies: ${qualifies}`);
+
+      if (zeroCrucial) {
+        totalLow++;
+        threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: false, reason: 'no-crucial' });
+        summaryLines.push(`⚠ MANUAL REVIEW: ${job.company} — ${job.title} — ${score}/40`);
+      } else if (qualifies) {
+        totalReviewed++;
+        threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: true });
+        summaryLines.push(`✅ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+      } else {
+        totalLow++;
+        threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: false });
+        summaryLines.push(`⬇ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+      }
+
+      jobsProcessed++;
+      Utilities.sleep(2500);
+    }
+
+    // ── Apply Gmail labels ────────────────────────────────────────────────
+    const analyzed  = threadResults.filter(r => r.smmResult);
+    const noJd      = threadResults.filter(r => r.skipped && r.reason === 'no_jd');
+    const otherSkip = threadResults.filter(r => r.skipped && r.reason !== 'no_jd');
+
+    if (analyzed.length > 0) {
+      const best       = analyzed.reduce((a, b) =>
+        (a.score || 0) >= (b.score || 0) ? a : b);
+      // Reuse buildAlertLabel but replace the JABA Alert prefix with JABA BA Alert
+      const scoreLabel = buildAlertLabel(best.smmResult)
+        .replace('JABA Alert/', 'JABA BA Alert/');
+      thread.addLabel(getOrCreateLabel(scoreLabel));
+    } else if (noJd.length > 0 && analyzed.length === 0) {
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/⏭ No JD Found'));
+    } else if (otherSkip.length > 0 && analyzed.length === 0) {
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/⏭ Skipped'));
+    }
+
+    thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
+    Utilities.sleep(500);
+  }
+
+  props.setProperty('LAST_BA_ALERT_SCAN', new Date().toISOString());
+
+  const remaining = Math.max(0, threads.length - jobsProcessed);
+  const summary = [
+    '📧 BA Alert Scan Complete',
+    '─────────────────────────────',
+    `✅ Qualifying jobs: ${totalReviewed}`,
+    `⬇  Below threshold: ${totalLow}`,
+    `⚠  Skipped (fetch failed): ${totalSkipped}`,
+    '',
+    ...summaryLines,
+    '',
+    `Jobs processed this run: ${jobsProcessed}/${MAX_JOBS_PER_RUN}`,
+    remaining > 0 ? `${remaining} email(s) still pending — run again to continue.` : ''
+  ].filter(l => l !== undefined).join('\n');
+
+  Logger.log(summary);
+  if (ui) ui.alert(summary);
+}
+
+/** Debug utility — resets the BA scan window to 7 days ago. */
+function resetBAAlertScanTimestamp() {
+  PropertiesService.getScriptProperties().deleteProperty('LAST_BA_ALERT_SCAN');
+  Logger.log('BA alert scan timestamp cleared. Next run will scan last 7 days.');
 }
