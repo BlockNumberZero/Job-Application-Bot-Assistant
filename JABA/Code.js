@@ -3265,6 +3265,41 @@ function isJobInCache(company, title) {
     r[1].toString().toLowerCase().trim() === nt
   );
 }
+// Loads the entire Job_Search_Cache into a Set — call once per run
+function buildCachedJobsSet() {
+  const cached = new Set();
+  const sheet  = getOrCreateJobCacheSheet();
+  if (sheet.getLastRow() < 2) return cached;
+  const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+  data.forEach(function(r) {
+    cached.add(
+      (r[0] || '').toString().toLowerCase().trim() + '||' +
+      (r[1] || '').toString().toLowerCase().trim()
+    );
+  });
+  return cached;
+}
+
+// Loads all applied jobs from all monthly sheets into a Set — call once per run
+function buildAppliedJobsSet() {
+  const applied    = new Set();
+  const ss         = SpreadsheetApp.getActiveSpreadsheet();
+  const skipSheets = new Set(['Sankey_Data', 'Geo_Data', 'SMM_Raw_Data',
+                               'Job_Search_Cache', 'Pending_SMM']);
+  for (const sheet of ss.getSheets()) {
+    const name = sheet.getName();
+    if (skipSheets.has(name) || !/\d{4}/.test(name)) continue;
+    if (sheet.getLastRow() < 2) continue;
+    const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+    data.forEach(function(r) {
+      applied.add(
+        (r[0] || '').toString().toLowerCase().trim() + '||' +
+        normalizeJobTitle((r[1] || '').toString()).toLowerCase().trim()
+      );
+    });
+  }
+  return applied;
+}
 
 function isJobAlreadyApplied(company, title) {
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
@@ -3738,66 +3773,53 @@ function extractBAJobListingsFromHtml(htmlBody) {
   const jobs = [];
   const seen = new Set();
 
-  // Normalise HTML entities
   const html = htmlBody
     .replace(/&amp;/g, '&').replace(/&#38;/g, '&')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&#\d+;/g, ' ').replace(/&nbsp;/g, ' ');
+    .replace(/&#\d+;/g, ' ').replace(/&nbsp;/g, ' ')
+    .replace(/&shy;/g, '');  // BA emails use soft hyphens in titles
 
-  // Primary: arbeitsagentur.de job detail / redirect links
-  const pattern = /href="([^"]*arbeitsagentur\.de[^"]+)"\s*[^>]*>([\s\S]{4,200}?)<\/a>/gi;
+  // BA alert email structure:
+  //   <a href="...jobdetail/ID...">
+  //     <span class="preventVisitedLinkStyle">N.</span>
+  //     <span class="hover-underline">JOB TITLE HERE</span>
+  //   </a>
+  // The title link and the "Stelle ansehen" button share the same jobdetail URL.
+  // We target the hover-underline span — this is always the actual job title.
+
+  const jobPattern = /href="(https:\/\/www\.arbeitsagentur\.de\/jobsuche\/jobdetail\/([^"]+))"[^>]*>[\s\S]{0,800}?<span[^>]*class="hover-underline"[^>]*>([\s\S]*?)<\/span>/gi;
+
   let match;
+  while ((match = jobPattern.exec(html)) !== null) {
+    const url      = match[1];
+    const jobId    = match[2];
+    const rawTitle = match[3]
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-  while ((match = pattern.exec(html)) !== null) {
-    const rawUrl  = match[1].trim();
-    const rawText = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (!rawTitle || rawTitle.length < 4 || rawTitle.length > 120) continue;
+    if (/^(stelle ansehen|jetzt bewerben|zur stellenanzeige|abbestellen|verwalten|stellensuche)/i
+        .test(rawTitle)) continue;
+    if (seen.has(jobId)) continue;
+    seen.add(jobId);
 
-    if (!rawText || rawText.length < 4) continue;
-    // Skip navigation / utility anchor text
-    if (/^(anmelden|registrieren|hilfe|datenschutz|impressum|abonnieren|abmelden|alle|mehr|weiter|zurück|suche|jobalarm|zur startseite|cookie)/i.test(rawText)) continue;
-    if (/^https?:|^\d+$/.test(rawText)) continue;
-
-    // Deduplicate by URL (strip utm params)
-    const urlKey = rawUrl.replace(/[?&]utm[^&]*/gi, '').replace(/&?ref=[^&]*/gi, '').trim();
-    if (seen.has(urlKey)) continue;
-    seen.add(urlKey);
-
-    // Company: extract from HTML immediately after the link
-    const afterLink = html.substring(match.index + match[0].length,
-                                     match.index + match[0].length + 600);
-    const company   = extractCompanyFromHtmlContext(afterLink) || 'Unknown';
+    // Company: extract from HTML in the ~1200 chars after this title block
+    const afterTitle = html.substring(
+      match.index + match[0].length,
+      match.index + match[0].length + 1200
+    );
+    const company = extractCompanyFromHtmlContext(afterTitle) || 'Unknown';
 
     jobs.push({
-      title:   rawText,
+      title:   rawTitle,
       company: company,
-      url:     rawUrl,
-      id:      'ba_' + urlKey.substring(urlKey.lastIndexOf('/') + 1).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)
+      url:     url,
+      id:      'ba_' + jobId.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)
     });
   }
 
-  // Fallback: if primary pattern found nothing, try any link whose anchor text
-  // looks like a job title (catches tracking/redirect URLs in some BA formats)
-  if (jobs.length === 0) {
-    Logger.log('  BA: no arbeitsagentur.de hrefs found — trying broad link fallback');
-    const broad = /href="(https?:\/\/[^"]{10,})"[^>]*>([\s\S]{4,200}?)<\/a>/gi;
-    while ((match = broad.exec(html)) !== null) {
-      const rawText = match[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-      if (!isRelevantJobTitle(rawText)) continue;
-      const rawUrl  = match[1].trim();
-      if (seen.has(rawUrl)) continue;
-      seen.add(rawUrl);
-      const afterLink = html.substring(match.index + match[0].length,
-                                       match.index + match[0].length + 600);
-      jobs.push({
-        title:   rawText,
-        company: extractCompanyFromHtmlContext(afterLink) || 'Unknown',
-        url:     rawUrl,
-        id:      'ba_fallback_' + rawUrl.substring(rawUrl.lastIndexOf('/') + 1).replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)
-      });
-    }
-  }
-
-  Logger.log(`  BA HTML extraction: ${jobs.length} job(s) found`);
+  Logger.log('  BA HTML extraction: ' + jobs.length + ' job(s) found');
   return jobs;
 }
 
@@ -3828,7 +3850,7 @@ function processArbeitsagenturAlertEmails() {
   const query = [
     'from:jobsuche@arbeitsagentur.de',
     `after:${sinceFormatted}`,
-    '-label:JABA BA Alert/Processed'
+    '-label:JABA-BA-Alert/Processed'
   ].join(' ');
 
   const threads = GmailApp.search(query, 0, 30);
@@ -4054,10 +4076,16 @@ function runJobSearchPhase1() {
   cleanJobCache();
 
   const allJobs = fetchAllJobSources();
-  Logger.log(`Phase 1: ${allJobs.length} total jobs fetched`);
+  Logger.log('Phase 1: ' + allJobs.length + ' total jobs fetched');
   if (allJobs.length === 0) { Logger.log('Phase 1: no jobs returned — exiting.'); return; }
 
-  // ── Filter ────────────────────────────────────────────────
+  // ── Preload cache + applied data ONCE (fixes timeout) ────────────────────
+  Logger.log('Phase 1: preloading cache and applied sets...');
+  const cachedSet  = buildCachedJobsSet();
+  const appliedSet = buildAppliedJobsSet();
+  Logger.log('Phase 1: cache=' + cachedSet.size + ' applied=' + appliedSet.size);
+  // ─────────────────────────────────────────────────────────────────────────
+
   let excludedTitle = 0, excludedGeo = 0, excludedCache = 0, excludedApplied = 0;
   const candidates = [];
 
@@ -4065,37 +4093,43 @@ function runJobSearchPhase1() {
     if (!isRelevantJobTitle(job.title)) { excludedTitle++; continue; }
 
     if (!job.descriptionFull) {
-      const cc           = (job.country || '').toLowerCase();
-      const inGermany    = cc === 'de' || isGermanLocation(job.city || '') || isGermanLocation(job.title || '');
-      const lower        = job.title.toLowerCase();
-      const descLow      = (job.description || '').toLowerCase();
-      const remote       = lower.includes('remote') || descLow.includes('remote') ||
-                           descLow.includes('homeoffice') || descLow.includes('home office');
+      const cc        = (job.country || '').toLowerCase();
+      const inGermany = cc === 'de' || isGermanLocation(job.city || '') || isGermanLocation(job.title || '');
+      const lower     = job.title.toLowerCase();
+      const descLow   = (job.description || '').toLowerCase();
+      const remote    = lower.includes('remote') || descLow.includes('remote') ||
+                        descLow.includes('homeoffice') || descLow.includes('home office');
       if (!inGermany && !remote) { excludedGeo++; continue; }
     }
 
-    if (isJobInCache(job.company, job.title))      { excludedCache++;   continue; }
-    if (isJobAlreadyApplied(job.company, job.title)) { excludedApplied++; continue; }
+    // ── Set lookups instead of sheet reads ───────────────────────────────
+    const cacheKey   = job.company.toLowerCase().trim() + '||' + job.title.toLowerCase().trim();
+    const appliedKey = job.company.toLowerCase().trim() + '||' +
+                       normalizeJobTitle(job.title).toLowerCase().trim();
+
+    if (cachedSet.has(cacheKey))    { excludedCache++;   continue; }
+    if (appliedSet.has(appliedKey)) { excludedApplied++; continue; }
+    // ─────────────────────────────────────────────────────────────────────
 
     candidates.push(job);
   }
 
-  // ── Deduplicate ───────────────────────────────────────────
-  const seen   = new Set();
+  // ── Deduplicate ───────────────────────────────────────────────────────────
+  const seen    = new Set();
   const deduped = [];
   for (const job of candidates) {
-    const key = `${job.company.toLowerCase().trim()}||${normalizeJobTitle(job.title).toLowerCase().trim()}`;
+    const key = job.company.toLowerCase().trim() + '||' +
+                normalizeJobTitle(job.title).toLowerCase().trim();
     if (!seen.has(key)) { seen.add(key); deduped.push(job); }
   }
 
-  // ── Sort by title quality, cap at PHASE1_CANDIDATE_CAP ───
   deduped.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
   const selected = deduped.slice(0, PHASE1_CANDIDATE_CAP);
 
   Logger.log(
-    `Phase 1 gates — title: ${excludedTitle}, geo: ${excludedGeo}, ` +
-    `cache: ${excludedCache}, applied: ${excludedApplied} | ` +
-    `candidates: ${deduped.length} | selected (cap ${PHASE1_CANDIDATE_CAP}): ${selected.length}`
+    'Phase 1 gates — title: ' + excludedTitle + ', geo: ' + excludedGeo +
+    ', cache: ' + excludedCache + ', applied: ' + excludedApplied +
+    ' | candidates: ' + deduped.length + ' | selected (cap ' + PHASE1_CANDIDATE_CAP + '): ' + selected.length
   );
 
   if (selected.length === 0) {
@@ -4103,17 +4137,16 @@ function runJobSearchPhase1() {
     return;
   }
 
-  // ── Write to Pending_SMM ──────────────────────────────────
+  // ── Write to Pending_SMM ──────────────────────────────────────────────────
   const sheet   = getOrCreatePendingSmmSheet();
   const lastRow = sheet.getLastRow();
 
-  // If leftover M2+ rows exist from a previous failed cycle, report them first
   if (lastRow > 1) {
     const oldStatuses = sheet.getRange(2, 11, lastRow - 1, 1).getValues();
     const oldM2Plus   = sheet.getRange(2, 1, lastRow - 1, 14).getValues()
                              .filter((_, i) => (oldStatuses[i][0] || '').toString().trim() === 'M2+');
     if (oldM2Plus.length > 0) {
-      Logger.log(`Phase 1: found ${oldM2Plus.length} unreported M2+ rows from previous cycle — sending now`);
+      Logger.log('Phase 1: found ' + oldM2Plus.length + ' unreported M2+ rows — sending now');
       sendPhase2Report(oldM2Plus);
     } else {
       sheet.deleteRows(2, lastRow - 1);
@@ -4121,34 +4154,32 @@ function runJobSearchPhase1() {
   }
 
   const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
-  const rows    = selected.map(job => [
-    dateStr,
-    job.company  || '',
-    job.title    || '',
-    job.url      || '',
-    job.city     || '',
-    job.country  || '',
-    (job.description || '').substring(0, 5000),
-    job.descriptionFull ? 'TRUE' : 'FALSE',
-    scoreJobTitleQuality(job.title),
-    job.id       || '',
-    '',  // Status    — empty = pending
-    '',  // CvType    — filled by Phase 2
-    '',  // FetchSource
-    ''   // SmmData
-  ]);
+  const rows    = selected.map(function(job) {
+    return [
+      dateStr,
+      job.company  || '',
+      job.title    || '',
+      job.url      || '',
+      job.city     || '',
+      job.country  || '',
+      (job.description || '').substring(0, 5000),
+      job.descriptionFull ? 'TRUE' : 'FALSE',
+      scoreJobTitleQuality(job.title),
+      job.id       || '',
+      '', '', '', ''
+    ];
+  });
 
   sheet.getRange(2, 1, rows.length, 14).setValues(rows);
   SpreadsheetApp.flush();
-  Logger.log(`Phase 1 complete: ${rows.length} candidates written to Pending_SMM`);
+  Logger.log('Phase 1 complete: ' + rows.length + ' candidates written to Pending_SMM');
 
-  // ── Schedule Phase 2 ─────────────────────────────────────
   deletePhase2Triggers();
   ScriptApp.newTrigger('runJobSearchPhase2')
     .timeBased()
     .after(PHASE2_DELAY_MS)
     .create();
-  Logger.log(`Phase 1: Phase 2 trigger created — runs in ${PHASE2_DELAY_MS / 60000} min`);
+  Logger.log('Phase 1: Phase 2 trigger created — runs in ' + (PHASE2_DELAY_MS / 60000) + ' min');
 }
 
 /* ── PHASE 2 ───────────────────────────────────────────────── */
@@ -4339,4 +4370,87 @@ function debugBASearch() {
     const msg = t.getMessages()[0];
     Logger.log(`Subject: ${msg.getSubject()} | Date: ${msg.getDate()} | Labels: ${t.getLabels().map(l => l.getName()).join(', ')}`);
   });
+}
+
+function diagnoseBaEmails() {
+  // Broad: any sender from the arbeitsagentur.de domain
+  const broad = GmailApp.search('from:arbeitsagentur.de', 0, 20);
+  Logger.log('Broad search (from:arbeitsagentur.de): ' + broad.length + ' thread(s)');
+
+  broad.forEach(function(t) {
+    const msg = t.getMessages()[0];
+    Logger.log(
+      'FROM: "' + msg.getFrom() + '" | ' +
+      'SUBJ: "' + msg.getSubject() + '" | ' +
+      'DATE: ' + msg.getDate()
+    );
+  });
+
+  // Narrow: the old hardcoded address
+  const narrow = GmailApp.search('from:jobsuche@arbeitsagentur.de', 0, 10);
+  Logger.log('Narrow search (jobsuche@): ' + narrow.length + ' thread(s)');
+
+  // Current timestamp cursor
+  const ts = PropertiesService.getScriptProperties().getProperty('LAST_BA_ALERT_SCAN');
+  Logger.log('LAST_BA_ALERT_SCAN = "' + (ts || 'not set') + '"');
+}
+
+function checkBaEmailLabels() {
+  const threads = GmailApp.search('from:jobsuche@arbeitsagentur.de', 0, 20);
+  threads.forEach(function(t) {
+    const msg    = t.getMessages()[0];
+    const labels = t.getLabels().map(function(l) { return l.getName(); }).join(', ');
+    Logger.log(
+      'SUBJ: "' + msg.getSubject() + '" | ' +
+      'DATE: ' + msg.getDate() + ' | ' +
+      'LABELS: [' + (labels || 'none') + ']'
+    );
+  });
+}
+function diagnoseBaHtmlExtraction() {
+  const threads = GmailApp.search('from:jobsuche@arbeitsagentur.de', 0, 2);
+  if (threads.length === 0) { Logger.log('No BA threads found.'); return; }
+
+  const msg      = threads[0].getMessages()[0];
+  const htmlBody = msg.getBody();
+  const subject  = msg.getSubject();
+  Logger.log('Email: "' + subject + '"');
+  Logger.log('HTML length: ' + htmlBody.length + ' chars');
+
+  // Show what the current extraction actually finds
+  const jobs = extractBAJobListingsFromHtml(htmlBody);
+  Logger.log('Extracted ' + jobs.length + ' item(s):');
+  jobs.forEach(function(j, i) {
+    Logger.log('  [' + i + '] title: "' + j.title + '" | company: "' + j.company + '" | url: "' + j.url + '"');
+  });
+
+  // Also dump the first 3000 chars of raw HTML so we can see the structure
+  Logger.log('--- RAW HTML PREVIEW (first 3000 chars) ---');
+  Logger.log(htmlBody.substring(0, 3000));
+}
+
+function diagnoseBaHtmlStructure() {
+  const threads = GmailApp.search('from:jobsuche@arbeitsagentur.de', 0, 1);
+  if (threads.length === 0) { Logger.log('No threads found.'); return; }
+
+  const msg  = threads[0].getMessages()[0];
+  const html = msg.getBody()
+    .replace(/&amp;/g, '&').replace(/&#38;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+
+  // Find the first jobdetail URL and show 1200 chars of HTML before it
+  const pattern = /href="(https:\/\/www\.arbeitsagentur\.de\/jobsuche\/jobdetail\/[^"]+)"/i;
+  const match   = pattern.exec(html);
+
+  if (!match) {
+    Logger.log('No jobdetail URL found in HTML.');
+    return;
+  }
+
+  Logger.log('Job URL: ' + match[1]);
+  Logger.log('--- HTML BEFORE LINK (1200 chars) ---');
+  Logger.log(html.substring(Math.max(0, match.index - 1200), match.index));
+  Logger.log('--- HTML AFTER LINK (300 chars) ---');
+  Logger.log(html.substring(match.index, match.index + 300));
 }
