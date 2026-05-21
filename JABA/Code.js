@@ -171,6 +171,7 @@ function refreshAllData() {
   try {
     updateSankeyData();
     updateGeoData();
+    updateInterviewGeoData();
     ui.alert('Success: Dashboard data updated.');
   } catch (e) {
     ui.alert('Error updating data: ' + e.toString());
@@ -1402,6 +1403,7 @@ COVER LETTER RULES:
     Utilities.sleep(1500);
     updateSankeyData();
     updateGeoData();
+    updateInterviewGeoData();
     SpreadsheetApp.flush();
 
     const scoreNote = smmData ? ` (SMM ${smmData.total_score}/40 · ${finalMatch})` : "";
@@ -2185,6 +2187,7 @@ function processRejectionEmails() {
     Utilities.sleep(1500);
     updateSankeyData();
     updateGeoData();
+    updateInterviewGeoData();
     SpreadsheetApp.flush();
   }
 
@@ -2327,6 +2330,112 @@ function updateGeoData() {
   range.setValues(allRows);
 }
 
+
+
+function updateInterviewGeoData() {
+  const ss     = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
+  const sheets = ss.getSheets();
+
+  const INTERVIEW_STAGES = [
+    { dataIdx: 10, name: 'HR Interview',  stageNum: 1 },
+    { dataIdx: 11, name: '1st Interview', stageNum: 2 },
+    { dataIdx: 12, name: '2nd Interview', stageNum: 3 },
+    { dataIdx: 13, name: '3rd Interview', stageNum: 4 },
+    { dataIdx: 14, name: '4th Interview', stageNum: 5 },
+    { dataIdx: 15, name: 'Offer',         stageNum: 6 },
+  ];
+
+  const countryToCities = {
+    "Spain":                ["madrid", "barcelona"],
+    "United Kingdom":       ["london"],
+    "Czech Republic":       ["praha", "prague"],
+    "Cyprus":               ["cyprus", "limasol", "limassol"],
+    "Malta":                ["malta"],
+    "Latvia":               ["riga"],
+    "Estonia":              ["tallinn"],
+    "France":               ["paris", "kamrach"],
+    "United Arab Emirates": ["dubai"],
+    "Portugal":             ["lisbon", "lissabon", "lisboan"],
+    "Norway":               ["oslo"],
+    "Ireland":              ["dublin"],
+    "Austria":              ["vienna", "wien"],
+    "Denmark":              ["kopenhagen", "copenhagen"],
+    "Belgium":              ["brussels", "brussel", "brüssel", "brüssels"],
+    "Netherlands":          ["amsterdam"],
+    "Switzerland":          ["zurich", "zürich"],
+    "Luxembourg":           ["luxembourg", "luxemburg"],
+    "Finland":              ["helsinki"],
+  };
+  const cityToCountry = {};
+  Object.entries(countryToCities).forEach(([country, cities]) => {
+    cities.forEach(city => { cityToCountry[city] = country; });
+  });
+
+  // key: "month|city|country" → { maxStageNum, maxStageName, count }
+  const cityMap = {};
+
+  sheets.forEach(sheet => {
+    const sheetName = sheet.getName().replace('.', '');
+    if (!sheetName.includes('2026')) return;
+
+    const dataRange = sheet.getDataRange();
+    if (dataRange.getNumRows() < 2) return;
+    const data = dataRange.getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[1]) continue;
+
+      let maxStageNum  = 0;
+      let maxStageName = '';
+      for (const stage of INTERVIEW_STAGES) {
+        if (row[stage.dataIdx] === 1) {
+          maxStageNum  = stage.stageNum;
+          maxStageName = stage.name;
+        }
+      }
+      if (maxStageNum === 0) continue; // no interview stage reached
+
+      const rawCity = row[4];
+      if (!rawCity || rawCity.trim() === '') continue;
+      const cleanCity = rawCity.split('(')[0].trim();
+
+      const matchedCountry = Object.keys(cityToCountry).find(c =>
+        cleanCity.toLowerCase().includes(c)
+      );
+      const country = matchedCountry ? cityToCountry[matchedCountry] : 'Germany';
+
+      const key = `${sheetName}|${cleanCity}|${country}`;
+      if (!cityMap[key]) {
+        cityMap[key] = { maxStageNum: 0, maxStageName: '', count: 0 };
+      }
+      cityMap[key].count++;
+      if (maxStageNum > cityMap[key].maxStageNum) {
+        cityMap[key].maxStageNum  = maxStageNum;
+        cityMap[key].maxStageName = maxStageName;
+      }
+    }
+  });
+
+  let geoSheet = ss.getSheetByName('Interview_Geo_Data');
+  if (!geoSheet) {
+    geoSheet = ss.insertSheet('Interview_Geo_Data');
+  } else {
+    geoSheet.clearContents();
+    geoSheet.clearFormats();
+  }
+
+  const output  = Object.keys(cityMap).map(key => {
+    const [month, city, country] = key.split('|');
+    const d = cityMap[key];
+    return [month, city, country, d.maxStageName, d.maxStageNum, d.count];
+  });
+
+  const allRows = [['Month', 'City', 'Country', 'Max_Stage', 'Stage_Num', 'Count'], ...output];
+  const range   = geoSheet.getRange(1, 1, allRows.length, 6);
+  range.setNumberFormat('@STRING@');
+  range.setValues(allRows);
+}
 
 // ── Utility / Debug Functions ──────────────────────────────────────────────
 
