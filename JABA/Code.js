@@ -149,21 +149,23 @@ function onEdit(e) {
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🤖 AI Recruitment')
-    .addItem('Open AI Sidebar', 'showSidebar')
+    .addItem('Open AI Sidebar',                        'showSidebar')
     .addSeparator()
-    .addItem('Scan Gmail for Applications', 'processGmailApplications')
-    .addItem('Scan Gmail for Rejections', 'processRejectionEmails')
+    .addItem('Scan Gmail for Applications',            'processGmailApplications')
+    .addItem('Scan Gmail for Rejections',              'processRejectionEmails')
     .addSeparator()
-    .addItem('📧 Process Indeed Job Alerts', 'processIndeedAlertEmails')
-    .addItem('📧 Process BA Job Alerts', 'processArbeitsagenturAlertEmails')
+    .addItem('📧 Process Indeed Job Alerts',           'processIndeedAlertEmails_Phase1')
+    .addItem('📧 Process BA Job Alerts',               'processArbeitsagenturAlertEmails_Phase1')
     .addSeparator()
-    .addItem('🔄 Refresh Dashboard Data', 'refreshAllData')
+    .addItem('🔄 Refresh Dashboard Data',              'refreshAllData')
     .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
     .addSeparator()
-    .addItem('🔍 Run Daily Job Search (Phase 1)', 'runJobSearchPhase1')
+    .addItem('🔍 Run Daily Job Search (Phase 1)',      'runJobSearchPhase1')
     .addSeparator()
-    .addItem('🗑️ Clear Job Search Cache (run once)', 'clearAllJobCache')
+    .addItem('🗑️ Clear Job Search Cache (run once)',  'clearAllJobCache')
     .addToUi();
+
+  checkUnreadM2Alerts();
 }
 
 function refreshAllData() {
@@ -3313,19 +3315,25 @@ function detectCvTypeForSearch(jdText, jobTitle) {
 // ── Job_Search_Cache tab ──────────────────────────────────────────────────────
 
 function getOrCreateJobCacheSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Job_Search_Cache');
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  let   sheet   = ss.getSheetByName('Job_Search_Cache');
+  const HEADERS = [
+    'Date', 'Company', 'Job_Title', 'URL', 'CV_Type',
+    'Match_Level', 'Score', 'Fetch_Source', 'Fetched_URL', 'Source'
+  ];
   if (!sheet) {
     sheet = ss.insertSheet('Job_Search_Cache');
-    const headers = ['Date', 'Company', 'Job_Title', 'URL', 'CV_Type', 'Match_Level', 'Score', 'Fetch_Source'];
-    sheet.getRange(1, 1, 1, headers.length)
-         .setValues([headers])
-         .setBackground('#34a853')
-         .setFontColor('white')
-         .setFontWeight('bold');
+    sheet.getRange(1, 1, 1, HEADERS.length)
+         .setValues([HEADERS])
+         .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
     sheet.setFrozenRows(1);
-    for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
-    Logger.log('Job_Search_Cache sheet created.');
+    for (let i = 1; i <= HEADERS.length; i++) sheet.autoResizeColumn(i);
+    Logger.log('Job_Search_Cache sheet created (10 columns).');
+  } else if (sheet.getLastColumn() < 10) {
+    sheet.getRange(1, 9, 1, 2)
+         .setValues([['Fetched_URL', 'Source']])
+         .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
+    Logger.log('Job_Search_Cache: migrated to 10 columns.');
   }
   return sheet;
 }
@@ -3432,18 +3440,20 @@ function isJobAlreadyApplied(company, title) {
   return false;
 }
 
-function addJobToCache(job, smmResult, cvType, fetchSource) {
+function addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source) {
   const sheet   = getOrCreateJobCacheSheet();
   const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
   sheet.appendRow([
     dateStr,
-    job.company  || '',
-    job.title    || '',
-    job.url      || '',
-    cvType       || '',
-    smmResult.match_level  || 'M0',
-    smmResult.total_score  || 0,
-    fetchSource  || ''
+    job.company || '',
+    job.title   || '',
+    job.url     || '',
+    cvType      || '',
+    smmResult.match_level || 'M0',
+    smmResult.total_score || 0,
+    fetchSource  || '',
+    fetchedUrl   || '',        // column 9 — new
+    source       || 'JobSearch' // column 10 — new
   ]);
 }
 
@@ -4134,6 +4144,180 @@ function processArbeitsagenturAlertEmails() {
   Logger.log(summary);
   if (ui) ui.alert(summary);
 }
+
+/* ============================================================
+   ALERT_RESULTS & M2_NOTIFICATIONS — Schema helpers
+   ============================================================ */
+
+function getOrCreateAlertResultsSheet() {
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  let   sheet   = ss.getSheetByName('Alert_Results');
+  const HEADERS = [
+    'Date_Added', 'Source', 'Company', 'Title',
+    'Source_URL', 'Fetched_JD_URL', 'Score', 'Level',
+    'Status', 'Dots', 'CV_Type', 'Read', 'Thread_ID', 'Label_Applied'
+  ];
+  if (!sheet) {
+    sheet = ss.insertSheet('Alert_Results');
+    sheet.getRange(1, 1, 1, HEADERS.length)
+         .setValues([HEADERS])
+         .setBackground('#ea4335').setFontColor('white').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    for (let i = 1; i <= HEADERS.length; i++) sheet.autoResizeColumn(i);
+    Logger.log('Alert_Results sheet created.');
+  }
+  return sheet;
+}
+
+function getOrCreateM2NotificationsSheet() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  let   sheet = ss.getSheetByName('M2_Notifications');
+  if (!sheet) {
+    sheet = ss.insertSheet('M2_Notifications');
+    sheet.getRange('A1').setValue('');
+    sheet.hideSheet();
+    Logger.log('M2_Notifications sheet created (hidden).');
+  }
+  return sheet;
+}
+
+/* ── Insert newest row at top, below frozen header ── */
+function writeToAlertResults(dateStr, source, company, title,
+                              sourceUrl, fetchedUrl, score, level,
+                              status, dots, cvType, threadId) {
+  const sheet = getOrCreateAlertResultsSheet();
+  sheet.insertRowAfter(1);
+  sheet.getRange(2, 1, 1, 14).setValues([[
+    dateStr, source, company, title,
+    sourceUrl  || '', fetchedUrl || '',
+    score, level, status, dots,
+    cvType || '', false,         // Read = false
+    threadId || '', false        // Label_Applied = false
+  ]]);
+}
+
+/* ── Delete rows older than 7 days — called at Phase 1 start ── */
+function cleanAlertResults() {
+  const sheet = getOrCreateAlertResultsSheet();
+  if (sheet.getLastRow() < 2) return;
+  const cutoff   = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const dates    = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  const toDelete = [];
+  dates.forEach((row, i) => {
+    if (row[0] && new Date(row[0]) < cutoff) toDelete.push(i + 2);
+  });
+  for (let i = toDelete.length - 1; i >= 0; i--) sheet.deleteRow(toDelete[i]);
+  if (toDelete.length > 0) Logger.log(`Alert_Results: removed ${toDelete.length} expired row(s).`);
+}
+
+/* ── Write to hidden M2_Notifications cell (triggers mobile push) ── */
+function updateM2NotificationCell(count, jobLines) {
+  const sheet   = getOrCreateM2NotificationsSheet();
+  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
+  sheet.getRange('A1').setValue(
+    `🚨 ${count} new M2+ job${count > 1 ? 's' : ''} · ${dateStr}\n${jobLines.join('\n')}`
+  );
+  Logger.log(`M2_Notifications updated: ${count} M2+ alert job(s).`);
+}
+
+/* ── Apply M-level summary label to each alert thread ── */
+function applyAlertThreadLabels() {
+  const sheet = getOrCreateAlertResultsSheet();
+  if (sheet.getLastRow() < 2) return;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 14).getValues();
+
+  const threadMap = {};
+  data.forEach((row, i) => {
+    const threadId     = (row[12] || '').toString().trim();
+    const labelApplied =  row[13];
+    const level        = (row[7]  || '').toString().trim();
+    const source       = (row[1]  || 'Indeed').toString().trim();
+    if (!threadId || labelApplied) return;
+    const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
+    if (!threadMap[threadId]) {
+      threadMap[threadId] = { source, counts: {}, rowIndices: [] };
+    }
+    if (levelNum >= 1) {
+      const key = 'M' + Math.min(levelNum, 4);
+      threadMap[threadId].counts[key] = (threadMap[threadId].counts[key] || 0) + 1;
+    }
+    threadMap[threadId].rowIndices.push(i + 2);
+  });
+
+  let labeled = 0;
+  Object.entries(threadMap).forEach(([threadId, info]) => {
+    try {
+      const thread = GmailApp.getThreadById(threadId);
+      if (!thread) { Logger.log(`Thread not found: ${threadId}`); return; }
+
+      const parts = ['M1','M2','M3','M4']
+        .filter(k => (info.counts[k] || 0) > 0)
+        .map(k => `${k}=${info.counts[k]}`);
+
+      if (parts.length > 0) {
+        const prefix    = info.source === 'BA' ? 'JABA BA Alert' : 'JABA Alert';
+        const labelName = `${prefix}/${parts.join(' ')}`;
+        thread.addLabel(getOrCreateLabel(labelName));
+        Logger.log(`Thread ${threadId}: label applied — "${labelName}"`);
+        labeled++;
+      }
+      info.rowIndices.forEach(rowNum => sheet.getRange(rowNum, 14).setValue(true));
+    } catch(e) {
+      Logger.log(`applyAlertThreadLabels error (${threadId}): ${e.message}`);
+    }
+  });
+  if (labeled > 0) SpreadsheetApp.flush();
+  Logger.log(`Alert thread labels applied: ${labeled} thread(s).`);
+}
+
+/* ── Desktop dialog on sheet open — shows unread M2+ alert jobs ── */
+function checkUnreadM2Alerts() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Alert_Results');
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const data   = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+    const unread = [];
+    data.forEach((row, i) => {
+      const levelNum = parseInt((row[7] || '').toString().replace(/\D/g, '')) || 0;
+      if (levelNum >= 2 && !row[11]) {
+        unread.push({ rowIndex: i + 2, company: row[2], title: row[3],
+                      level: row[7], score: row[6], source: row[1] });
+      }
+    });
+    if (unread.length === 0) return;
+
+    const lines = unread.map(j =>
+      `${j.source === 'BA' ? '🏛' : '🔔'} ${j.company} — ${j.title} (${j.level}: ${j.score}/40)`
+    ).join('\n');
+
+    SpreadsheetApp.getUi().alert(
+      `🚨 ${unread.length} new M2+ Alert Job${unread.length > 1 ? 's' : ''}`,
+      `${lines}\n\nOpen the Alert_Results tab for links and details.`,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+
+    unread.forEach(j => sheet.getRange(j.rowIndex, 12).setValue(true));
+    SpreadsheetApp.flush();
+  } catch(e) {
+    Logger.log(`checkUnreadM2Alerts error: ${e.message}`);
+  }
+}
+
+/* ── Called from runPhase2 when all pending rows processed ── */
+function finalizeAlertResults(m2PlusRows) {
+  applyAlertThreadLabels();
+  if (!m2PlusRows || m2PlusRows.length === 0) {
+    Logger.log('finalizeAlertResults: no M2+ alert rows.');
+    return;
+  }
+  const jobLines = m2PlusRows.map(row =>
+    `• ${(row[14] || 'Indeed')} | ${row[1]} — ${row[2]}`
+  );
+  updateM2NotificationCell(m2PlusRows.length, jobLines);
+  Logger.log(`finalizeAlertResults: ${m2PlusRows.length} M2+ alert job(s) notified.`);
+}
+
 /* ============================================================
    PHASE 1 / PHASE 2 — Batched daily job search
    Phase 1: fetch all sources, filter, write top 24 to Pending_SMM,
@@ -4150,23 +4334,28 @@ const PHASE2_DELAY_MS      = 15 * 60 * 1000; // 15 minutes between batches
 
 /* ── Pending_SMM sheet ─────────────────────────────────────── */
 function getOrCreatePendingSmmSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Pending_SMM');
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  let   sheet   = ss.getSheetByName('Pending_SMM');
+  const HEADERS = [
+    'Date_Added', 'Company', 'Title', 'URL', 'City', 'Country',
+    'Description', 'DescriptionFull', 'QualityScore', 'ID',
+    'Status', 'CvType', 'FetchSource', 'SmmData',
+    'Source', 'Thread_ID', 'JD_Fetched', 'Source_URL'
+  ];
   if (!sheet) {
     sheet = ss.insertSheet('Pending_SMM');
-    const headers = [
-      'Date_Added', 'Company', 'Title', 'URL', 'City', 'Country',
-      'Description', 'DescriptionFull', 'QualityScore', 'ID',
-      'Status', 'CvType', 'FetchSource', 'SmmData'
-    ];
-    sheet.getRange(1, 1, 1, headers.length)
-         .setValues([headers])
-         .setBackground('#34a853')
-         .setFontColor('white')
-         .setFontWeight('bold');
+    sheet.getRange(1, 1, 1, HEADERS.length)
+         .setValues([HEADERS])
+         .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
     sheet.setFrozenRows(1);
-    for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
-    Logger.log('Pending_SMM sheet created.');
+    for (let i = 1; i <= HEADERS.length; i++) sheet.autoResizeColumn(i);
+    Logger.log('Pending_SMM sheet created (18 columns).');
+  } else if (sheet.getLastColumn() < 18) {
+    // One-time migration: add the 4 new columns to existing sheet
+    sheet.getRange(1, 15, 1, 4)
+         .setValues([['Source', 'Thread_ID', 'JD_Fetched', 'Source_URL']])
+         .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
+    Logger.log('Pending_SMM: migrated to 18 columns.');
   }
   return sheet;
 }
@@ -4174,7 +4363,10 @@ function getOrCreatePendingSmmSheet() {
 /* ── Trigger helpers ───────────────────────────────────────── */
 function deletePhase2Triggers() {
   ScriptApp.getProjectTriggers()
-    .filter(t => t.getHandlerFunction() === 'runJobSearchPhase2')
+    .filter(t =>
+      t.getHandlerFunction() === 'runJobSearchPhase2' ||
+      t.getHandlerFunction() === 'runPhase2'
+    )
     .forEach(t => ScriptApp.deleteTrigger(t));
 }
 
@@ -4275,7 +4467,8 @@ function runJobSearchPhase1() {
       job.descriptionFull ? 'TRUE' : 'FALSE',
       scoreJobTitleQuality(job.title),
       job.id       || '',
-      '', '', '', ''
+      '', '', '', '',           // Status, CvType, FetchSource, SmmData
+      'JobSearch', '', 'FALSE', job.url || ''  // Source, Thread_ID, JD_Fetched, Source_URL
     ];
   });
 
@@ -4284,11 +4477,205 @@ function runJobSearchPhase1() {
   Logger.log('Phase 1 complete: ' + rows.length + ' candidates written to Pending_SMM');
 
   deletePhase2Triggers();
-  ScriptApp.newTrigger('runJobSearchPhase2')
+  ScriptApp.newTrigger('runPhase2')
     .timeBased()
     .after(PHASE2_DELAY_MS)
     .create();
   Logger.log('Phase 1: Phase 2 trigger created — runs in ' + (PHASE2_DELAY_MS / 60000) + ' min');
+}
+
+/* ============================================================
+   UNIVERSAL PHASE 2 — handles JobSearch, Indeed, BA
+   Replaces runJobSearchPhase2 (keep old function until Deploy 3)
+   ============================================================ */
+function runPhase2() {
+  const TIME_BUDGET_MS = 280000;
+  const runStart       = Date.now();
+
+  Logger.log('=== JABA Universal Phase 2: SMM Batch ===');
+  deletePhase2Triggers();
+
+  const sheet = getOrCreatePendingSmmSheet();
+  if (sheet.getLastRow() < 2) {
+    Logger.log('Phase 2: Pending_SMM empty — nothing to do.');
+    return;
+  }
+
+  const allData = sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getValues();
+
+  const pendingEntries  = [];
+  const m2PlusJobSearch = [];
+  const m2PlusAlerts    = [];
+
+  allData.forEach((row, i) => {
+    const status = (row[10] || '').toString().trim();
+    const source = (row[14] || 'JobSearch').toString().trim();
+    if (status === 'M2+') {
+      if (source === 'JobSearch') m2PlusJobSearch.push(row);
+      else                        m2PlusAlerts.push(row);
+    } else {
+      pendingEntries.push({ sheetRow: i + 2, data: row });
+    }
+  });
+
+  Logger.log(`Phase 2: ${pendingEntries.length} pending | ${m2PlusJobSearch.length} JS-M2+ | ${m2PlusAlerts.length} Alert-M2+ accumulated`);
+
+  if (pendingEntries.length === 0) {
+    Logger.log('Phase 2: no pending rows — finalizing.');
+    sendPhase2Report(m2PlusJobSearch);
+    finalizeAlertResults(m2PlusAlerts);
+    if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+    SpreadsheetApp.flush();
+    return;
+  }
+
+  const batch        = pendingEntries.slice(0, PHASE2_BATCH_SIZE);
+  const rowsToDelete = [];
+
+  for (const { sheetRow, data } of batch) {
+    if (Date.now() - runStart > TIME_BUDGET_MS - 90000) {
+      Logger.log('⏱ Phase 2 time budget — stopping early');
+      break;
+    }
+
+    const company         = data[1];
+    const title           = data[2];
+    const url             = data[3];
+    const city            = data[4];
+    const country         = data[5];
+    const description     = data[6];
+    const descriptionFull = data[7] === 'TRUE' || data[7] === true;
+    const jobId           = data[9];
+    const source          = (data[14] || 'JobSearch').toString().trim();
+    const threadId        = (data[15] || '').toString().trim();
+    const jdFetched       = data[16] === 'TRUE' || data[16] === true;
+    const sourceUrl       = (data[17] || url).toString().trim();
+    const job             = { title, company, city, country, url, description, descriptionFull, id: jobId };
+    const dateStr         = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
+
+    Logger.log(`\n[${source}] "${title}" — ${company}`);
+
+    let extractedText = null;
+    let fetchSource   = 'phase1_prefetch';
+    let fetchedUrl    = url;
+
+    if (jdFetched && description && description.length > 300 && looksLikeJobContent(description)) {
+      // Alert jobs: JD already validated in Phase 1
+      extractedText = description;
+      Logger.log(`  ✓ Pre-fetched JD (${description.length} chars)`);
+    } else {
+      // Job Search jobs: fetch JD now (existing logic unchanged)
+      const extracted = smartExtractJD(url, description, descriptionFull);
+      if (!extracted) {
+        Logger.log('  ✗ JD fetch failed — skipping');
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed', url, source);
+        if (source !== 'JobSearch') {
+          writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'No JD found', '', '', threadId);
+        }
+        rowsToDelete.push(sheetRow);
+        Utilities.sleep(500);
+        continue;
+      }
+      const isTrusted = descriptionFull || extracted.source === 'api_full';
+      if (!isJdRelevantToJob(extracted.text, company, title, isTrusted)) {
+        Logger.log('  ✗ JD irrelevant — skipping');
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd', url, source);
+        if (source !== 'JobSearch') {
+          writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'JD irrelevant', '', '', threadId);
+        }
+        rowsToDelete.push(sheetRow);
+        Utilities.sleep(500);
+        continue;
+      }
+      extractedText = extracted.text;
+      fetchSource   = extracted.source;
+    }
+
+    const cvType = source === 'JobSearch'
+      ? detectCvTypeForSearch(extractedText, title)
+      : detectCvTypeFromText(title + ' ' + extractedText.substring(0, 500));
+
+    let smmResult;
+    try {
+      const raw = analyzeSkillsMatch(extractedText, cvType, runStart, TIME_BUDGET_MS);
+      smmResult = JSON.parse(raw);
+      if (smmResult.error) throw new Error(smmResult.error);
+    } catch(e) {
+      Logger.log(`  ✗ SMM error: ${e.message}`);
+      if (source !== 'JobSearch') {
+        writeToAlertResults(dateStr, source, company, title, sourceUrl, fetchedUrl, 0, 'Err', 'SMM error', '', '', threadId);
+      }
+      rowsToDelete.push(sheetRow);
+      Utilities.sleep(3000);
+      continue;
+    }
+
+    const score    = smmResult.total_score || 0;
+    const level    = smmResult.match_level  || 'M0';
+    const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
+    const dots     = buildJobDots(smmResult);
+
+    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${source}`);
+    addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source);
+
+    // All alert jobs (including M0) go to Alert_Results for full visibility
+    if (source !== 'JobSearch') {
+      writeToAlertResults(dateStr, source, company, title, sourceUrl, fetchedUrl, score, level, 'Analyzed', dots, cvType, threadId);
+    }
+
+    if (levelNum >= 2) {
+      sheet.getRange(sheetRow, 11).setValue('M2+');
+      sheet.getRange(sheetRow, 12).setValue(cvType);
+      sheet.getRange(sheetRow, 13).setValue(fetchSource);
+      sheet.getRange(sheetRow, 14).setValue(JSON.stringify(smmResult));
+      Logger.log(`  ✓ M2+ — kept for final report`);
+    } else {
+      rowsToDelete.push(sheetRow);
+    }
+
+    Utilities.sleep(1500);
+  }
+
+  for (let i = rowsToDelete.length - 1; i >= 0; i--) {
+    try { sheet.deleteRow(rowsToDelete[i]); } catch(e) {}
+  }
+  SpreadsheetApp.flush();
+
+  let remainingPending = 0;
+  if (sheet.getLastRow() > 1) {
+    remainingPending = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1)
+      .getValues()
+      .filter(r => (r[0] || '').toString().trim() !== 'M2+')
+      .length;
+  }
+
+  Logger.log(`Phase 2 batch done. Remaining pending: ${remainingPending}`);
+
+  if (remainingPending > 0) {
+    ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
+    Logger.log(`Phase 2 rescheduled — ${PHASE2_DELAY_MS / 60000} min`);
+  } else {
+    const finalLastRow = sheet.getLastRow();
+    const finalData    = finalLastRow > 1
+      ? sheet.getRange(2, 1, finalLastRow - 1, 18).getValues()
+      : [];
+
+    const finalJS = finalData.filter(r =>
+      (r[10] || '').toString().trim() === 'M2+' &&
+      (r[14] || 'JobSearch').toString().trim() === 'JobSearch'
+    );
+    const finalAlerts = finalData.filter(r =>
+      (r[10] || '').toString().trim() === 'M2+' &&
+      (r[14] || '').toString().trim() !== 'JobSearch'
+    );
+
+    sendPhase2Report(finalJS);
+    finalizeAlertResults(finalAlerts);
+
+    if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+    SpreadsheetApp.flush();
+    Logger.log('Phase 2 complete — Pending_SMM cleared.');
+  }
 }
 
 /* ── PHASE 2 ───────────────────────────────────────────────── */
@@ -4437,33 +4824,29 @@ function runJobSearchPhase2() {
 
 /* ── Send report and clear Pending_SMM ─────────────────────── */
 function sendPhase2Report(m2PlusRows) {
-  const sheet = getOrCreatePendingSmmSheet();
-
-  // Build report jobs from accumulated M2+ rows
   const reportJobs = (m2PlusRows || []).map(row => {
-    const company     = row[1];
-    const title       = row[2];
-    const url         = row[3];
-    const city        = row[4];
-    const cvType      = row[11];
-    const fetchSource = row[12];
-    let smmResult     = {};
+    let smmResult = {};
     try { smmResult = JSON.parse(row[13] || '{}'); } catch(e) {}
-    return { title, company, city, url, cvType, fetchSource, smmResult };
+    return {
+      title:       row[2],
+      company:     row[1],
+      city:        row[4],
+      url:         row[3],
+      cvType:      row[11],
+      fetchSource: row[12],
+      smmResult
+    };
   });
 
-  // Clear Pending_SMM regardless of outcome
-  if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
-  SpreadsheetApp.flush();
-
+  // Note: Pending_SMM is cleared by runPhase2 after this call — do not clear here
   if (reportJobs.length === 0) {
-    Logger.log('Phase 2: no M2+ jobs this cycle — no report sent');
+    Logger.log('sendPhase2Report: no JobSearch M2+ jobs — no email sent.');
     return;
   }
 
   const html = buildJobReportHtml(reportJobs);
   sendJobReportEmail(html);
-  Logger.log(`Phase 2 report sent — ${reportJobs.length} M2+ job(s)`);
+  Logger.log(`sendPhase2Report: sent email with ${reportJobs.length} M2+ job(s).`);
 }
 
 /** Debug utility — resets the BA scan window to 7 days ago. */
