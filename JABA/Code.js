@@ -265,6 +265,18 @@ TASK:
    RULE: To justify score 4 over 3, at least one concrete number (%, €, users, months, team size) must appear in direct connection with the skill evidence.
    RULE: To justify score 5 over 4, two or more distinct quantified outcomes must appear.
    Applying these rules strictly prevents score inflation. Be conservative, not generous.
+   FUNCTIONAL EQUIVALENCE — EXCEPTION TO THE SCORE-0 RULE:
+   Apply ONLY when the exact skill and all direct synonyms are completely absent from the CV.
+
+   A. TOOL EQUIVALENCE: Tools within the same group below are interchangeable. If the JD requires a tool absent from the CV but the CV contains a different tool from the same group, do NOT score 0. Apply: 1 equivalent tool in CV → score minimum 1. 2 or more equivalents in CV → score minimum 2. Then also apply depth rules (3–5) normally to the best-described equivalent tool, and use the HIGHER of the count-based or depth-based result.
+   GROUPS: [BI & Visualisation: Power BI · Looker Studio · Google Data Studio · Tableau · Qlik] [CRM: Salesforce · HubSpot CRM · Pipedrive · Zoho CRM · Microsoft Dynamics] [Marketing Automation: Marketo · Pardot · HubSpot Marketing · Salesforce Marketing Cloud · ActiveCampaign · Klaviyo · Brevo] [Email Marketing: Mailchimp · Klaviyo · Brevo · HubSpot · Campaign Monitor] [Paid Advertising: Google Ads · Meta Ads Manager · LinkedIn Ads · TikTok Ads · Microsoft Ads] [SEO Tools: SEMrush · Ahrefs · Moz · Google Search Console] [Social Tools: Hootsuite · Buffer · Sprout Social · Later]
+
+   B. SKILL ADJACENCY: The pairs below share enough core outcomes that outcome evidence of one justifies a score of 1 for the other. This rule converts 0 → 1 ONLY — never higher. Require specific named outcomes in the CV (not just job titles) before applying.
+   Copywriting ↔ Content Writing or Social Media Content: only if CV shows CTA writing, conversion copy, ad copy, or persuasive writing outcomes.
+   Paid Search ↔ Performance Marketing or Paid Social: only if CV shows ROAS, CPC, conversion rate, or campaign budget outcomes.
+   Community Management ↔ Social Media Management: only if CV shows community growth metrics or engagement rate outcomes.
+   Email Marketing ↔ CRM or Marketing Automation: only if CV shows open rate, CTR, subscriber count, or campaign automation outcomes.
+   Data Analysis/Reporting ↔ BI Tools or Web Analytics: only if CV shows data-driven decisions, performance dashboards, or reporting outcomes.
 3. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
 4. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
 5. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
@@ -398,6 +410,23 @@ return resultStr;
 function clearSmmCache() {
   CacheService.getScriptCache().removeAll();
   Logger.log('SMM cache cleared. Next analysis will call Mistral fresh.');
+}
+
+function getPhase2Status() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const raw   = props.getProperty('PHASE2_STATUS');
+    if (!raw) return { running: false };
+    const status = JSON.parse(raw);
+    // Auto-expire after 12 min — protects against crashes without cleanup
+    if (status.startedAt && (Date.now() - status.startedAt) > 720000) {
+      props.deleteProperty('PHASE2_STATUS');
+      return { running: false };
+    }
+    return status;
+  } catch(e) {
+    return { running: false };
+  }
 }
 
 /* ============================================================
@@ -1948,6 +1977,7 @@ function classifyRejectionByRules(subject, body) {
 
   // Hard rejection signals — any one of these = confirmed rejection
   const rejectionPhrases = [
+    // ── German formal (Sie/Ihnen) — original phrases ──────────────────────
     'leider müssen wir ihnen mitteilen',
     'leider können wir ihre bewerbung',
     'leider können wir ihnen',
@@ -1969,6 +1999,36 @@ function classifyRejectionByRules(subject, body) {
     'an dieser stelle beenden',
     'bewerbungsprozess beenden',
     'leider keine möglichkeit',
+    'nach reiflicher überlegung',
+    'nach sorgfältiger prüfung',
+    'nach eingehender prüfung',
+    'anderen kandidaten den vorzug',
+    'anderen bewerbern den vorzug',
+
+    // ── German informal (du/dir/deine) — added variants ───────────────────
+    'leider müssen wir dir mitteilen',
+    'leider können wir deine bewerbung',
+    'leider können wir dir',
+    'bedauern wir dir mitteilen',
+    'bedauern, dir mitteilen',
+    'absage für deine bewerbung',
+    'deine bewerbung war leider nicht erfolgreich',
+
+    // ── German — new patterns missing entirely ────────────────────────────
+    'inzwischen besetzt',                        // "position filled in the meantime"
+    'nicht berücksichtigt werden konnte',        // very common soft rejection
+    'nicht berücksichtigt werden konnten',
+    'nicht in die engere auswahl',               // not shortlisted
+    'leider nicht in die engere auswahl',
+    'uns leider nicht für dich entschieden',
+    'uns leider nicht für sie entschieden',
+    'müssen wir dir leider absagen',
+    'müssen wir ihnen leider absagen',
+    'leider absagen müssen',
+    'haben wir uns gegen deine bewerbung',
+    'haben wir uns gegen ihre bewerbung',
+
+    // ── English — original phrases ────────────────────────────────────────
     'not moving forward with your application',
     'not moving forward with your candidacy',
     'will not be moving forward',
@@ -1984,11 +2044,20 @@ function classifyRejectionByRules(subject, body) {
     'unfortunately we\'re unable to',
     'unfortunately, we\'re unable to',
     'regret to inform you',
-    'nach reiflicher überlegung',
-    'nach sorgfältiger prüfung',
-    'nach eingehender prüfung',
-    'anderen kandidaten den vorzug',
-    'anderen bewerbern den vorzug'
+
+    // ── English — new patterns missing entirely ───────────────────────────
+    'we have decided not to move forward',
+    'we have decided to pursue other',
+    'will not be proceeding with your',
+    'your application was unsuccessful',
+    'we are unable to offer you',
+    'the role has been filled',
+    'we have filled the position',
+    'chosen to move forward with another candidate',
+    'not shortlisted',
+    'other applicants meet our requirements',
+    'We are truly sorry not to be able to give you positive feedback',
+    'decided not to proceed with your',
   ];
 
   // Hard non-rejection signals — any one of these = definitely not rejection
@@ -4857,7 +4926,7 @@ function runJobSearchPhase1() {
     ];
   });
 
-  sheet.getRange(2, 1, rows.length, 14).setValues(rows);
+  sheet.getRange(2, 1, rows.length, 18).setValues(rows);
   SpreadsheetApp.flush();
   Logger.log('Phase 1 complete: ' + rows.length + ' candidates written to Pending_SMM');
 
@@ -4904,6 +4973,9 @@ function runPhase2() {
   });
 
   Logger.log(`Phase 2: ${pendingEntries.length} pending | ${m2PlusJobSearch.length} JS-M2+ | ${m2PlusAlerts.length} Alert-M2+ accumulated`);
+  PropertiesService.getScriptProperties().setProperty('PHASE2_STATUS', JSON.stringify({
+    running: true, pending: pendingEntries.length, startedAt: Date.now()
+  }));
 
   if (pendingEntries.length === 0) {
     Logger.log('Phase 2: no pending rows — finalizing.');
@@ -4911,6 +4983,7 @@ function runPhase2() {
     finalizeAlertResults(m2PlusAlerts);
     if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
     SpreadsheetApp.flush();
+    PropertiesService.getScriptProperties().deleteProperty('PHASE2_STATUS');
     return;
   }
 
@@ -5036,6 +5109,7 @@ function runPhase2() {
 
   Logger.log(`Phase 2 batch done. Remaining pending: ${remainingPending}`);
 
+  PropertiesService.getScriptProperties().deleteProperty('PHASE2_STATUS');
   if (remainingPending > 0) {
     ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
     Logger.log(`Phase 2 rescheduled — ${PHASE2_DELAY_MS / 60000} min`);
