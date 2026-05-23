@@ -590,7 +590,7 @@ function tavilySearchValidated(company, jobTitle) {
         continue;
       }
       Logger.log(`  Tavily search validated OK: ${r.url}`);
-      return text;
+      return { text, url: r.url };
     }
     return null;
 
@@ -772,8 +772,8 @@ function processIndeedAlertEmails() {
 
   // Gmail labels
   // Score labels are built dynamically by buildAlertLabel()
-// Only static labels needed upfront:
-const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
+  // Only static labels needed upfront:
+  const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
 
   // Search for Indeed job alert emails only — exclude application/rejection threads
   const query = [
@@ -976,6 +976,204 @@ thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
   ].join('\n');
 
   Logger.log(summary);
+  if (ui) ui.alert(summary);
+}
+
+/* ============================================================
+   INDEED ALERT PHASE 1
+   Fetches and validates JDs, writes to Pending_SMM.
+   SMM analysis handled by universal runPhase2.
+   Replaces processIndeedAlertEmails (old function kept as dead code).
+   ============================================================ */
+function processIndeedAlertEmails_Phase1() {
+  const props    = PropertiesService.getScriptProperties();
+  const timezone = CONFIG.TIMEZONE;
+  const runStart = Date.now();
+  const TIME_BUDGET_MS = 280000;
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+
+  cleanAlertResults();
+
+  const lastScanStr    = props.getProperty('LAST_ALERT_SCAN');
+  const sinceDate      = lastScanStr
+    ? new Date(lastScanStr)
+    : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
+  const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
+  Logger.log(`Indeed Phase 1 — since: ${sinceFormatted}`);
+
+  const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
+  const labelQueued     = getOrCreateLabel('JABA Alert/⏳ Queued');
+
+  const query = [
+    'from:indeed.com',
+    `after:${sinceFormatted}`,
+    '-label:JABA Alert/Processed',
+    '-subject:Bewerbung',
+    '-subject:"Neuigkeiten zu Ihrer Bewerbung"',
+    '-subject:"Your application"',
+    '-subject:indeedapply',
+    '-subject:"Heben Sie sich"'
+  ].join(' ');
+
+  const threads = GmailApp.search(query, 0, 30);
+  Logger.log(`Found ${threads.length} Indeed alert thread(s)`);
+
+  if (threads.length === 0) {
+    props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
+    if (ui) ui.alert('No new Indeed alert emails found since last scan.');
+    return;
+  }
+
+  const pendingSheet   = getOrCreatePendingSmmSheet();
+  const dateStr        = Utilities.formatDate(new Date(), timezone, 'yyyy-MM-dd');
+  const MAX_JD_FETCHES = 12;
+  let jdFetches    = 0;
+  let totalQueued  = 0;
+  let totalSkipped = 0;
+  let totalCached  = 0;
+
+  for (const thread of threads) {
+    if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
+      Logger.log('⏱ Indeed Phase 1 time budget — stopping');
+      break;
+    }
+
+    const threadId = thread.getId();
+    const message  = thread.getMessages()[thread.getMessages().length - 1];
+    const htmlBody = message.getBody();
+    const subject  = message.getSubject();
+    Logger.log(`\nIndeed thread: "${subject}"`);
+
+    const allJobs      = extractJobListingsFromHtml(htmlBody);
+    const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
+    Logger.log(`  Jobs: ${allJobs.length} total | ${relevantJobs.length} relevant`);
+
+    if (relevantJobs.length === 0) {
+      const hasInternship = allJobs.some(j =>
+        /werkstudent|praktikum|pflichtpraktikum|internship/i.test(j.title)
+      );
+      if (hasInternship) thread.addLabel(labelInternship);
+      thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
+      continue;
+    }
+
+    let threadQueued         = 0;
+    let threadFullyProcessed = true;
+
+    for (const job of relevantJobs) {
+      if (isJobInCache(job.company, job.title)) {
+        Logger.log(`    [cache] "${job.title}" @ ${job.company} — skip`);
+        totalCached++;
+        continue;
+      }
+
+      if (jdFetches >= MAX_JD_FETCHES) {
+        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached — thread not fully processed`);
+        threadFullyProcessed = false;
+        break;
+      }
+
+      if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
+        threadFullyProcessed = false;
+        break;
+      }
+
+      Logger.log(`  → "${job.title}" at "${job.company}"`);
+      jdFetches++;
+
+      let jdText    = null;
+      let fetchedUrl = job.url;
+
+      // Tier 1: Indeed job page via Tavily advanced extract
+      Logger.log(`    Tier 1: ${job.url}`);
+      const t1 = tavilyExtractAdvanced(job.url);
+      if (t1 && looksLikeJobContent(t1) && isCompleteJobDescription(t1) &&
+          isJdRelevantToJob(t1, job.company, job.title, false)) {
+        jdText = t1;
+        Logger.log(`    Tier 1 OK (${t1.length} chars)`);
+      } else if (t1) {
+        Logger.log(`    Tier 1 discarded (relevance or completeness failed)`);
+      }
+
+      // Tier 2: Tavily web search — now returns {text, url}
+      if (!jdText) {
+        Logger.log(`    Tier 2: web search`);
+        const t2 = tavilySearchValidated(job.company, job.title);
+        if (t2 && isCompleteJobDescription(t2.text) &&
+            isJdRelevantToJob(t2.text, job.company, job.title, false)) {
+          jdText     = t2.text;
+          fetchedUrl = t2.url;
+          Logger.log(`    Tier 2 OK (${t2.text.length} chars)`);
+        } else if (t2) {
+          Logger.log(`    Tier 2 discarded`);
+        }
+      }
+
+      if (!jdText) {
+        Logger.log(`    ✗ No valid JD — writing skipped to Alert_Results`);
+        const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
+        writeToAlertResults(skipDate, 'Indeed', job.company, job.title,
+                            job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'no_jd', job.url, 'Indeed');
+        totalSkipped++;
+        Utilities.sleep(500);
+        continue;
+      }
+
+      // Write to Pending_SMM — Phase 2 handles SMM scoring
+      pendingSheet.appendRow([
+        dateStr, job.company, job.title, job.url,
+        '', '',                           // City, Country (not in email)
+        jdText.substring(0, 5000),        // Description — pre-fetched and validated
+        'TRUE',                           // DescriptionFull
+        scoreJobTitleQuality(job.title),  // QualityScore
+        job.id || '',                     // ID
+        '', '', '', '',                   // Status, CvType, FetchSource, SmmData
+        'Indeed',                         // Source
+        threadId,                         // Thread_ID
+        'TRUE',                           // JD_Fetched
+        job.url                           // Source_URL
+      ]);
+      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, 'unknown', 'queued', fetchedUrl, 'Indeed');
+      totalQueued++;
+      threadQueued++;
+      Logger.log(`    ✓ Queued for SMM`);
+
+      Utilities.sleep(1000);
+    }
+
+    // Mark thread as Processed only if every relevant job was handled
+    // Unfinished threads stay unlabeled so the next trigger finds them again
+    if (threadFullyProcessed) {
+      thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
+      if (threadQueued > 0) thread.addLabel(labelQueued);
+    } else {
+      Logger.log(`  Thread not fully processed — will retry on next trigger run`);
+    }
+
+    Utilities.sleep(300);
+  }
+
+  props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
+  SpreadsheetApp.flush();
+  Logger.log(`Indeed Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached`);
+
+  if (totalQueued > 0) {
+    deletePhase2Triggers();
+    ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
+    Logger.log(`Phase 2 trigger created — runs in ${PHASE2_DELAY_MS / 60000} min`);
+  }
+
+  const summary = [
+    '📧 Indeed Alert Phase 1 Complete',
+    '─────────────────────────────',
+    `✅ Queued for SMM: ${totalQueued}`,
+    `⚠  Skipped (no valid JD): ${totalSkipped}`,
+    `⏭  Already cached: ${totalCached}`,
+    totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
+  ].filter(Boolean).join('\n');
+
   if (ui) ui.alert(summary);
 }
 
@@ -2621,16 +2819,13 @@ function isCompleteJobDescription(text) {
 function isJobDetailPage(url) {
   if (!url) return false;
   const lower = url.toLowerCase();
-  // Stepstone category pattern: /jobs/category-name/in-cityname
-  if (/stepstone\.[a-z]+\/jobs\/[^?#/]+\/in-[^?#/]+/.test(lower)) return false;
-  // Indeed search results
-  if (/indeed\.com\/(jobs|jobsearch|\?q=)/.test(lower)) return false;
-  // Xing search results
-  if (/xing\.com\/jobs(?:\/search|\/?$)/.test(lower)) return false;
-  // Glassdoor listing pages
-  if (/glassdoor\.[a-z]+\/(job-listings?|Jobs\/jobs)/.test(lower)) return false;
-  // Google Jobs search
-  if (/jobs\.google\.com\/search/.test(lower)) return false;
+  if (/stepstone\.[a-z]+\/jobs\/[^?#/]+\/in-[^?#/]+/.test(lower))  return false;
+  if (/indeed\.com\/(jobs|jobsearch|\?q=)/.test(lower))             return false;
+  if (/xing\.com\/jobs(?:\/search|\/?$)/.test(lower))               return false;
+  if (/glassdoor\.[a-z]+\/(job-listings?|Jobs\/jobs)/.test(lower))  return false;
+  if (/jobs\.google\.com\/search/.test(lower))                      return false;
+  if (/linkedin\.com\/company\//.test(lower))                       return false;
+  if (/linkedin\.com\/jobs\/search/.test(lower))                    return false;
   return true;
 }
 
@@ -2644,7 +2839,10 @@ function isJdRelevantToJob(text, company, jobTitle, trustedSource) {
  
   const titleWords = jobTitle
     .toLowerCase()
-    .replace(/\(m\/w\/d\)|\(w\/m\/d\)|\(w\/d\/m\)|\(f\/m\/d\)/gi, '')
+    .replace(/\([mwfdx*\/\s]{3,15}\)/gi, '')
+    .replace(/\(all\s*genders?\)/gi, '')
+    .replace(/\(gn\)/gi, '')
+    .replace(/\(mensch\)/gi, '')
     .split(/\s+/)
     .filter(w => w.length > 4);
  
@@ -3357,8 +3555,8 @@ function cleanJobCache() {
     if (!dateVal) return;
  
     const entryDate  = new Date(dateVal);
-    const isSkip     = matchLevel === 'SKIP';
-    const cutoff     = isSkip ? cutoffSkip : cutoffAnalyzed;
+    const isShortLived = matchLevel === 'SKIP' || matchLevel === 'QUEUED';
+    const cutoff       = isShortLived ? cutoffSkip : cutoffAnalyzed;
  
     if (entryDate < cutoff) toDelete.push(i + 2); // +2: 1-indexed + header row
   });
@@ -3941,6 +4139,188 @@ function extractBAJobListingsFromHtml(htmlBody) {
   Logger.log('  BA HTML extraction: ' + jobs.length + ' job(s) found');
   return jobs;
 }
+/* ============================================================
+BA (BUNDESAGENTUR) ALERT PHASE 1
+   Same pattern as Indeed Phase 1 but for BA job emails.
+   Replaces processArbeitsagenturAlertEmails (kept as dead code).
+   ============================================================ */
+function processArbeitsagenturAlertEmails_Phase1() {
+  const props    = PropertiesService.getScriptProperties();
+  const timezone = CONFIG.TIMEZONE;
+  const runStart = Date.now();
+  const TIME_BUDGET_MS = 280000;
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+
+  cleanAlertResults();
+
+  const lastScanStr    = props.getProperty('LAST_BA_ALERT_SCAN');
+  const sinceDate      = lastScanStr
+    ? new Date(lastScanStr)
+    : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
+  const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
+  Logger.log(`BA Phase 1 — since: ${sinceFormatted}`);
+
+  const labelInternship = getOrCreateLabel('JABA BA Alert/🎓 Internship');
+  const labelQueued     = getOrCreateLabel('JABA BA Alert/⏳ Queued');
+
+  const query = [
+    'from:jobsuche@arbeitsagentur.de',
+    `after:${sinceFormatted}`,
+    '-label:JABA-BA-Alert/Processed'
+  ].join(' ');
+
+  const threads = GmailApp.search(query, 0, 30);
+  Logger.log(`Found ${threads.length} BA alert thread(s)`);
+
+  if (threads.length === 0) {
+    props.setProperty('LAST_BA_ALERT_SCAN', new Date().toISOString());
+    if (ui) ui.alert('No new BA alert emails found since last scan.');
+    return;
+  }
+
+  const pendingSheet   = getOrCreatePendingSmmSheet();
+  const dateStr        = Utilities.formatDate(new Date(), timezone, 'yyyy-MM-dd');
+  const MAX_JD_FETCHES = 12;
+  let jdFetches    = 0;
+  let totalQueued  = 0;
+  let totalSkipped = 0;
+  let totalCached  = 0;
+
+  for (const thread of threads) {
+    if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
+      Logger.log('⏱ BA Phase 1 time budget — stopping');
+      break;
+    }
+
+    const threadId = thread.getId();
+    const message  = thread.getMessages()[thread.getMessages().length - 1];
+    const htmlBody = message.getBody();
+    const subject  = message.getSubject();
+    Logger.log(`\nBA thread: "${subject}"`);
+
+    const allJobs      = extractBAJobListingsFromHtml(htmlBody);
+    const relevantJobs = allJobs.filter(j => isRelevantJobTitle(j.title));
+    Logger.log(`  Jobs: ${allJobs.length} total | ${relevantJobs.length} relevant`);
+
+    if (relevantJobs.length === 0) {
+      const hasInternship = allJobs.some(j =>
+        /werkstudent|praktikum|pflichtpraktikum|internship/i.test(j.title)
+      );
+      if (hasInternship) thread.addLabel(labelInternship);
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
+      continue;
+    }
+
+    let threadQueued         = 0;
+    let threadFullyProcessed = true;
+
+    for (const job of relevantJobs) {
+      if (isJobInCache(job.company, job.title)) {
+        Logger.log(`    [cache] "${job.title}" @ ${job.company} — skip`);
+        totalCached++;
+        continue;
+      }
+
+      if (jdFetches >= MAX_JD_FETCHES) {
+        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached — thread not fully processed`);
+        threadFullyProcessed = false;
+        break;
+      }
+
+      if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
+        threadFullyProcessed = false;
+        break;
+      }
+
+      Logger.log(`  → "${job.title}" at "${job.company}"`);
+      jdFetches++;
+
+      let jdText    = null;
+      let fetchedUrl = job.url;
+
+      // Tier 1: direct UrlFetchApp — BA pages are public
+      const direct = fetchJobPageDirectly(job.url);
+      if (direct && looksLikeJobContent(direct) && isCompleteJobDescription(direct) &&
+          isJdRelevantToJob(direct, job.company, job.title, false)) {
+        jdText = direct;
+        Logger.log(`    Tier 1 (direct) OK (${direct.length} chars)`);
+      }
+
+      // Tier 2: Tavily advanced extract
+      if (!jdText) {
+        Logger.log(`    Tier 2: Tavily extract`);
+        const tavily = tavilyExtractAdvanced(job.url);
+        if (tavily && looksLikeJobContent(tavily) && isCompleteJobDescription(tavily) &&
+            isJdRelevantToJob(tavily, job.company, job.title, false)) {
+          jdText = tavily;
+          Logger.log(`    Tier 2 (Tavily) OK (${tavily.length} chars)`);
+        }
+      }
+
+      if (!jdText) {
+        Logger.log(`    ✗ No valid JD — writing skipped to Alert_Results`);
+        const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
+        writeToAlertResults(skipDate, 'BA', job.company, job.title,
+                            job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'no_jd', job.url, 'BA');
+        totalSkipped++;
+        Utilities.sleep(500);
+        continue;
+      }
+
+      pendingSheet.appendRow([
+        dateStr, job.company, job.title, job.url,
+        '', '',
+        jdText.substring(0, 5000),
+        'TRUE',
+        scoreJobTitleQuality(job.title),
+        job.id || '',
+        '', '', '', '',
+        'BA',
+        threadId,
+        'TRUE',
+        job.url
+      ]);
+      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, 'unknown', 'queued', fetchedUrl, 'BA');
+      totalQueued++;
+      threadQueued++;
+      Logger.log(`    ✓ Queued for SMM`);
+
+      Utilities.sleep(1000);
+    }
+
+    if (threadFullyProcessed) {
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
+      if (threadQueued > 0) thread.addLabel(labelQueued);
+    } else {
+      Logger.log(`  Thread not fully processed — will retry on next trigger run`);
+    }
+
+    Utilities.sleep(300);
+  }
+
+  props.setProperty('LAST_BA_ALERT_SCAN', new Date().toISOString());
+  SpreadsheetApp.flush();
+  Logger.log(`BA Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached`);
+
+  if (totalQueued > 0) {
+    deletePhase2Triggers();
+    ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
+    Logger.log(`Phase 2 trigger created — runs in ${PHASE2_DELAY_MS / 60000} min`);
+  }
+
+  const summary = [
+    '📧 BA Alert Phase 1 Complete',
+    '─────────────────────────────',
+    `✅ Queued for SMM: ${totalQueued}`,
+    `⚠  Skipped (no valid JD): ${totalSkipped}`,
+    `⏭  Already cached: ${totalCached}`,
+    totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
+  ].filter(Boolean).join('\n');
+
+  if (ui) ui.alert(summary);
+}
 
 /**
  * Main BA alert processor.
@@ -4444,11 +4824,16 @@ function runJobSearchPhase1() {
 
   if (lastRow > 1) {
     const oldStatuses = sheet.getRange(2, 11, lastRow - 1, 1).getValues();
-    const oldM2Plus   = sheet.getRange(2, 1, lastRow - 1, 14).getValues()
-                             .filter((_, i) => (oldStatuses[i][0] || '').toString().trim() === 'M2+');
+    const allOldRows  = sheet.getRange(2, 1, lastRow - 1, 18).getValues();
+    const oldM2Plus   = allOldRows.filter((row, i) =>
+      (oldStatuses[i][0] || '').toString().trim() === 'M2+'
+    );
     if (oldM2Plus.length > 0) {
-      Logger.log('Phase 1: found ' + oldM2Plus.length + ' unreported M2+ rows — sending now');
-      sendPhase2Report(oldM2Plus);
+      Logger.log('Phase 1: found ' + oldM2Plus.length + ' unreported M2+ rows — routing by source');
+      const oldJobSearch = oldM2Plus.filter(r => (r[14] || 'JobSearch').toString().trim() === 'JobSearch');
+      const oldAlerts    = oldM2Plus.filter(r => (r[14] || '').toString().trim() !== 'JobSearch');
+      if (oldJobSearch.length > 0) sendPhase2Report(oldJobSearch);
+      if (oldAlerts.length > 0)    finalizeAlertResults(oldAlerts);
     } else {
       sheet.deleteRows(2, lastRow - 1);
     }
