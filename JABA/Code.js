@@ -149,23 +149,25 @@ function onEdit(e) {
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🤖 AI Recruitment')
-    .addItem('Open AI Sidebar',                        'showSidebar')
+    .addItem('Open AI Sidebar',                         'showSidebar')
     .addSeparator()
-    .addItem('Scan Gmail for Applications',            'processGmailApplications')
-    .addItem('Scan Gmail for Rejections',              'processRejectionEmails')
+    .addItem('Scan Gmail for Applications',             'processGmailApplications')
+    .addItem('Scan Gmail for Rejections',               'processRejectionEmails')
     .addSeparator()
-    .addItem('📧 Process Indeed Job Alerts',           'processIndeedAlertEmails_Phase1')
-    .addItem('📧 Process BA Job Alerts',               'processArbeitsagenturAlertEmails_Phase1')
+    .addItem('📧 Process Indeed Job Alerts',            'processIndeedAlertEmails_Phase1')
+    .addItem('📧 Process BA Job Alerts',                'processArbeitsagenturAlertEmails_Phase1')
     .addSeparator()
-    .addItem('🔄 Refresh Dashboard Data',              'refreshAllData')
+    .addItem('🔄 Refresh Dashboard Data',               'refreshAllData')
     .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
     .addSeparator()
-    .addItem('🔍 Run Daily Job Search (Phase 1)',      'runJobSearchPhase1')
+    .addItem('🔍 Run Daily Job Search (Phase 1)',       'runJobSearchPhase1')
     .addSeparator()
-    .addItem('🗑️ Clear Job Search Cache (run once)',  'clearAllJobCache')
+    .addItem('🗑️ Clear Job Search Cache (run once)',   'clearAllJobCache')
+    .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
     .addToUi();
-
+ 
   checkUnreadM2Alerts();
+  checkPendingNotification();   // ← NEW: shows desktop popup if 15:00 trigger fired earlier
 }
 
 function refreshAllData() {
@@ -243,14 +245,7 @@ ${categoryContext}
 
 TASK:
 1. Identify the TOP 8 most important skills from the JD, ranked strictly by the JD's own emphasis (most repeated / most described first).
-   Language requirements — apply this logic exactly:
-- German C2, "Muttersprache", "native speaker", or "verhandlungssicher": 
-  include as a skill, classify as Crucial, score it 0/5 — the candidate holds 
-  C1 which does not satisfy these levels.
-- German C1, "fließend", "fluent", "gute Kenntnisse", or any English language 
-  requirement: EXCLUDE entirely — not a differentiating factor for this candidate.
-- No language level specified: EXCLUDE entirely.
-2. For each skill score the CV from 0 to 5 using ONLY these exact criteria — no interpretation allowed:
+   2. For each skill score the CV from 0 to 5 using ONLY these exact criteria — no interpretation allowed:
    - 0: The exact skill or a direct synonym does NOT appear anywhere in the CV.
    - 1: The skill word appears once with no context (e.g. listed in a tools section only).
    - 2: The skill is described in 1 sentence but with no measurable outcome.
@@ -277,9 +272,22 @@ TASK:
    Community Management ↔ Social Media Management: only if CV shows community growth metrics or engagement rate outcomes.
    Email Marketing ↔ CRM or Marketing Automation: only if CV shows open rate, CTR, subscriber count, or campaign automation outcomes.
    Data Analysis/Reporting ↔ BI Tools or Web Analytics: only if CV shows data-driven decisions, performance dashboards, or reporting outcomes.
-3. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
-4. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
-5. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
+3. Language requirements — do NOT include any language as one of the 8 skills.
+   Instead, analyse the JD and populate language_note with exactly one of:
+   - German C2 / Muttersprache / native speaker / verhandlungssicher / muttersprachlich:
+     { "text": "German C2 (native) required — candidate holds C1, requirement not met.", "status": "unmet" }
+   - German B1 / B2 / C1 / fließend / sehr gute Deutschkenntnisse / gute Deutschkenntnisse / fluent German:
+     { "text": "German C1 required — requirement met.", "status": "met" }
+   - English required (any phrasing, any level):
+     { "text": "English required — requirement met.", "status": "met" }
+   - Third language required (Spanish, French, Dutch, Italian, Polish, etc.):
+     { "text": "[Language] [level if stated] required — verify this requirement manually.", "status": "other" }
+   - No language requirement anywhere in the JD:
+     { "text": "No specific language requirement stated.", "status": "none" }
+   Priority if multiple apply: "unmet" > "other" > "met" > "none".
+4. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
+5. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
+6. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
 
 SCORING RULES:
 - Scores are based ONLY on what is written in the CV — not on assumptions about the candidate.
@@ -306,7 +314,11 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
     }
   ],
   "total_score": 0,
-  "match_level": "M0"
+  "match_level": "M0",
+  "language_note": {
+    "text": "German C2 (native) required — candidate holds C1, requirement not met.",
+    "status": "unmet"
+  }
 }`;
 
     const url = "https://api.mistral.ai/v1/chat/completions";
@@ -366,7 +378,12 @@ if (responseCode !== 200) {
   );
   if (!groqRaw) throw new Error(`Both Mistral and Groq failed for SMM analysis.`);
   let content = groqRaw.replace(/```json|```/g, '').trim();
-  const parsed = repairAndParseSmm(content); // uses the new helper below
+  const parsed = repairAndParseSmm(content);
+  if (!parsed.language_note || typeof parsed.language_note !== 'object') {
+    parsed.language_note = { text: 'Language requirement not analyzed.', status: 'none' };
+  }
+  if (!parsed.language_note.text)   parsed.language_note.text   = 'No language data.';
+  if (!parsed.language_note.status) parsed.language_note.status = 'none';
   // recalculate totals
   if (parsed.skills && parsed.skills.length > 0) {
     parsed.total_score = parsed.skills.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
@@ -384,7 +401,12 @@ if (responseCode !== 200) {
     let content = json.choices[0].message.content.trim()
                   .replace(/```json|```/g, '').trim();
 const parsed = repairAndParseSmm(content);
-
+    if (!parsed.language_note || typeof parsed.language_note !== 'object') {
+      parsed.language_note = { text: 'Language requirement not analyzed.', status: 'none' };
+    }
+    if (!parsed.language_note.text)   parsed.language_note.text   = 'No language data.';
+    if (!parsed.language_note.status) parsed.language_note.status = 'none';
+ 
     // Server-side validation: recalculate total and match level to prevent AI drift
     if (parsed.skills && parsed.skills.length > 0) {
       parsed.total_score = parsed.skills.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
@@ -1144,7 +1166,7 @@ function processIndeedAlertEmails_Phase1() {
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'Indeed', job.company, job.title,
                             job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
-        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'no_jd', job.url, 'Indeed');
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'no_jd', job.url, 'Indeed', '');
         totalSkipped++;
         Utilities.sleep(500);
         continue;
@@ -1154,7 +1176,7 @@ function processIndeedAlertEmails_Phase1() {
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
         '', '',                           // City, Country (not in email)
-        jdText.substring(0, 5000),        // Description — pre-fetched and validated
+        jdText.substring(0, 10000),       // Description — pre-fetched and validated
         'TRUE',                           // DescriptionFull
         scoreJobTitleQuality(job.title),  // QualityScore
         job.id || '',                     // ID
@@ -1164,7 +1186,7 @@ function processIndeedAlertEmails_Phase1() {
         'TRUE',                           // JD_Fetched
         job.url                           // Source_URL
       ]);
-      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, 'unknown', 'queued', fetchedUrl, 'Indeed');
+      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'Indeed', '');
       totalQueued++;
       threadQueued++;
       Logger.log(`    ✓ Queued for SMM`);
@@ -1635,6 +1657,9 @@ COVER LETTER RULES:
     updateInterviewGeoData();
     SpreadsheetApp.flush();
 
+    try { markCacheRowStatus(companyName, position, 'registered'); } catch(e) {
+      Logger.log(`markCacheRowStatus non-fatal: ${e.message}`);
+    }
     const scoreNote = smmData ? ` (SMM ${smmData.total_score}/40 · ${finalMatch})` : "";
     return `✅ Success: ${companyName} registered${scoreNote}!`;
 
@@ -3371,7 +3396,6 @@ function fetchJobicyJobs() {
 function fetchArbeitnowJobs() {
   const allJobs = [];
   const seenIds = new Set();
-
   for (let page = 1; page <= 3; page++) {
     try {
       const res = UrlFetchApp.fetch(
@@ -3382,47 +3406,33 @@ function fetchArbeitnowJobs() {
         Logger.log(`Arbeitnow page ${page}: HTTP ${res.getResponseCode()}`);
         break;
       }
-
       const data = JSON.parse(res.getContentText());
       const jobs  = data.data || [];
       if (jobs.length === 0) break;
-
       for (const job of jobs) {
         const id    = 'arbeitnow_' + (job.slug || '');
         if (seenIds.has(id)) continue;
         seenIds.add(id);
-
-        const title    = (job.title || '').trim();
-        const location = (job.location || '').trim();
-        const isRemote = job.remote === true;
-        const inGermany = isGermanLocation(location);
-
-        // Geographic rule: Germany = all jobs; abroad = remote only
-        if (!inGermany && !isRemote) continue;
-
-        // Keyword relevance filter
-        if (!isRelevantJobTitle(title)) continue;
-
+        const title = (job.title || '').trim();
+        if (!isRelevantJobTitle(title)) continue;  // title filter only; no geo gate
         allJobs.push({
-          title:           title,
+          title,
           company:         (job.company_name || 'Unknown').trim(),
-          city:            location || (inGermany ? 'Germany' : 'Remote'),
+          city:            (job.location || 'Remote').trim(),
           url:             job.url || '',
           description:     stripHtmlToText(job.description || '').substring(0, 10000),
-          id:              id,
+          id,
           pubDate:         job.created_at || '',
           descriptionFull: true
         });
       }
       Utilities.sleep(400);
-
     } catch(e) {
       Logger.log(`Arbeitnow page ${page} error: ${e.message}`);
       break;
     }
   }
-
-  Logger.log(`Arbeitnow: ${allJobs.length} relevant jobs`);
+  Logger.log(`Arbeitnow: ${allJobs.length} relevant jobs (no geo filter)`);
   return allJobs;
 }
 
@@ -3585,22 +3595,58 @@ function getOrCreateJobCacheSheet() {
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
   let   sheet   = ss.getSheetByName('Job_Search_Cache');
   const HEADERS = [
-    'Date', 'Company', 'Job_Title', 'URL', 'CV_Type',
-    'Match_Level', 'Score', 'Fetch_Source', 'Fetched_URL', 'Source'
+    'Timestamp','Company','Job_Title','URL','CV_Type',
+    'Match_Level','Score','Fetch_Source','Fetched_URL','Source',
+    'Review_Status','JD_Text'
   ];
+ 
+  function applyDropdowns() {
+    function dv(col, values) {
+      const rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(values, true).setAllowInvalid(true).build();
+      sheet.getRange(2, col, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
+    }
+    dv(5,  ['DE Web2 Marketing Manager','EN Web2 Marketing Manager','Web3 Marketing Manager','—']);
+    dv(6,  ['M0','M1','M2','M3','M4','SKIP','QUEUED','already_applied']);
+    dv(8,  ['api_full','direct','tavily_advanced','failed','irrelevant_jd',
+            'queued','no_jd','already_applied','phase1_prefetch']);
+    dv(10, ['JobSearch','Indeed','BA']);
+    dv(11, ['in process','fit','discarded','registered','auto']);
+  }
+ 
   if (!sheet) {
     sheet = ss.insertSheet('Job_Search_Cache');
     sheet.getRange(1, 1, 1, HEADERS.length)
          .setValues([HEADERS])
          .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
     sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, sheet.getMaxRows(), 1).setNumberFormat('@STRING@');
     for (let i = 1; i <= HEADERS.length; i++) sheet.autoResizeColumn(i);
-    Logger.log('Job_Search_Cache sheet created (10 columns).');
-  } else if (sheet.getLastColumn() < 10) {
-    sheet.getRange(1, 9, 1, 2)
-         .setValues([['Fetched_URL', 'Source']])
-         .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
-    Logger.log('Job_Search_Cache: migrated to 10 columns.');
+    applyDropdowns();
+    Logger.log('Job_Search_Cache sheet created (12 columns).');
+  } else {
+    const colCount = sheet.getLastColumn();
+    if (colCount < 11) {
+      // Migrate 10 → 12 columns
+      sheet.getRange(1, 11, 1, 2)
+           .setValues([['Review_Status','JD_Text']])
+           .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
+      if (sheet.getLastRow() > 1) {
+        const levels   = sheet.getRange(2, 6, sheet.getLastRow() - 1, 1).getValues();
+        const statuses = levels.map(r => {
+          const n = parseInt((r[0] || '').toString().replace(/\D/g, '')) || 0;
+          return [n >= 1 ? 'in process' : 'auto'];
+        });
+        sheet.getRange(2, 11, statuses.length, 1).setValues(statuses);
+      }
+      sheet.getRange(1, 1, sheet.getMaxRows(), 1).setNumberFormat('@STRING@');
+      applyDropdowns();
+      Logger.log('Job_Search_Cache: migrated to 12 columns, Review_Status backfilled.');
+    } else if (colCount < 12) {
+      sheet.getRange(1, 12, 1, 1).setValue('JD_Text')
+           .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
+      Logger.log('Job_Search_Cache: JD_Text column added.');
+    }
   }
   return sheet;
 }
@@ -3608,33 +3654,22 @@ function getOrCreateJobCacheSheet() {
 function cleanJobCache() {
   const sheet = getOrCreateJobCacheSheet();
   if (sheet.getLastRow() < 2) return;
- 
   const now            = new Date();
-  const cutoffAnalyzed = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000); // 14 days
-  const cutoffSkip     = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000); //  7 days
- 
-  // Columns: Date(1), Company(2), Job_Title(3), URL(4), CV_Type(5), Match_Level(6), Score(7), Fetch_Source(8)
-  // Read 6 columns so index 5 = Match_Level
-  const data     = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
-  const toDelete = [];
- 
+  const cutoffAnalyzed = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const cutoffSkip     = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000);
+  const data           = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
+  const toDelete       = [];
   data.forEach((row, i) => {
-    const dateVal    = row[0];
-    const matchLevel = (row[5] || '').toString().toUpperCase().trim();
-    if (!dateVal) return;
- 
-    const entryDate  = new Date(dateVal);
-    const isShortLived = matchLevel === 'SKIP' || matchLevel === 'QUEUED';
-    const cutoff       = isShortLived ? cutoffSkip : cutoffAnalyzed;
- 
-    if (entryDate < cutoff) toDelete.push(i + 2); // +2: 1-indexed + header row
+    const entryDate = parseCacheTimestamp(row[0]);
+    if (!entryDate) return;
+    const level     = (row[5] || '').toString().toUpperCase().trim();
+    const shortLive = level === 'SKIP' || level === 'QUEUED';
+    if (entryDate < (shortLive ? cutoffSkip : cutoffAnalyzed)) toDelete.push(i + 2);
   });
- 
   for (let i = toDelete.length - 1; i >= 0; i--) sheet.deleteRow(toDelete[i]);
- 
   if (toDelete.length > 0) {
     SpreadsheetApp.flush();
-    Logger.log(`Job cache cleaned: ${toDelete.length} entries removed (SKIP > 7d or analyzed > 30d).`);
+    Logger.log(`Job cache cleaned: ${toDelete.length} entries removed.`);
   }
 }
 
@@ -3643,10 +3678,10 @@ function isJobInCache(company, title) {
   if (sheet.getLastRow() < 2) return false;
   const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
   const nc   = company.toLowerCase().trim();
-  const nt   = title.toLowerCase().trim();
+  const nt   = normalizeJobTitle(title || '').toLowerCase().trim();
   return data.some(r =>
     r[0].toString().toLowerCase().trim() === nc &&
-    r[1].toString().toLowerCase().trim() === nt
+    normalizeJobTitle(r[1].toString()).toLowerCase().trim() === nt
   );
 }
 // Loads the entire Job_Search_Cache into a Set — call once per run
@@ -3655,10 +3690,10 @@ function buildCachedJobsSet() {
   const sheet  = getOrCreateJobCacheSheet();
   if (sheet.getLastRow() < 2) return cached;
   const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
-  data.forEach(function(r) {
+  data.forEach(r => {
     cached.add(
       (r[0] || '').toString().toLowerCase().trim() + '||' +
-      (r[1] || '').toString().toLowerCase().trim()
+      normalizeJobTitle((r[1] || '').toString()).toLowerCase().trim()
     );
   });
   return cached;
@@ -3707,11 +3742,14 @@ function isJobAlreadyApplied(company, title) {
   return false;
 }
 
-function addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source) {
-  const sheet   = getOrCreateJobCacheSheet();
-  const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd');
+function addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source, jdText) {
+  const sheet        = getOrCreateJobCacheSheet();
+  const timestamp    = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd-MM-yyyy HH:mm:ss');
+  const levelNum     = parseInt((smmResult.match_level || '').replace(/\D/g, '')) || 0;
+  const reviewStatus = levelNum >= 1 ? 'in process' : 'auto';
+  const safeJdText   = (jdText || '').substring(0, 49000);
   sheet.appendRow([
-    dateStr,
+    timestamp,
     job.company || '',
     job.title   || '',
     job.url     || '',
@@ -3719,8 +3757,10 @@ function addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source) 
     smmResult.match_level || 'M0',
     smmResult.total_score || 0,
     fetchSource  || '',
-    fetchedUrl   || '',        // column 9 — new
-    source       || 'JobSearch' // column 10 — new
+    fetchedUrl   || '',
+    source       || 'JobSearch',
+    reviewStatus,
+    safeJdText
   ]);
 }
 
@@ -3953,24 +3993,6 @@ function runDailyJobSearch() {
       continue;
     }
  
-    if (!job.descriptionFull) {
-      const countryCode    = (job.country || '').toLowerCase();
-      const inGermany      = countryCode === 'de' ||
-                             isGermanLocation(job.city  || '') ||
-                             isGermanLocation(job.title || '');
-      const titleLower     = job.title.toLowerCase();
-      const descLower      = (job.description || '').toLowerCase();
-      const mentionsRemote = titleLower.includes('remote') ||
-                             descLower.includes('remote')  ||
-                             descLower.includes('homeoffice') ||
-                             descLower.includes('home office');
-      if (!inGermany && !mentionsRemote) {
-        Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city} [${countryCode || '?'}]`);
-        diag.excluded_geo++;
-        continue;
-      }
-    }
- 
     if (isJobInCache(job.company, job.title)) {
       Logger.log(`  ✗ [cache] "${job.title}" @ ${job.company}`);
       diag.excluded_cache++;
@@ -3980,6 +4002,8 @@ function runDailyJobSearch() {
     if (isJobAlreadyApplied(job.company, job.title)) {
       Logger.log(`  ✗ [applied] "${job.title}" @ ${job.company}`);
       diag.excluded_applied++;
+      addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
+                    '', 'already_applied', '', 'JobSearch', '');
       continue;
     }
  
@@ -4039,7 +4063,7 @@ function runDailyJobSearch() {
     if (!extracted) {
       Logger.log(`  ✗ JD fetch failed — skipping`);
       diag.jd_fetch_failed++;
-      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
+      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'failed', job.url, 'JobSearch', '');
       processed++;
       Utilities.sleep(500);
       continue;
@@ -4049,7 +4073,7 @@ function runDailyJobSearch() {
     if (!isJdRelevantToJob(extracted.text, job.company, job.title, isTrustedSource)) {
       Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
       diag.jd_irrelevant++;
-      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
+      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'irrelevant_jd', job.url, 'JobSearch', '');
       processed++;
       Utilities.sleep(500);
       continue;
@@ -4089,7 +4113,7 @@ function runDailyJobSearch() {
  
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
  
-    addJobToCache(job, smmResult, cvType, extracted.source);
+    addJobToCache(job, smmResult, cvType, extracted.source, job.url, 'JobSearch', extracted.text);
  
     if (levelNum >= 2) {
       reportJobs.push({ ...job, smmResult, cvType, fetchSource: extracted.source });
@@ -4107,14 +4131,10 @@ function runDailyJobSearch() {
   emitDiagnosticsSummary(diag);
  
   if (reportJobs.length > 0) {
-    const html = buildJobReportHtml(reportJobs);
-    sendJobReportEmail(html);
-    Logger.log(`Report email sent with ${reportJobs.length} job(s).`);
+    Logger.log(`${reportJobs.length} M2+ job(s) stored in Job_Search_Cache with "in process" status.`);
+    reportJobs.forEach(j => Logger.log(`  → ${j.company} — ${j.title} (${j.smmResult.match_level})`));
   } else {
-    Logger.log('No M2+ jobs found today — no email sent.');
-    if (diag.scored_m0 + diag.scored_m1 > 0) {
-      sendDebugDiagnosticsEmail(diag);
-    }
+    Logger.log('No M2+ jobs today. All scored jobs are in Job_Search_Cache for review.');
   }
  
   Logger.log('=== JABA Daily Job Search complete ===');
@@ -4332,7 +4352,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'BA', job.company, job.title,
                             job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
-        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'no_jd', job.url, 'BA');
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'no_jd', job.url, 'BA', '');
         totalSkipped++;
         Utilities.sleep(500);
         continue;
@@ -4341,7 +4361,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
         '', '',
-        jdText.substring(0, 5000),
+        jdText.substring(0, 10000),
         'TRUE',
         scoreJobTitleQuality(job.title),
         job.id || '',
@@ -4351,7 +4371,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
         'TRUE',
         job.url
       ]);
-      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, 'unknown', 'queued', fetchedUrl, 'BA');
+      addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'BA', '');
       totalQueued++;
       threadQueued++;
       Logger.log(`    ✓ Queued for SMM`);
@@ -4842,24 +4862,18 @@ function runJobSearchPhase1() {
   for (const job of allJobs) {
     if (!isRelevantJobTitle(job.title)) { excludedTitle++; continue; }
 
-    if (!job.descriptionFull) {
-      const cc        = (job.country || '').toLowerCase();
-      const inGermany = cc === 'de' || isGermanLocation(job.city || '') || isGermanLocation(job.title || '');
-      const lower     = job.title.toLowerCase();
-      const descLow   = (job.description || '').toLowerCase();
-      const remote    = lower.includes('remote') || descLow.includes('remote') ||
-                        descLow.includes('homeoffice') || descLow.includes('home office');
-      if (!inGermany && !remote) { excludedGeo++; continue; }
+
+
+    const cacheKey = job.company.toLowerCase().trim() + '||' +
+                     normalizeJobTitle(job.title).toLowerCase().trim();
+ 
+    if (cachedSet.has(cacheKey))  { excludedCache++; continue; }
+    if (appliedSet.has(cacheKey)) {
+      excludedApplied++;
+      addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
+                    '', 'already_applied', '', 'JobSearch', '');
+      continue;
     }
-
-    // ── Set lookups instead of sheet reads ───────────────────────────────
-    const cacheKey   = job.company.toLowerCase().trim() + '||' + job.title.toLowerCase().trim();
-    const appliedKey = job.company.toLowerCase().trim() + '||' +
-                       normalizeJobTitle(job.title).toLowerCase().trim();
-
-    if (cachedSet.has(cacheKey))    { excludedCache++;   continue; }
-    if (appliedSet.has(appliedKey)) { excludedApplied++; continue; }
-    // ─────────────────────────────────────────────────────────────────────
 
     candidates.push(job);
   }
@@ -4917,7 +4931,7 @@ function runJobSearchPhase1() {
       job.url      || '',
       job.city     || '',
       job.country  || '',
-      (job.description || '').substring(0, 5000),
+      (job.description || '').substring(0, 10000),
       job.descriptionFull ? 'TRUE' : 'FALSE',
       scoreJobTitleQuality(job.title),
       job.id       || '',
@@ -5026,7 +5040,7 @@ function runPhase2() {
       const extracted = smartExtractJD(url, description, descriptionFull);
       if (!extracted) {
         Logger.log('  ✗ JD fetch failed — skipping');
-        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed', url, source);
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'failed', url, source, '');
         if (source !== 'JobSearch') {
           writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'No JD found', '', '', threadId);
         }
@@ -5037,7 +5051,7 @@ function runPhase2() {
       const isTrusted = descriptionFull || extracted.source === 'api_full';
       if (!isJdRelevantToJob(extracted.text, company, title, isTrusted)) {
         Logger.log('  ✗ JD irrelevant — skipping');
-        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd', url, source);
+        addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'irrelevant_jd', url, source, '');
         if (source !== 'JobSearch') {
           writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'JD irrelevant', '', '', threadId);
         }
@@ -5074,7 +5088,7 @@ function runPhase2() {
     const dots     = buildJobDots(smmResult);
 
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${source}`);
-    addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source);
+    addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source, extractedText || '');
 
     // All alert jobs (including M0) go to Alert_Results for full visibility
     if (source !== 'JobSearch') {
@@ -5283,29 +5297,14 @@ function runJobSearchPhase2() {
 
 /* ── Send report and clear Pending_SMM ─────────────────────── */
 function sendPhase2Report(m2PlusRows) {
-  const reportJobs = (m2PlusRows || []).map(row => {
-    let smmResult = {};
-    try { smmResult = JSON.parse(row[13] || '{}'); } catch(e) {}
-    return {
-      title:       row[2],
-      company:     row[1],
-      city:        row[4],
-      url:         row[3],
-      cvType:      row[11],
-      fetchSource: row[12],
-      smmResult
-    };
-  });
-
-  // Note: Pending_SMM is cleared by runPhase2 after this call — do not clear here
-  if (reportJobs.length === 0) {
-    Logger.log('sendPhase2Report: no JobSearch M2+ jobs — no email sent.');
+  if (!m2PlusRows || m2PlusRows.length === 0) {
+    Logger.log('sendPhase2Report: no JobSearch M2+ rows.');
     return;
   }
-
-  const html = buildJobReportHtml(reportJobs);
-  sendJobReportEmail(html);
-  Logger.log(`sendPhase2Report: sent email with ${reportJobs.length} M2+ job(s).`);
+  Logger.log(`sendPhase2Report: ${m2PlusRows.length} M2+ job(s) in Job_Search_Cache with "in process" status.`);
+  m2PlusRows.forEach(row => {
+    Logger.log(`  → ${row[1] || '?'} — ${row[2] || '?'} (${row[11] || 'unknown CV type'})`);
+  });
 }
 
 /** Debug utility — resets the BA scan window to 7 days ago. */
@@ -5404,4 +5403,285 @@ function diagnoseBaHtmlStructure() {
   Logger.log(html.substring(Math.max(0, match.index - 1200), match.index));
   Logger.log('--- HTML AFTER LINK (300 chars) ---');
   Logger.log(html.substring(match.index, match.index + 300));
+}
+
+/**
+ * Parses a cache timestamp string in either:
+ *   new format: dd-MM-yyyy HH:mm:ss
+ *   old format: yyyy-MM-dd
+ * Returns a Date object or null.
+ */
+function parseCacheTimestamp(val) {
+  if (!val) return null;
+  const str = val.toString().trim();
+  const m   = str.match(/^(\d{2})-(\d{2})-(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
+  if (m) {
+    return new Date(
+      parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]),
+      parseInt(m[4] || '0'), parseInt(m[5] || '0'), parseInt(m[6] || '0')
+    );
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return new Date(str); // legacy
+  return null;
+}
+ 
+/**
+ * Returns the count of Job_Search_Cache rows with Review_Status = 'fit'.
+ * Called from the sidebar to keep the fit-jobs badge current.
+ */
+function getFitJobCount() {
+  try {
+    const sheet = getOrCreateJobCacheSheet();
+    if (sheet.getLastRow() < 2) return 0;
+    const data = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1).getValues();
+    return data.filter(r => (r[0] || '').toString().trim() === 'fit').length;
+  } catch(e) {
+    Logger.log(`getFitJobCount error: ${e.message}`);
+    return 0;
+  }
+}
+ 
+/**
+ * Returns the highest M-level 'fit' job from Job_Search_Cache as a JSON string.
+ * skipIndices: array of rowIndex values already loaded in this sidebar session.
+ */
+function getNextFitJob(skipIndices) {
+  try {
+    skipIndices = skipIndices || [];
+    const sheet = getOrCreateJobCacheSheet();
+    if (sheet.getLastRow() < 2) return JSON.stringify({ empty: true, fitCount: 0 });
+ 
+    const data    = sheet.getDataRange().getValues();
+    const fitJobs = [];
+ 
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if ((row[10] || '').toString().trim() !== 'fit') continue;
+      const rowIndex = i + 1;
+      if (skipIndices.includes(rowIndex)) continue;
+ 
+      const matchLevel = (row[5] || '').toString().trim();
+      fitJobs.push({
+        rowIndex,
+        company:          (row[1]  || '').toString(),
+        title:            (row[2]  || '').toString(),
+        url:              (row[3]  || '').toString(),
+        cvType:           (row[4]  || '').toString(),
+        matchLevel,
+        levelNum:         parseInt(matchLevel.replace(/\D/g, '')) || 0,
+        score:            row[6]   || 0,
+        fetchedUrl:       (row[8]  || '').toString(),
+        source:           (row[9]  || '').toString(),
+        jdText:           (row[11] || '').toString()
+      });
+    }
+ 
+    // Total fit count (before skip filter) for badge display
+    const totalFit = data.slice(1)
+      .filter(r => (r[10] || '').toString().trim() === 'fit').length;
+ 
+    if (fitJobs.length === 0) return JSON.stringify({ empty: true, fitCount: totalFit });
+ 
+    fitJobs.sort((a, b) =>
+      b.levelNum !== a.levelNum ? b.levelNum - a.levelNum : b.rowIndex - a.rowIndex
+    );
+ 
+    const best = fitJobs[0];
+    return JSON.stringify({
+      rowIndex:          best.rowIndex,
+      company:           best.company,
+      title:             best.title,
+      url:               best.url,
+      cvType:            best.cvType,
+      matchLevel:        best.matchLevel,
+      score:             best.score,
+      fetchedUrl:        best.fetchedUrl,
+      source:            best.source,
+      jdText:            best.jdText,
+      urlMatchesFetched: best.url === best.fetchedUrl,
+      fitCount:          totalFit - skipIndices.length    // remaining after loaded ones
+    });
+  } catch(e) {
+    Logger.log(`getNextFitJob error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+ 
+/**
+ * Re-fetches fetchedUrl, computes Jaccard word-overlap similarity against
+ * the cached JD text, and returns { accessible, score } as a JSON string.
+ * Tries direct fetch first, then Tavily as fallback.
+ * Returns accessible: false for blocked domains (LinkedIn, Indeed, etc.).
+ */
+function checkJdSimilarity(fetchedUrl, cachedJdText) {
+  try {
+    if (!fetchedUrl || !cachedJdText || cachedJdText.length < 100) {
+      return JSON.stringify({ accessible: false, score: 0 });
+    }
+    if (DIRECT_FETCH_BLOCKED.some(d => fetchedUrl.includes(d))) {
+      return JSON.stringify({ accessible: false, score: 0, reason: 'blocked_domain' });
+    }
+ 
+    let liveText = fetchJobPageDirectly(fetchedUrl);
+ 
+    if (!liveText || liveText.length < 100) {
+      liveText = tavilyExtractAdvanced(fetchedUrl);
+    }
+ 
+    if (!liveText || liveText.length < 100) {
+      return JSON.stringify({ accessible: false, score: 0, reason: 'fetch_failed' });
+    }
+ 
+    const score = computeTextSimilarity(cachedJdText, liveText);
+    return JSON.stringify({ accessible: true, score: Math.round(score * 100) });
+  } catch(e) {
+    Logger.log(`checkJdSimilarity error: ${e.message}`);
+    return JSON.stringify({ accessible: false, score: 0, reason: 'error' });
+  }
+}
+ 
+/**
+ * Jaccard similarity between two texts.
+ * Tokenises into unique lowercase words, removes stop words and short tokens.
+ * Returns a float 0.0–1.0.
+ */
+function computeTextSimilarity(text1, text2) {
+  const stopWords = new Set([
+    'die','der','das','und','in','zu','den','ist','für','von','mit','wir','sie',
+    'ihr','ein','eine','einen','dem','des','einer','werden','kann','auch','an',
+    'bei','nach','auf','hat','wird','durch','haben','oder','aber','als','sind',
+    'the','and','for','are','you','our','your','will','have','with','this',
+    'that','from','not','but','all','can','we','be','to','of','in','at','on',
+    'or','an','as','by','is','it','if','do','no','has','been','who','they','their'
+  ]);
+  function tokenize(text) {
+    return new Set(
+      text.toLowerCase()
+          .replace(/[^a-zäöüßàáâèéêëìíîïòóôùúû0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter(w => w.length > 3 && !stopWords.has(w))
+    );
+  }
+  const set1 = tokenize(text1);
+  const set2 = tokenize(text2);
+  if (set1.size === 0 || set2.size === 0) return 0;
+  let intersection = 0;
+  set1.forEach(w => { if (set2.has(w)) intersection++; });
+  const union = set1.size + set2.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+ 
+/**
+ * Updates Review_Status in Job_Search_Cache to newStatus for ALL rows
+ * matching company + normalised job title (handles minor name variations).
+ */
+function markCacheRowStatus(company, title, newStatus) {
+  try {
+    const sheet = getOrCreateJobCacheSheet();
+    if (sheet.getLastRow() < 2) return;
+    const nc   = company.toLowerCase().trim();
+    const nt   = normalizeJobTitle(title).toLowerCase().trim();
+    const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+    let updated = 0;
+    data.forEach((row, i) => {
+      if (row[0].toString().toLowerCase().trim() === nc &&
+          normalizeJobTitle(row[1].toString()).toLowerCase().trim() === nt) {
+        sheet.getRange(i + 2, 11).setValue(newStatus);
+        updated++;
+      }
+    });
+    if (updated > 0) {
+      SpreadsheetApp.flush();
+      Logger.log(`markCacheRowStatus: "${company}" / "${title}" → "${newStatus}" (${updated} row(s))`);
+    }
+  } catch(e) {
+    Logger.log(`markCacheRowStatus error: ${e.message}`);
+  }
+}
+ 
+/**
+ * Fires at 15:00 Berlin time (time-based trigger).
+ * Counts 'in process' M1–M4 rows and:
+ *  1. Writes summary to M2_Notifications A1  →  triggers Sheets mobile push
+ *     if the user enabled "Content changes" notifications in the Sheets app.
+ *  2. Stores summary in PENDING_NOTIFICATION_TEXT script property
+ *     so onOpen() can display a desktop popup.
+ */
+function sendDailyNotificationSummary() {
+  try {
+    const sheet = getOrCreateJobCacheSheet();
+    if (sheet.getLastRow() < 2) return;
+    const data   = sheet.getDataRange().getValues();
+    const counts = { M1: 0, M2: 0, M3: 0, M4: 0 };
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][10] || '').toString().trim() !== 'in process') continue;
+      const lvl = parseInt((data[i][5] || '').toString().replace(/\D/g, '')) || 0;
+      if (lvl >= 1 && lvl <= 4) counts['M' + lvl]++;
+    }
+    const total = counts.M1 + counts.M2 + counts.M3 + counts.M4;
+    if (total === 0) { Logger.log('sendDailyNotificationSummary: no in-process jobs.'); return; }
+ 
+    const parts = [];
+    if (counts.M4 > 0) parts.push(`${counts.M4}× M4`);
+    if (counts.M3 > 0) parts.push(`${counts.M3}× M3`);
+    if (counts.M2 > 0) parts.push(`${counts.M2}× M2`);
+    if (counts.M1 > 0) parts.push(`${counts.M1}× M1`);
+ 
+    const ts       = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd-MM-yyyy HH:mm');
+    const message  = `📋 ${total} job${total > 1 ? 's' : ''} in review: ${parts.join(', ')}`;
+    const fullText = `${message}\nUpdated: ${ts}`;
+ 
+    getOrCreateM2NotificationsSheet().getRange('A1').setValue(fullText);
+    PropertiesService.getScriptProperties().setProperty('PENDING_NOTIFICATION_TEXT', fullText);
+    SpreadsheetApp.flush();
+    Logger.log(`Daily notification written: ${message}`);
+  } catch(e) {
+    Logger.log(`sendDailyNotificationSummary error: ${e.message}`);
+  }
+}
+ 
+/**
+ * Called from onOpen(). If a pending notification exists (written by
+ * sendDailyNotificationSummary), shows a desktop popup and clears the property.
+ */
+function checkPendingNotification() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const text  = props.getProperty('PENDING_NOTIFICATION_TEXT');
+    if (!text) return;
+    SpreadsheetApp.getUi().alert(
+      '📋 JABA Job Review',
+      text + '\n\nOpen Job_Search_Cache → change promising rows to "fit" → use the sidebar to register.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    props.deleteProperty('PENDING_NOTIFICATION_TEXT');
+  } catch(e) {
+    Logger.log(`checkPendingNotification error: ${e.message}`);
+  }
+}
+ 
+/**
+ * Creates the daily 15:00 Berlin trigger for sendDailyNotificationSummary.
+ * Run once from the menu: 🤖 AI Recruitment → 🔔 Setup Daily Notification (15:00).
+ *
+ * MOBILE SETUP (one-time, manual):
+ *   1. Open Google Sheets app on your phone.
+ *   2. Tap the JABA spreadsheet → ⋮ → Notifications → enable "When content changes".
+ *   JABA writes to the hidden M2_Notifications sheet at 15:00 → phone push notification.
+ */
+function createDailyNotificationTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'sendDailyNotificationSummary')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('sendDailyNotificationSummary')
+    .timeBased().atHour(15).everyDays(1).inTimezone('Europe/Berlin').create();
+  SpreadsheetApp.getUi().alert(
+    '✅ Daily notification trigger set for 15:00 Berlin time.\n\n' +
+    'MOBILE PUSH (one-time setup):\n' +
+    '1. Open Google Sheets app on your phone\n' +
+    '2. Long-press or open ⋮ menu on the JABA spreadsheet\n' +
+    '3. Tap Notifications → enable "When content changes"\n' +
+    'JABA writes to the hidden M2_Notifications sheet at 15:00 → ' +
+    'your phone receives a push notification.'
+  );
 }
