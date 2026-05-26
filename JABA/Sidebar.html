@@ -256,6 +256,13 @@
       }
       @keyframes p2spin { to { transform: rotate(360deg); } }
       #phase2-checked { margin-left: auto; font-size: 10px; color: #9aa0a6; white-space: nowrap; }
+
+      #chart-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+      #chartToggleBtn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #dadce0;background:white;color:#5f6368;cursor:pointer;font-weight:600}
+      #chartToggleBtn:hover{background:#f1f3f4}
+      .imp-legend{display:flex;gap:10px;font-size:11px;color:#9aa0a6}
+      #radar-container.bar-mode{padding:12px 10px 10px;height:320px}
+
     </style>
   </head>
 
@@ -317,8 +324,16 @@
       <!-- CV Type Indicator -->
       <div id="cv-type-indicator"></div>
 
-      <!-- Radar Chart -->
-      <div id="radar-container">
+      <!-- Chart toggle + importance legend -->
+      <div id="chart-toggle-bar">
+        <div class="imp-legend">
+          <span style="color:#ea4335;">● Crucial</span>
+          <span style="color:#f4b400;">● Necessary</span>
+          <span style="color:#4285f4;">● Optional</span>
+        </div>
+        <button id="chartToggleBtn" onclick="toggleChartType()">🕸️ Radar view</button>
+      </div>
+      <div id="radar-container" class="bar-mode">
         <canvas id="radarChart"></canvas>
       </div>
 
@@ -346,6 +361,150 @@
       var currentSmmData    = null;
       var currentCvType     = null;
       var radarChart        = null;
+      var currentChartType  = 'bar';
+
+      function getImportanceColor(imp) {
+        if (!imp) return '#4285f4';
+        var l = imp.toLowerCase();
+        if (l === 'crucial')   return '#ea4335';
+        if (l === 'necessary') return '#f4b400';
+        return '#4285f4';
+      }
+
+      function toggleChartType() {
+        currentChartType = currentChartType === 'bar' ? 'radar' : 'bar';
+        var btn = document.getElementById('chartToggleBtn');
+        var c   = document.getElementById('radar-container');
+        if (currentChartType === 'bar') {
+          btn.innerText = '🕸️ Radar view';
+          c.classList.add('bar-mode');
+        } else {
+          btn.innerText = '📊 Bar view';
+          c.classList.remove('bar-mode');
+        }
+        if (currentSmmData) renderChartOnly(currentSmmData, currentCvType);
+      }
+
+      function renderChartOnly(data, cvType) {
+        var skills = data.skills || [];
+        var scores = skills.map(function(s) { return s.score || 0; });
+        var labels = skills.map(function(s) { return s.name; });
+        var color  = getScoreColor(data.total_score || 0);
+        var ic     = skills.map(function(s) { return getImportanceColor(s.importance); });
+        var c      = document.getElementById('radar-container');
+
+        if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+        setTimeout(function() {
+          var ctx = document.getElementById('radarChart').getContext('2d');
+
+          if (currentChartType === 'bar') {
+            c.classList.add('bar-mode');
+            radarChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [{
+                  data: scores,
+                  backgroundColor: ic.map(function(x) { return x + 'cc'; }),
+                  borderColor: ic,
+                  borderWidth: 2,
+                  borderRadius: 4,
+                  borderSkipped: false
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: {
+                    min: 0, max: 5,
+                    ticks: { stepSize: 1, font: { size: 11 }, color: '#9aa0a6' },
+                    grid: { color: '#f1f3f4' }
+                  },
+                  y: {
+                    ticks: { font: { size: 12 }, color: '#3c4043' },
+                    grid: { display: false }
+                  }
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(ctx) {
+                        var s = skills[ctx.dataIndex];
+                        return ' ' + ctx.raw + '/5  ·  ' + (s ? s.importance : '');
+                      }
+                    }
+                  }
+                },
+                layout: { padding: { right: 8 } }
+              }
+            });
+
+          } else {
+            c.classList.remove('bar-mode');
+            radarChart = new Chart(ctx, {
+              type: 'radar',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Match Score',
+                  data: scores,
+                  borderColor: color,
+                  backgroundColor: color + '2e',
+                  borderWidth: 2.5,
+                  pointBackgroundColor: ic,
+                  pointBorderColor: '#fff',
+                  pointBorderWidth: 2,
+                  pointRadius: 7,
+                  pointHoverRadius: 9
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                  r: {
+                    min: 0, max: 5,
+                    ticks: { stepSize: 1, font: { size: 9 }, color: '#9aa0a6', backdropColor: 'transparent' },
+                    grid: { color: '#e0e0e0' },
+                    angleLines: { color: '#e0e0e0' },
+                    pointLabels: {
+                      font: { size: 11, weight: '600' }, color: '#3c4043', padding: 8,
+                      callback: function(label) {
+                        if (label.length <= 16) return label;
+                        var words = label.split(' '), lines = [], cur = '';
+                        words.forEach(function(w) {
+                          if ((cur + ' ' + w).trim().length > 16) {
+                            if (cur) lines.push(cur.trim());
+                            cur = w;
+                          } else { cur = (cur + ' ' + w).trim(); }
+                        });
+                        if (cur) lines.push(cur.trim());
+                        return lines;
+                      }
+                    }
+                  }
+                },
+                layout: { padding: { top: 30, left: 70, right: 70, bottom: 30 } },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(ctx) {
+                        var s = skills[ctx.dataIndex];
+                        return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : '');
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          }
+        }, 80);
+      }
       var phase2PollTimer   = null;
       var currentFitJobUrl  = null;   // set when a fit job is loaded; opened in new tab on SMM click
       var currentFitJobData = null;   // full fit job object from cache
@@ -602,67 +761,7 @@
         var scores = skills.map(function(s) { return s.score || 0; });
 
         document.getElementById('smm-section').style.display = 'block';
-        if (radarChart) { radarChart.destroy(); radarChart = null; }
-
-        setTimeout(function() {
-          var ctx = document.getElementById('radarChart').getContext('2d');
-          radarChart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-              labels: labels,
-              datasets: [{
-                label: 'Match Score',
-                data: scores,
-                borderColor: color,
-                backgroundColor: color + '2e',
-                borderWidth: 2.5,
-                pointBackgroundColor: color,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1.5,
-                pointRadius: 5,
-                pointHoverRadius: 7
-              }]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: true,
-              scales: {
-                r: {
-                  min: 0, max: 5,
-                  ticks: { stepSize: 1, font: { size: 9 }, color: '#9aa0a6', backdropColor: 'transparent' },
-                  grid: { color: '#e0e0e0' },
-                  angleLines: { color: '#e0e0e0' },
-                  pointLabels: {
-                    font: { size: 12, weight: '600' }, color: '#3c4043', padding: 10,
-                    callback: function(label) {
-                      if (label.length <= 18) return label;
-                      var words = label.split(' '); var lines = []; var current = '';
-                      words.forEach(function(w) {
-                        if ((current + ' ' + w).trim().length > 18) {
-                          if (current) lines.push(current.trim());
-                          current = w;
-                        } else { current = (current + ' ' + w).trim(); }
-                      });
-                      if (current) lines.push(current.trim());
-                      return lines;
-                    }
-                  }
-                }
-              },
-              layout: { padding: { top: 40, left: 80, right: 80, bottom: 40 } },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  callbacks: {
-                    label: function(ctx) {
-                      var s = skills[ctx.dataIndex];
-                      return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : '');
-                    }
-                  }
-                }
-              }
-            }
-          });
-        }, 80);
+        renderChartOnly(data, cvType);
 
         var list = document.getElementById('gap-tips-list');
         list.innerHTML = '';
@@ -670,10 +769,14 @@
           var div = document.createElement('div');
           div.className = 'gap-tip-item';
           var impClass = getImportanceClass(s.importance);
-          div.innerHTML =
+          var evText = (s.evidence && s.evidence !== 'Not found in CV')
+          ? '📄 ' + escHtml(s.evidence)
+          : '🚫 Not found in CV';
+        div.innerHTML =
             '<span class="gap-tip-skill">' + escHtml(s.name) + '</span>' +
             ' <span class="gap-tip-score">(' + (s.score || 0) + '/5)</span>' +
             ' <span class="gap-tip-importance ' + impClass + '">' + escHtml(s.importance || '') + '</span>' +
+            '<br><span style="font-size:11px;color:#9aa0a6;font-style:italic;">' + evText + '</span>' +
             '<br>' + escHtml(s.gap_tip || '');
           list.appendChild(div);
         });
@@ -746,6 +849,11 @@
         currentFitJobUrl  = null;
         currentFitJobData = null;
         loadedRowIndices  = [];
+        currentChartType  = 'bar';
+        var btn = document.getElementById('chartToggleBtn');
+        if (btn) btn.innerText = '🕸️ Radar view';
+        var cont = document.getElementById('radar-container');
+        if (cont) cont.classList.add('bar-mode');
       }
 
       /* ── Scan Rejections ── */

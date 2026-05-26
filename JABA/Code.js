@@ -166,8 +166,36 @@ function onOpen() {
     .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
     .addToUi();
  
-  checkUnreadM2Alerts();
-  checkPendingNotification();   // ← NEW: shows desktop popup if 15:00 trigger fired earlier
+  checkCombinedOpenNotifications();
+
+// ── Add this new function near checkUnreadM2Alerts ──
+function checkCombinedOpenNotifications() {
+  const messages = [];
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Alert_Results');
+    if (sheet && sheet.getLastRow() >= 2) {
+      const data = sheet.getRange(2,1,sheet.getLastRow()-1,12).getValues();
+      const unread = [];
+      data.forEach((row,i) => {
+        const n = parseInt((row[7]||'').toString().replace(/\D/g,''))||0;
+        if (n>=2 && !row[11]) unread.push({rowIndex:i+2,company:row[2],title:row[3],level:row[7],score:row[6],source:row[1]});
+      });
+      if (unread.length > 0) {
+        const lines = unread.map(j=>`${j.source==='BA'?'🏛':'🔔'} ${j.company} — ${j.title} (${j.level}: ${j.score}/40)`).join('\n');
+        messages.push(`🚨 ${unread.length} new M2+ Alert Job${unread.length>1?'s':''}:\n${lines}\n\nSee Alert_Results tab for links.`);
+        unread.forEach(j => sheet.getRange(j.rowIndex,12).setValue(true));
+        SpreadsheetApp.flush();
+      }
+    }
+  } catch(e) { Logger.log('combinedNotif alerts: '+e.message); }
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const text  = props.getProperty('PENDING_NOTIFICATION_TEXT');
+    if (text) { messages.push(text+'\n\nOpen Job_Search_Cache → mark "fit" → register via sidebar.'); props.deleteProperty('PENDING_NOTIFICATION_TEXT'); }
+  } catch(e) { Logger.log('combinedNotif pending: '+e.message); }
+  if (messages.length===0) return;
+  SpreadsheetApp.getUi().alert('📋 JABA Updates', messages.join('\n\n──────\n\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+}
 }
 
 function refreshAllData() {
@@ -1261,7 +1289,7 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
 
     if (rows.length > 0) {
       const startRow = sheet.getLastRow() + 1;
-      sheet.getRange(startRow, 1, rows.length, 13).setValues(rows);
+      sheet.getRange(startRow, 1, rows.length, 14).setValues(rows);
       Logger.log(`SMM_Raw_Data: wrote ${rows.length} rows for UID ${uid} (${company})`);
     }
   } catch (e) {
@@ -1916,7 +1944,7 @@ function findNextEmptyRow(sheet) {
 
 function getOrCreateMonthlyTab() {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace('.', '');
+  const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace(/\./g, '');
   let sheet   = ss.getSheetByName(month);
 
   if (!sheet) {
@@ -1936,7 +1964,7 @@ function getOrCreateMonthlyTab() {
 
     const lastHeaderCol = headers.length;
     sheet.getRange(2, lastHeaderCol + 1).setFormula('=UNIQUE(E2:E)');
-    sheet.getRange(2, lastHeaderCol + 2).setFormula('=ARRAYFORMULA(IF(Y2:Y=""; ""; COUNTIF(E$2:E; Y2:Y)))');
+    sheet.getRange(2, lastHeaderCol + 2).setFormula('=ARRAYFORMULA(IF(X2:X=""; ""; COUNTIF(E$2:E; X2:X)))');
 
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
@@ -2354,7 +2382,11 @@ function processRejectionEmails() {
   let pendingCompanies = [];
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
-    if (sheetName !== "Sankey_Data" && sheetName !== "Geo_Data" && sheetName !== "SMM_Raw_Data" && /\d{4}/.test(sheetName)) {
+    const SKIP_REJECTION_SHEETS = new Set([
+        "Sankey_Data","Geo_Data","SMM_Raw_Data","Interview_Geo_Data",
+        "Job_Search_Cache","Pending_SMM","Alert_Results","M2_Notifications"
+      ]);
+      if (!SKIP_REJECTION_SHEETS.has(sheetName) && /\d{4}/.test(sheetName)) {
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
         const status      = data[i][STATUS_COL] ? data[i][STATUS_COL].toString().trim().toLowerCase() : "";
@@ -2507,8 +2539,8 @@ function updateSankeyData() {
   ];
 
   sheets.forEach(sheet => {
-    const sheetName = sheet.getName().replace('.', '');
-    if (sheetName.includes("2026")) {
+    const sheetName = sheet.getName().replace(/\./g, '');
+    if (/[A-Za-z]+ \d{4}/.test(sheetName)) {
       const dataRange = sheet.getDataRange();
       const lastRow   = dataRange.getNumRows();
       if (lastRow < 2) return;
@@ -2586,8 +2618,8 @@ function updateGeoData() {
   });
 
   sheets.forEach(sheet => {
-    const sheetName = sheet.getName().replace('.', '');
-    if (sheetName.includes("2026")) {
+    const sheetName = sheet.getName().replace(/\./g, '');
+    if (/[A-Za-z]+ \d{4}/.test(sheetName)) {
       const dataRange = sheet.getDataRange();
       if (dataRange.getNumRows() < 2) return;
       const data = dataRange.getValues();
@@ -2669,8 +2701,8 @@ function updateInterviewGeoData() {
   const cityMap = {};
 
   sheets.forEach(sheet => {
-    const sheetName = sheet.getName().replace('.', '');
-    if (!sheetName.includes('2026')) return;
+    const sheetName = sheet.getName().replace(/\./g, '');
+    if (!/[A-Za-z]+ \d{4}/.test(sheetName)) return;
 
     const dataRange = sheet.getDataRange();
     if (dataRange.getNumRows() < 2) return;
@@ -2985,6 +3017,15 @@ function isJdRelevantToJob(text, company, jobTitle, trustedSource) {
  * Returns true if a job location string indicates Germany.
  * Used to decide whether remote-only filter applies.
  */
+function isJobRemoteEligible(job) {
+  if (/^(remote|homeoffice|home\s*office|home-office)$/i.test((job.city || '').trim())) return true;
+  if ((job.country || '').toLowerCase() === 'de') return true;
+  if (isGermanLocation(job.city || '')) return true;
+  const combined = ((job.title || '') + ' ' +
+    (job.description || '').substring(0, 600)).toLowerCase();
+  return /remote|homeoffice|home\s*office|home-office/.test(combined);
+}
+
 function isGermanLocation(location) {
   if (!location || location.trim() === '') return true; // no location = assume Germany
   const lower = location.toLowerCase();
@@ -3984,29 +4025,43 @@ function runDailyJobSearch() {
   }
  
   // ── Step 3: filter candidates ─────────────────────────────────────────────
+  Logger.log('Preloading cache and applied sets...');
+  const cachedSet  = buildCachedJobsSet();
+  const appliedSet = buildAppliedJobsSet();
+  Logger.log(`Cache: ${cachedSet.size} | Applied: ${appliedSet.size}`);
+
   const candidates = [];
   for (const job of allJobs) {
- 
+
     if (!isRelevantJobTitle(job.title)) {
       Logger.log(`  ✗ [title] "${job.title}"`);
       diag.excluded_title++;
       continue;
     }
- 
-    if (isJobInCache(job.company, job.title)) {
+
+    if (!isJobRemoteEligible(job)) {
+      Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city || job.country || '?'}`);
+      diag.excluded_geo++;
+      continue;
+    }
+
+    const cacheKey = job.company.toLowerCase().trim() + '||' +
+                     normalizeJobTitle(job.title).toLowerCase().trim();
+
+    if (cachedSet.has(cacheKey)) {
       Logger.log(`  ✗ [cache] "${job.title}" @ ${job.company}`);
       diag.excluded_cache++;
       continue;
     }
- 
-    if (isJobAlreadyApplied(job.company, job.title)) {
+
+    if (appliedSet.has(cacheKey)) {
       Logger.log(`  ✗ [applied] "${job.title}" @ ${job.company}`);
       diag.excluded_applied++;
       addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
                     '', 'already_applied', '', 'JobSearch', '');
       continue;
     }
- 
+
     candidates.push(job);
     if (candidates.length >= CANDIDATE_CAP) break;
   }
@@ -4862,7 +4917,7 @@ function runJobSearchPhase1() {
   for (const job of allJobs) {
     if (!isRelevantJobTitle(job.title)) { excludedTitle++; continue; }
 
-
+    if (!isJobRemoteEligible(job)) { excludedGeo++; continue; }
 
     const cacheKey = job.company.toLowerCase().trim() + '||' +
                      normalizeJobTitle(job.title).toLowerCase().trim();
@@ -5298,13 +5353,28 @@ function runJobSearchPhase2() {
 /* ── Send report and clear Pending_SMM ─────────────────────── */
 function sendPhase2Report(m2PlusRows) {
   if (!m2PlusRows || m2PlusRows.length === 0) {
-    Logger.log('sendPhase2Report: no JobSearch M2+ rows.');
+    Logger.log('sendPhase2Report: no M2+ rows — no email sent.');
     return;
   }
-  Logger.log(`sendPhase2Report: ${m2PlusRows.length} M2+ job(s) in Job_Search_Cache with "in process" status.`);
-  m2PlusRows.forEach(row => {
-    Logger.log(`  → ${row[1] || '?'} — ${row[2] || '?'} (${row[11] || 'unknown CV type'})`);
-  });
+  const reportJobs = m2PlusRows.map(row => {
+    let smmResult;
+    try { smmResult = JSON.parse(row[13]); } catch(e) { return null; }
+    if (!smmResult) return null;
+    return {
+      company: (row[1] || '').toString(),
+      title:   (row[2] || '').toString(),
+      url:     (row[3] || '').toString(),
+      city:    (row[4] || '').toString(),
+      cvType:      (row[11] || '').toString(),
+      fetchSource: (row[12] || '').toString(),
+      smmResult
+    };
+  }).filter(Boolean);
+  if (reportJobs.length === 0) return;
+  Logger.log(`sendPhase2Report: sending email for ${reportJobs.length} M2+ job(s)`);
+  reportJobs.forEach(j => Logger.log(`  → ${j.company} — ${j.title} (${j.smmResult.match_level})`));
+  const html = buildJobReportHtml(reportJobs);
+  sendJobReportEmail(html);
 }
 
 /** Debug utility — resets the BA scan window to 7 days ago. */
