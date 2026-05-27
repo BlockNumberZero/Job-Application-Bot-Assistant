@@ -164,6 +164,8 @@ function onOpen() {
     .addSeparator()
     .addItem('🗑️ Clear Job Search Cache (run once)',   'clearAllJobCache')
     .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
+    .addSeparator()
+    .addItem('🔍 Audit Cache Quality',                  'auditCacheQuality')
     .addToUi();
  
   checkCombinedOpenNotifications();
@@ -709,12 +711,21 @@ function detectCvTypeFromText(text) {
 
 function stripHtmlToText(html) {
   return html
+    // Remove entire semantic sections that are never JD content
+    .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
+    .replace(/<header[\s\S]*?<\/header>/gi, ' ')
+    .replace(/<footer[\s\S]*?<\/footer>/gi, ' ')
+    .replace(/<aside[\s\S]*?<\/aside>/gi, ' ')
+    // Remove scripts and styles
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    // Strip remaining tags
     .replace(/<[^>]+>/g, ' ')
+    // Decode entities
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
     .replace(/&#\d+;/g, ' ')
+    // Clean whitespace
     .replace(/[ \t]{3,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -1212,7 +1223,7 @@ function processIndeedAlertEmails_Phase1() {
         'Indeed',                         // Source
         threadId,                         // Thread_ID
         'TRUE',                           // JD_Fetched
-        job.url                           // Source_URL
+        fetchedUrl                        // Source_URL — actual JD source (may differ from job.url)
       ]);
       addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'Indeed', '');
       totalQueued++;
@@ -2899,14 +2910,32 @@ function getTavilyMonthlyUsage() {
 
 function looksLikeJobContent(text) {
   if (!text || text.length < 150) return false;
-  const signals = [
-    'aufgaben', 'anforderungen', 'erfahrung', 'kenntnisse', 'qualifikation',
-    'requirements', 'responsibilities', 'experience', 'skills', 'qualifications',
-    'bewerb', 'stelle', 'vollzeit', 'teilzeit', 'wir suchen', 'we are looking',
-    'marketing', 'automation', 'crm', 'manager', 'kampagne', 'campaign'
-  ];
   const lower = text.toLowerCase();
-  return signals.filter(s => lower.includes(s)).length >= 2;
+
+  // Task/role signals — what the candidate will DO in the role
+  const taskSignals = [
+    'aufgaben', 'tätigkeiten', 'deine aufgaben', 'ihre aufgaben',
+    'verantwortlichkeiten', 'was du tust', 'was du machst',
+    'was du bei uns machst', 'deine rolle', 'in dieser rolle',
+    'responsibilities', 'what you will do', 'you will be', 'your role',
+    'wir suchen', 'we are looking for', 'your responsibilities',
+    'du verantwortest', 'du übernimmst', 'zu deinen aufgaben'
+  ];
+
+  // Requirement/qualification signals — what the candidate must HAVE
+  const reqSignals = [
+    'anforderungen', 'qualifikation', 'voraussetzungen',
+    'was du mitbringst', 'was wir erwarten', 'dein profil',
+    'berufserfahrung', 'abgeschlossenes studium', 'must-have', 'must have',
+    'requirements', 'qualifications', 'you bring', 'required experience',
+    'years of experience', 'jahre erfahrung', 'nachweisbare erfahrung',
+    'du hast erfahrung', 'du verfügst', 'du bringst mit'
+  ];
+
+  const hasTask = taskSignals.some(s => lower.includes(s));
+  const hasReq  = reqSignals.some(s => lower.includes(s));
+
+  return hasTask && hasReq;
 }
 
 /**
@@ -2945,6 +2974,8 @@ function isCompleteJobDescription(text) {
 function isJobDetailPage(url) {
   if (!url) return false;
   const lower = url.toLowerCase();
+
+  // Existing job board search/listing patterns
   if (/stepstone\.[a-z]+\/jobs\/[^?#/]+\/in-[^?#/]+/.test(lower))  return false;
   if (/indeed\.com\/(jobs|jobsearch|\?q=)/.test(lower))             return false;
   if (/xing\.com\/jobs(?:\/search|\/?$)/.test(lower))               return false;
@@ -2952,6 +2983,21 @@ function isJobDetailPage(url) {
   if (/jobs\.google\.com\/search/.test(lower))                      return false;
   if (/linkedin\.com\/company\//.test(lower))                       return false;
   if (/linkedin\.com\/jobs\/search/.test(lower))                    return false;
+
+  // NEW: reject root domains and known careers homepage paths
+  // e.g. https://media-karriere.de  →  root domain, no job ID
+  try {
+    const parsed    = new URL(url);
+    const pathParts = parsed.pathname.replace(/\/$/, '').split('/').filter(Boolean);
+    // Root domain with no path
+    if (pathParts.length === 0) return false;
+    // Shallow careers/jobs landing pages with no job-specific ID segment
+    if (pathParts.length === 1 &&
+        /^(karriere|jobs?|stellen|stellenangebote?|vacancies|careers?|arbeiten|offene-stellen|jobs-de)$/.test(pathParts[0])) {
+      return false;
+    }
+  } catch(e) {} // malformed URL — fall through to true
+
   return true;
 }
 
@@ -4424,7 +4470,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
         'BA',
         threadId,
         'TRUE',
-        job.url
+        fetchedUrl                        // Source_URL — actual JD source (may differ from job.url)
       ]);
       addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'BA', '');
       totalQueued++;
@@ -5088,8 +5134,10 @@ function runPhase2() {
 
     if (jdFetched && description && description.length > 300 && looksLikeJobContent(description)) {
       // Alert jobs: JD already validated in Phase 1
+      // Use sourceUrl (col 18) which now stores the actual JD source URL from Phase 1
       extractedText = description;
-      Logger.log(`  ✓ Pre-fetched JD (${description.length} chars)`);
+      fetchedUrl    = sourceUrl;
+      Logger.log(`  ✓ Pre-fetched JD (${description.length} chars) from ${sourceUrl}`);
     } else {
       // Job Search jobs: fetch JD now (existing logic unchanged)
       const extracted = smartExtractJD(url, description, descriptionFull);
@@ -5754,4 +5802,76 @@ function createDailyNotificationTrigger() {
     'JABA writes to the hidden M2_Notifications sheet at 15:00 → ' +
     'your phone receives a push notification.'
   );
+}
+/**
+ * Scans Job_Search_Cache for 'in process' and 'fit' entries whose stored
+ * JD_Text no longer passes the looksLikeJobContent quality check.
+ * These entries were likely scored on a wrong/incomplete page (e.g. a
+ * company homepage instead of the actual job posting).
+ * Flagged entries are marked "suspicious" in the Review_Status column.
+ * Run from: 🤖 AI Recruitment → 🔍 Audit Cache Quality
+ */
+function auditCacheQuality() {
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+  const sheet = getOrCreateJobCacheSheet();
+
+  if (sheet.getLastRow() < 2) {
+    if (ui) ui.alert('Job_Search_Cache is empty — nothing to audit.');
+    return;
+  }
+
+  const data      = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
+  const flagged   = [];
+  const toUpdate  = []; // { rowIndex, newStatus }
+
+  data.forEach(function(row, i) {
+    const reviewStatus = (row[10] || '').toString().trim().toLowerCase();
+    if (reviewStatus !== 'in process' && reviewStatus !== 'fit') return;
+
+    const jdText = (row[11] || '').toString();
+
+    // Flag if JD is missing or fails the new stricter quality check
+    if (!jdText || !looksLikeJobContent(jdText)) {
+      toUpdate.push({ rowIndex: i + 2, newStatus: 'suspicious' });
+      flagged.push({
+        company: (row[1] || '').toString(),
+        title:   (row[2] || '').toString(),
+        level:   (row[5] || '').toString(),
+        score:   row[6]  || 0
+      });
+    }
+  });
+
+  // Write status updates in a batch
+  toUpdate.forEach(function(u) {
+    sheet.getRange(u.rowIndex, 11).setValue(u.newStatus);
+  });
+
+  if (toUpdate.length > 0) SpreadsheetApp.flush();
+
+  if (flagged.length === 0) {
+    if (ui) ui.alert(
+      '✅ Cache Quality Audit',
+      'All "in process" and "fit" entries passed the JD quality check.\nNo suspicious entries found.',
+      ui.ButtonSet.OK
+    );
+    Logger.log('Cache quality audit: all entries passed.');
+    return;
+  }
+
+  const lines = flagged.map(function(j) {
+    return '• ' + j.company + ' — ' + j.title + ' (' + j.level + ': ' + j.score + '/40)';
+  }).join('\n');
+
+  const message =
+    flagged.length + ' entry(ies) were scored on a JD that no longer passes quality checks\n' +
+    '(likely a company homepage or truncated page, not the actual job posting).\n\n' +
+    lines + '\n\n' +
+    'These have been marked "suspicious" in Job_Search_Cache.\n\n' +
+    'Options:\n' +
+    '  • Open the sidebar → paste the real JD → run SMM to re-score\n' +
+    '  • Change status to "discarded" if you\'ve already reviewed manually';
+
+  if (ui) ui.alert('⚠️ Cache Quality Audit — ' + flagged.length + ' Suspicious Entry(ies)', message, ui.ButtonSet.OK);
+  Logger.log('Cache quality audit: ' + flagged.length + ' suspicious entries flagged.');
 }
