@@ -5,428 +5,195 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>JABA</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
     :root {
-      --bg:      #0f1117;
-      --surface: #181c25;
-      --sur2:    #1e2330;
-      --border:  #2a2f3d;
-      --accent:  #4f8ef7;
-      --green:   #34d399;
-      --warn:    #f59e0b;
-      --danger:  #f87171;
-      --text:    #e8eaf0;
-      --muted:   #6b7280;
-      --mono:    'DM Mono', monospace;
-      --sans:    'DM Sans', sans-serif;
-      --r:       10px;
+      --bg:#0f1117; --surface:#181c25; --sur2:#1e2330; --border:#2a2f3d;
+      --accent:#4f8ef7; --green:#34d399; --warn:#f59e0b; --danger:#f87171;
+      --text:#e8eaf0; --muted:#6b7280; --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --r:10px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
-      min-height: 100vh;
-    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 
-    /* ── TOP BAR ── */
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      height: 50px; padding: 0 16px;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 100;
-    }
-    .logo {
-      font-family: var(--mono); font-size: 14px; font-weight: 500;
-      color: var(--accent); letter-spacing: 1px;
-      display: flex; align-items: center; gap: 7px;
-    }
-    .logo-dot {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
-      animation: blink 2s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-    .s-chip {
-      font-size: 11px; font-family: var(--mono); padding: 3px 8px;
-      border-radius: 12px; border: 1px solid var(--border);
-      display: flex; align-items: center; gap: 4px;
-    }
-    .s-chip.ok   { color: var(--green);  border-color: #34d39930; }
-    .s-chip.busy { color: var(--warn);   border-color: #f59e0b30; }
-    .cdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .topbar{display:flex;align-items:center;justify-content:space-between;height:50px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);letter-spacing:1px;display:flex;align-items:center;gap:7px}
+    .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .s-chip{font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;gap:4px}
+    .s-chip.ok{color:var(--green);border-color:#34d39930}
+    .cdot{width:5px;height:5px;border-radius:50%;background:currentColor}
 
-    /* ── TAB NAV ── */
-    .tabnav {
-      display: flex; background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto; scrollbar-width: none;
-      position: sticky; top: 50px; z-index: 99;
-    }
-    .tabnav::-webkit-scrollbar { display: none; }
-    .tab {
-      flex: 1; min-width: 75px; height: 46px;
-      border: none; background: transparent; color: var(--muted);
-      font-family: var(--sans); font-size: 12px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      gap: 4px; border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s; white-space: nowrap; padding: 0 6px;
-    }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .bdg {
-      background: var(--accent); color: white;
-      font-size: 9px; font-weight: 700;
-      padding: 1px 5px; border-radius: 8px;
-      min-width: 16px; text-align: center; line-height: 14px;
-    }
-    .bdg.green { background: var(--green); color: #0f1117; }
+    .tabnav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:50px;z-index:99}
+    .tabnav::-webkit-scrollbar{display:none}
+    .tab{flex:1;min-width:75px;height:46px;border:none;background:transparent;color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;padding:0 6px}
+    .tab:hover{color:var(--text)} .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .bdg{background:var(--accent);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:14px}
+    .bdg.green{background:var(--green);color:#0f1117}
 
-    /* ── PAGES ── */
-    .page { display: none; padding: 14px 14px 40px; max-width: 700px; margin: 0 auto; }
-    .page.active { display: block; }
+    .page{display:none;padding:14px 14px 40px;max-width:700px;margin:0 auto}
+    .page.active{display:block}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+    .card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+    .slabel{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+    .slabel::after{content:'';flex:1;height:1px;background:var(--border)}
 
-    /* ── CARD ── */
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 14px; margin-bottom: 10px;
-    }
-    .card-title {
-      font-size: 10px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;
-    }
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 8px;text-align:center}
+    .stat-n{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1;margin-bottom:3px}
+    .stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+    .ca{color:var(--accent)}.cg{color:var(--green)}.cw{color:var(--warn)}.cd{color:var(--danger)}
 
-    /* ── SECTION LABEL ── */
-    .slabel {
-      font-size: 10px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.7px;
-      margin: 14px 0 8px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .slabel::after { content:''; flex:1; height:1px; background: var(--border); }
+    #p2-banner{display:none;align-items:center;gap:10px;background:#f59e0b0a;border:1px solid #f59e0b40;border-radius:var(--r);padding:10px 14px;margin-bottom:10px}
+    .p2-spin{width:14px;height:14px;flex-shrink:0;border:2px solid #f59e0b40;border-top-color:var(--warn);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── STATS ROW ── */
-    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
-    .stat {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 12px 8px; text-align: center;
-    }
-    .stat-n { font-family: var(--mono); font-size: 22px; font-weight: 500; line-height: 1; margin-bottom: 3px; }
-    .stat-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
-    .ca { color: var(--accent); }
-    .cg { color: var(--green); }
-    .cw { color: var(--warn); }
-    .cd { color: var(--danger); }
+    .job-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:border-color .15s,opacity .3s,transform .3s}
+    .job-card.removing{opacity:0;transform:translateX(30px)}
+    .jc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px}
+    .jc-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+    .jc-co{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .jc-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+    .lvl{font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px}
+    .lm2{background:#f59e0b18;color:var(--warn);border:1px solid #f59e0b40}
+    .lm3{background:#4f8ef718;color:var(--accent);border:1px solid #4f8ef740}
+    .lm4{background:#34d39918;color:var(--green);border:1px solid #34d39940}
+    .chip{font-size:10px;color:var(--muted);background:var(--sur2);border:1px solid var(--border);padding:2px 6px;border-radius:4px}
+    .jc-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 
-    /* ── PHASE 2 BANNER ── */
-    #p2-banner {
-      display: none; align-items: center; gap: 10px;
-      background: #f59e0b0a; border: 1px solid #f59e0b40;
-      border-radius: var(--r); padding: 10px 14px; margin-bottom: 10px;
-    }
-    .p2-spin {
-      width: 14px; height: 14px; flex-shrink: 0;
-      border: 2px solid #f59e0b40; border-top-color: var(--warn);
-      border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 14px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
+    .btn:active{transform:scale(.96)} .btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important}
+    .bp{background:var(--accent);color:white} .bs{background:var(--green);color:#0f1117}
+    .bg{background:transparent;color:var(--muted);border:1px solid var(--border)} .bg:hover{color:var(--text);border-color:var(--muted)}
+    .bdn{background:transparent;color:var(--danger);border:1px solid #f8717140}
+    .sm{padding:5px 10px;font-size:11px} .ful{width:100%;justify-content:center}
 
-    /* ── JOB CARDS ── */
-    .job-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 14px; margin-bottom: 8px;
-      transition: border-color 0.15s, opacity 0.3s, transform 0.3s;
-    }
-    .job-card.removing { opacity: 0; transform: translateX(30px); }
-    .jc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
-    .jc-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
-    .jc-co { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-    .jc-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-    .lvl {
-      font-family: var(--mono); font-size: 11px; font-weight: 500;
-      padding: 2px 8px; border-radius: 4px;
-    }
-    .lm2 { background: #f59e0b18; color: var(--warn);   border: 1px solid #f59e0b40; }
-    .lm3 { background: #4f8ef718; color: var(--accent); border: 1px solid #4f8ef740; }
-    .lm4 { background: #34d39918; color: var(--green);  border: 1px solid #34d39940; }
-    .chip {
-      font-size: 10px; color: var(--muted);
-      background: var(--sur2); border: 1px solid var(--border);
-      padding: 2px 6px; border-radius: 4px;
-    }
-    .jc-actions {
-      display: flex; gap: 6px;
-      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
-    }
+    .empty{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty-icon{font-size:36px;margin-bottom:10px} .empty-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px} .empty-sub{font-size:12px}
+    .loader{text-align:center;padding:24px;color:var(--muted);font-size:13px;font-style:italic}
+    .lspin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:7px;vertical-align:middle}
 
-    /* ── QUEUE HEADER ── */
-    .q-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    #preloaded-bar{display:none;align-items:center;gap:8px;background:#4f8ef70a;border:1px solid #4f8ef740;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--accent)}
+    .cv-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+    .cv-btn{padding:9px 6px;border-radius:6px;border:1px solid var(--border);background:var(--sur2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;text-align:center;line-height:1.4;transition:all .15s}
+    .cv-btn:hover{border-color:var(--muted);color:var(--text)} .cv-btn.active{border-color:var(--accent);background:#4f8ef710;color:var(--accent)}
+    textarea.jd{width:100%;height:120px;background:var(--sur2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;padding:10px 12px;resize:vertical;display:block;transition:border-color .15s}
+    textarea.jd:focus{outline:none;border-color:var(--accent)} textarea.jd::placeholder{color:var(--muted)}
+    .a-btns{display:flex;gap:8px;margin-top:8px}
 
-    /* ── BUTTONS ── */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-      padding: 8px 14px; border-radius: 6px; border: none;
-      font-family: var(--sans); font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s; white-space: nowrap;
-    }
-    .btn:active { transform: scale(0.96); }
-    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
-    .bp { background: var(--accent); color: white; }
-    .bs { background: var(--green);  color: #0f1117; }
-    .bg { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-    .bg:hover { color: var(--text); border-color: var(--muted); }
-    .bdn { background: transparent; color: var(--danger); border: 1px solid #f8717140; }
-    .sm  { padding: 5px 10px; font-size: 11px; }
-    .ful { width: 100%; justify-content: center; }
+    #a-loader{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;text-align:center;margin:10px 0}
+    .alspin{width:28px;height:28px;margin:0 auto 12px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite}
+    .altext{font-size:13px;color:var(--muted);font-style:italic} .alsub{font-size:11px;color:var(--muted);margin-top:4px;opacity:.6}
 
-    /* ── EMPTY / LOADER ── */
-    .empty {
-      text-align: center; padding: 40px 20px; color: var(--muted);
-    }
-    .empty-icon  { font-size: 36px; margin-bottom: 10px; }
-    .empty-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-    .empty-sub   { font-size: 12px; }
-    .loader { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; font-style: italic; }
-    .lspin {
-      display: inline-block; width: 16px; height: 16px;
-      border: 2px solid var(--border); border-top-color: var(--accent);
-      border-radius: 50%; animation: spin 0.8s linear infinite;
-      margin-right: 7px; vertical-align: middle;
-    }
+    #smm-results{display:none}
+    .score-card{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:border-color .3s}
+    .score-big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1}
+    .score-r{flex:1} .score-lv{font-family:var(--mono);font-size:14px;font-weight:500;margin-bottom:2px}
+    .score-sb{font-size:11px;color:var(--muted)} .score-cv{font-size:11px;color:var(--muted);font-style:italic;margin-top:3px}
+    .lang-note{display:flex;align-items:flex-start;gap:7px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:500;margin-bottom:8px;border:1px solid;line-height:1.4}
+    .ln-ok{background:#34d39910;color:var(--green);border-color:#34d39940} .ln-bad{background:#f8717110;color:var(--danger);border-color:#f8717140}
+    .ln-oth{background:#f59e0b10;color:var(--warn);border-color:#f59e0b40} .ln-non{background:var(--sur2);color:var(--muted);border-color:var(--border)}
 
-    /* ── ANALYZE PAGE ── */
-    #preloaded-bar {
-      display: none; align-items: center; gap: 8px;
-      background: #4f8ef70a; border: 1px solid #4f8ef740;
-      border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
-      font-size: 12px; color: var(--accent);
-    }
-    .cv-btns { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 10px; }
-    .cv-btn {
-      padding: 9px 6px; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--sur2);
-      color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 600;
-      cursor: pointer; text-align: center; line-height: 1.4; transition: all 0.15s;
-    }
-    .cv-btn:hover { border-color: var(--muted); color: var(--text); }
-    .cv-btn.active { border-color: var(--accent); background: #4f8ef710; color: var(--accent); }
-    textarea.jd {
-      width: 100%; height: 120px; background: var(--sur2);
-      border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text); font-family: var(--sans); font-size: 13px;
-      padding: 10px 12px; resize: vertical; display: block;
-      transition: border-color 0.15s;
-    }
-    textarea.jd:focus { outline: none; border-color: var(--accent); }
-    textarea.jd::placeholder { color: var(--muted); }
-    .a-btns { display: flex; gap: 8px; margin-top: 8px; }
+    #chart-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .imp-legend{display:flex;gap:10px;font-size:11px;color:var(--muted)}
+    .chart-type-btns{display:flex;gap:4px}
+    .ctype-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--sur2);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+    .ctype-btn:hover{border-color:var(--muted);color:var(--text)} .ctype-btn.active{border-color:var(--accent);background:#4f8ef718;color:var(--accent)}
+    #radar-container{background:transparent;border-radius:0;border:none;padding:0;margin-bottom:4px;display:flex;justify-content:center}
+    #radar-container.bar-mode{height:320px}
+    #radarChart{width:100% !important;max-width:660px;max-height:520px}
+    #map-container{display:none;height:300px;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:4px;position:relative}
+    #leaflet-map{height:100%;width:100%}
+    .map-ph{height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface);color:var(--muted);font-size:13px;font-style:italic}
 
-    /* ── ANALYZE LOADER ── */
-    #a-loader {
-      display: none; background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 24px; text-align: center; margin: 10px 0;
-    }
-    .alspin {
-      width: 28px; height: 28px; margin: 0 auto 12px;
-      border: 3px solid var(--border); border-top-color: var(--accent);
-      border-radius: 50%; animation: spin 0.9s linear infinite;
-    }
-    .altext { font-size: 13px; color: var(--muted); font-style: italic; }
-    .alsub  { font-size: 11px; color: var(--muted); margin-top: 4px; opacity: 0.6; }
+    .gap-item{padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+    .gap-item:last-child{border-bottom:none} .gap-sk{font-weight:600;color:var(--text)} .gap-tip{color:var(--muted);margin-top:2px}
+    .reg-btns{display:flex;gap:8px}
+    .out-msg{display:none;padding:10px 14px;border-radius:6px;font-size:13px;margin-top:8px;border:1px solid transparent;line-height:1.5}
+    .out-ok{background:#34d39915;color:var(--green);border-color:#34d39940} .out-err{background:#f8717115;color:var(--danger);border-color:#f8717140}
 
-    /* ── SMM RESULTS ── */
-    #smm-results { display: none; }
-    .score-card {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 14px; margin-bottom: 8px;
-      transition: border-color 0.3s;
-    }
-    .score-big { font-family: var(--mono); font-size: 38px; font-weight: 500; line-height: 1; }
-    .score-r { flex: 1; }
-    .score-lv { font-family: var(--mono); font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-    .score-sb { font-size: 11px; color: var(--muted); }
-    .score-cv { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 3px; }
-    .lang-note {
-      display: flex; align-items: flex-start; gap: 7px;
-      padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
-      margin-bottom: 8px; border: 1px solid; line-height: 1.4;
-    }
-    .ln-ok  { background: #34d39910; color: var(--green);  border-color: #34d39940; }
-    .ln-bad { background: #f8717110; color: var(--danger); border-color: #f8717140; }
-    .ln-oth { background: #f59e0b10; color: var(--warn);   border-color: #f59e0b40; }
-    .ln-non { background: var(--sur2); color: var(--muted); border-color: var(--border); }
-    .skill-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 5px 0; border-bottom: 1px solid var(--border);
-    }
-    .skill-row:last-child { border-bottom: none; }
-    .sk-name { flex: 1; font-size: 12px; color: var(--text); font-weight: 500; }
-    .sk-imp {
-      font-size: 9px; font-weight: 700; padding: 1px 5px;
-      border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px;
-    }
-    .ic { background: #f8717120; color: var(--danger); }
-    .in { background: #f59e0b20; color: var(--warn); }
-    .io { background: #4f8ef720; color: var(--accent); }
-    .sk-bw { width: 70px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
-    .sk-bf { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-    .sk-sc { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 22px; text-align: right; }
-    .gap-item { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-    .gap-item:last-child { border-bottom: none; }
-    .gap-sk  { font-weight: 600; color: var(--text); }
-    .gap-tip { color: var(--muted); margin-top: 2px; }
-    .reg-btns { display: flex; gap: 8px; }
-    .out-msg {
-      display: none; padding: 10px 14px; border-radius: 6px;
-      font-size: 13px; margin-top: 8px; border: 1px solid transparent; line-height: 1.5;
-    }
-    .out-ok  { background: #34d39915; color: var(--green);  border-color: #34d39940; }
-    .out-err { background: #f8717115; color: var(--danger); border-color: #f8717140; }
+    .coming{text-align:center;padding:60px 20px;color:var(--muted)}
+    .coming-icon{font-size:40px;margin-bottom:16px} .coming-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px} .coming-desc{font-size:13px;max-width:280px;margin:0 auto}
 
-    /* ── PLACEHOLDER PAGES ── */
-    .coming {
-      text-align: center; padding: 60px 20px; color: var(--muted);
-    }
-    .coming-icon  { font-size: 40px; margin-bottom: 16px; }
-    .coming-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
-    .coming-desc  { font-size: 13px; max-width: 280px; margin: 0 auto; }
+    #skip-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center;padding:20px}
+    #skip-modal.open{display:flex}
+    .modal-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:480px;animation:slideUp .2s ease}
+    @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+    .modal-subtitle{font-size:12px;color:var(--muted);margin-bottom:14px;font-style:italic}
+    .reason-btns{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+    .reason-btn{padding:10px 14px;border-radius:6px;border:1px solid var(--border);background:var(--sur2);color:var(--text);font-family:var(--sans);font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+    .reason-btn:hover{border-color:var(--danger);background:#f8717108}
 
-    /* ── SKIP MODAL ── */
-    #skip-modal {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75); z-index: 200;
-      align-items: flex-end; justify-content: center; padding: 20px;
-    }
-    #skip-modal.open { display: flex; }
-    .modal-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 14px; padding: 20px; width: 100%; max-width: 480px;
-      animation: slideUp 0.2s ease;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
-    }
-    .modal-title    { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-    .modal-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 14px; font-style: italic; }
-    .reason-btns    { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
-    .reason-btn {
-      padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--sur2); color: var(--text); font-family: var(--sans); font-size: 13px;
-      text-align: left; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-    }
-    .reason-btn:hover { border-color: var(--danger); background: #f8717108; }
+    .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    .leaflet-popup-tip{background:var(--surface)}
+    .leaflet-popup-content{font-family:var(--sans);font-size:12px;margin:8px 12px}
+    .leaflet-control-zoom a{background:var(--surface);color:var(--text);border-color:var(--border)}
+    .leaflet-control-zoom a:hover{background:var(--sur2)}
+    .leaflet-control-attribution{background:rgba(15,17,23,.7) !important;color:var(--muted) !important;font-size:9px !important}
+    .leaflet-control-attribution a{color:var(--muted) !important}
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════
-     TOP BAR
-════════════════════════════════════════ -->
 <header class="topbar">
-  <div class="logo">
-    <div class="logo-dot"></div>
-    JABA
-  </div>
-  <div class="s-chip ok">
-    <div class="cdot"></div>
-    Ready
-  </div>
+  <div class="logo"><div class="logo-dot"></div>JABA</div>
+  <div class="s-chip ok"><div class="cdot"></div>Ready</div>
 </header>
 
-<!-- ═══════════════════════════════════════
-     TAB NAV
-════════════════════════════════════════ -->
 <nav class="tabnav">
-  <button id="tab-queue"   class="tab active" onclick="showTab('queue',   this)">📋 Queue   <span id="q-bdg" class="bdg green" style="display:none;">0</span></button>
-  <button id="tab-analyze" class="tab"        onclick="showTab('analyze', this)">🔍 Analyze</button>
-  <button id="tab-scan"    class="tab"        onclick="showTab('scan',    this)">📧 Scan</button>
-  <button id="tab-stats"   class="tab"        onclick="showTab('stats',   this)">📊 Stats</button>
+  <button id="tab-queue"   class="tab active" onclick="showTab('queue',this)">📋 Queue <span id="q-bdg" class="bdg green" style="display:none">0</span></button>
+  <button id="tab-analyze" class="tab"        onclick="showTab('analyze',this)">🔍 Analyze</button>
+  <button id="tab-scan"    class="tab"        onclick="showTab('scan',this)">📧 Scan</button>
+  <button id="tab-stats"   class="tab"        onclick="showTab('stats',this)">📊 Stats</button>
 </nav>
 
-<!-- ═══════════════════════════════════════
-     PAGE — QUEUE
-════════════════════════════════════════ -->
+<!-- PAGE: QUEUE -->
 <div id="page-queue" class="page active">
-
-  <!-- Phase 2 banner -->
   <div id="p2-banner">
     <div class="p2-spin"></div>
-    <span id="p2-text" style="font-size:12px;color:var(--warn);font-weight:500;flex:1;">Phase 2 running…</span>
-    <span id="p2-time" style="font-size:10px;color:var(--muted);font-family:var(--mono);"></span>
+    <span id="p2-text" style="font-size:12px;color:var(--warn);font-weight:500;flex:1">Phase 2 running…</span>
+    <span id="p2-time" style="font-size:10px;color:var(--muted);font-family:var(--mono)"></span>
   </div>
-
-  <!-- Stats -->
   <div class="stats-row">
     <div class="stat"><div class="stat-n ca" id="s-applied">—</div><div class="stat-l">Applied</div></div>
     <div class="stat"><div class="stat-n cw" id="s-inproc">—</div><div class="stat-l">In Review</div></div>
     <div class="stat"><div class="stat-n cg" id="s-fit">—</div><div class="stat-l">Fit Jobs</div></div>
   </div>
-
-  <!-- Queue header -->
   <div class="q-header">
-    <div class="slabel" style="margin:0;flex:1;">Fit jobs — ready to review</div>
-    <button class="btn bg sm" onclick="loadAllFitJobs()" title="Refresh list" style="margin-left:8px;">↻ Refresh</button>
+    <div class="slabel" style="margin:0;flex:1">Fit jobs — ready to review</div>
+    <button class="btn bg sm" onclick="loadAllFitJobs()" style="margin-left:8px">↻ Refresh</button>
   </div>
+  <div id="job-cards"><div class="loader"><span class="lspin"></span>Loading fit jobs…</div></div>
+</div>
 
-  <!-- Job cards -->
-  <div id="job-cards">
-    <div class="loader"><span class="lspin"></span>Loading fit jobs…</div>
-  </div>
-
-</div><!-- /#page-queue -->
-
-<!-- ═══════════════════════════════════════
-     PAGE — ANALYZE
-════════════════════════════════════════ -->
+<!-- PAGE: ANALYZE -->
 <div id="page-analyze" class="page">
-
-  <!-- Pre-loaded banner (shown when navigated from Queue) -->
   <div id="preloaded-bar">
     📌 <span id="preloaded-text">Loaded from cache</span>
-    <button class="btn bg sm" onclick="clearPreloaded()" style="margin-left:auto;padding:3px 8px;font-size:11px;">✕</button>
+    <button class="btn bg sm" onclick="clearPreloaded()" style="margin-left:auto;padding:3px 8px;font-size:11px">✕</button>
   </div>
-
-  <!-- CV Profile selector -->
   <div class="slabel">CV Profile</div>
   <div class="cv-btns">
-    <button class="cv-btn" data-type="DE Web2 Marketing Manager" onclick="selectCvType('DE Web2 Marketing Manager')">
-      🇩🇪 DE<br><span style="font-size:10px;opacity:0.7;">Web2</span>
-    </button>
-    <button class="cv-btn" data-type="EN Web2 Marketing Manager" onclick="selectCvType('EN Web2 Marketing Manager')">
-      🇬🇧 EN<br><span style="font-size:10px;opacity:0.7;">Web2</span>
-    </button>
-    <button class="cv-btn" data-type="Web3 Marketing Manager" onclick="selectCvType('Web3 Marketing Manager')">
-      🔗 Web3<br><span style="font-size:10px;opacity:0.7;">Crypto</span>
-    </button>
+    <button class="cv-btn" data-type="DE Web2 Marketing Manager" onclick="selectCvType('DE Web2 Marketing Manager')">🇩🇪 DE<br><span style="font-size:10px;opacity:.7">Web2</span></button>
+    <button class="cv-btn" data-type="EN Web2 Marketing Manager" onclick="selectCvType('EN Web2 Marketing Manager')">🇬🇧 EN<br><span style="font-size:10px;opacity:.7">Web2</span></button>
+    <button class="cv-btn" data-type="Web3 Marketing Manager"    onclick="selectCvType('Web3 Marketing Manager')">🔗 Web3<br><span style="font-size:10px;opacity:.7">Crypto</span></button>
   </div>
-
-  <!-- JD input -->
   <div class="slabel">Job Description</div>
-  <textarea id="jd-input" class="jd"
-    placeholder="Paste a job description or URL here…&#10;&#10;Or go to Queue → tap Analyze & Register on a card to load it automatically."></textarea>
-
-  <!-- Analyze buttons -->
+  <textarea id="jd-input" class="jd" placeholder="Paste a job description or URL here…&#10;&#10;Or go to Queue and click Analyze &amp; Register on a card."></textarea>
   <div class="a-btns">
-    <button id="run-smm-btn" class="btn bp" style="flex:1;" onclick="runSmm()">🔍 Run Skills Analysis</button>
+    <button id="run-smm-btn" class="btn bp" style="flex:1" onclick="runSmm()">🔍 Run Skills Analysis</button>
     <button class="btn bg" onclick="resetAnalyze()">Clear</button>
   </div>
-
-  <!-- Loader (shown while Mistral is working) -->
   <div id="a-loader">
     <div class="alspin"></div>
     <div id="al-text" class="altext">Analyzing with Mistral…</div>
     <div id="al-sub"  class="alsub">This takes 15–30 seconds ⏳</div>
   </div>
-
-  <!-- SMM Results -->
   <div id="smm-results">
-
-    <div class="slabel" style="margin-top:14px;">Skills Match Result</div>
-
-    <!-- Score card -->
+    <div class="slabel" style="margin-top:14px">Skills Match Result</div>
     <div id="score-card" class="score-card">
       <div id="score-big" class="score-big ca">0</div>
       <div class="score-r">
@@ -435,63 +202,48 @@
         <div id="score-cv" class="score-cv"></div>
       </div>
     </div>
-
-    <!-- Language note -->
-    <div id="lang-note" style="display:none;" class="lang-note">
-      <span id="lang-icon">✅</span>
-      <span id="lang-text"></span>
+    <div id="lang-note" style="display:none" class="lang-note">
+      <span id="lang-icon">✅</span><span id="lang-text"></span>
     </div>
-
-    <!-- Skill bars -->
     <div class="card">
-      <div class="card-title">📊 Skill Breakdown — C = Crucial · N = Necessary · O = Optional</div>
-      <div id="skill-bars"></div>
+      <div id="chart-toggle-bar">
+        <div class="imp-legend">
+          <span style="color:#ea4335">● Crucial</span>
+          <span style="color:#f4b400">● Necessary</span>
+          <span style="color:#4285f4">● Optional</span>
+        </div>
+        <div class="chart-type-btns">
+          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">📊 Bar</button>
+          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">🕸️ Radar</button>
+          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">🗺️ Map</button>
+        </div>
+      </div>
+      <div id="radar-container" class="bar-mode"><canvas id="radarChart"></canvas></div>
+      <div id="map-container"><div id="leaflet-map"></div></div>
     </div>
-
-    <!-- Gap tips -->
     <div class="card">
       <div class="card-title">💡 Gap Tips</div>
       <div id="gap-tips"></div>
     </div>
-
-    <!-- Register actions -->
     <div class="reg-btns">
-      <button id="reg-btn" class="btn bs" style="flex:2;" onclick="register()">✅ Generate &amp; Register</button>
+      <button id="reg-btn" class="btn bs" style="flex:2" onclick="register()">✅ Generate &amp; Register</button>
       <button class="btn bg" onclick="resetAnalyze()">🔄 Reset</button>
     </div>
-
-    <!-- Output message -->
     <div id="a-output" class="out-msg"></div>
+  </div>
+</div>
 
-  </div><!-- /#smm-results -->
-
-</div><!-- /#page-analyze -->
-
-<!-- ═══════════════════════════════════════
-     PAGE — SCAN (placeholder)
-════════════════════════════════════════ -->
+<!-- PAGE: SCAN -->
 <div id="page-scan" class="page">
-  <div class="coming">
-    <div class="coming-icon">📧</div>
-    <div class="coming-title">Scan — Coming Next</div>
-    <div class="coming-desc">Gmail scanning for applications and rejections, plus Indeed and BA alert processing. Building in the next iteration.</div>
-  </div>
+  <div class="coming"><div class="coming-icon">📧</div><div class="coming-title">Scan — Coming Next</div><div class="coming-desc">Gmail scanning for applications and rejections, plus Indeed and BA alert processing.</div></div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     PAGE — STATS (placeholder)
-════════════════════════════════════════ -->
+<!-- PAGE: STATS -->
 <div id="page-stats" class="page">
-  <div class="coming">
-    <div class="coming-icon">📊</div>
-    <div class="coming-title">Stats — Coming Next</div>
-    <div class="coming-desc">Application funnel, match level distribution, and Tavily credit usage. Building after the Scan tab.</div>
-  </div>
+  <div class="coming"><div class="coming-icon">📊</div><div class="coming-title">Stats — Coming Next</div><div class="coming-desc">Application funnel, match level distribution, and Tavily credit usage.</div></div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     SKIP MODAL
-════════════════════════════════════════ -->
+<!-- SKIP MODAL -->
 <div id="skip-modal">
   <div class="modal-panel">
     <div class="modal-title">Skip this job?</div>
@@ -507,437 +259,250 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════ -->
 <script>
-/* ─────────────────────────────────────
-   STATE
-───────────────────────────────────── */
-var allFitJobs     = [];    // array from getAllFitJobs()
-var currentFitJob  = null;  // job loaded from Queue into Analyze
-var currentSmmData = null;  // SMM result object
-var currentCvType  = null;  // selected CV type string
-var skipTargetRow  = null;  // rowIndex being skipped
-var p2Timer        = null;  // Phase 2 poll timeout
-var p2Running      = false; // current Phase 2 state
+var allFitJobs=[],currentFitJob=null,currentSmmData=null,currentCvType=null;
+var currentChartType='bar',skipTargetRow=null,p2Timer=null,p2Running=false;
+var radarChart=null,leafletMap=null,leafletMarker=null;
 
-/* ─────────────────────────────────────
-   INIT — runs on page load
-───────────────────────────────────── */
-(function init() {
-  startP2Poll();
-  loadAllFitJobs();
-})();
+(function init(){startP2Poll();loadAllFitJobs();loadQueueStats();})();
 
-/* ─────────────────────────────────────
-   TAB NAVIGATION
-───────────────────────────────────── */
-function showTab(name, btn) {
-  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-  document.querySelectorAll('.tab').forEach(function(t)  { t.classList.remove('active'); });
-  document.getElementById('page-' + name).classList.add('active');
-  if (btn) { btn.classList.add('active'); }
-  else     { document.getElementById('tab-' + name).classList.add('active'); }
+function showTab(name,btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');else document.getElementById('tab-'+name).classList.add('active');
 }
 
-/* ─────────────────────────────────────
-   PHASE 2 BANNER — polls every 30s
-   when running, every 5 min at rest
-───────────────────────────────────── */
-function startP2Poll() { checkP2Status(); }
-
-function checkP2Status() {
+function startP2Poll(){checkP2Status();}
+function checkP2Status(){
   google.script.run
-    .withSuccessHandler(function(status) {
-      renderP2Banner(status);
-      var delay = (status && status.running) ? 30000 : 300000;
-      clearTimeout(p2Timer);
-      p2Timer = setTimeout(checkP2Status, delay);
-    })
-    .withFailureHandler(function() {
-      clearTimeout(p2Timer);
-      p2Timer = setTimeout(checkP2Status, 300000);
-    })
+    .withSuccessHandler(function(s){renderP2Banner(s);clearTimeout(p2Timer);p2Timer=setTimeout(checkP2Status,(s&&s.running)?30000:300000);})
+    .withFailureHandler(function(){clearTimeout(p2Timer);p2Timer=setTimeout(checkP2Status,300000);})
     .getPhase2Status();
 }
-
-function renderP2Banner(status) {
-  var banner  = document.getElementById('p2-banner');
-  var wasRunning = p2Running;
-
-  if (status && status.running) {
-    p2Running = true;
-    banner.style.display = 'flex';
-    document.getElementById('p2-text').innerText =
-      '⚙️ Phase 2 running — ' + (status.pending || '?') + ' job(s) scoring';
-    document.getElementById('p2-time').innerText =
-      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } else {
-    banner.style.display = 'none';
-    // Phase 2 just finished → refresh Queue automatically
-    if (wasRunning && !(status && status.running)) {
-      p2Running = false;
-      loadAllFitJobs();
-    }
-    p2Running = false;
+function renderP2Banner(status){
+  var banner=document.getElementById('p2-banner'),wasRunning=p2Running;
+  if(status&&status.running){
+    p2Running=true;banner.style.display='flex';
+    var eta=status.etaMinutes?' · ~'+status.etaMinutes+' min':'';
+    document.getElementById('p2-text').innerText='⚙️ Phase 2 running — '+(status.pending||'?')+' job(s) scoring'+eta;
+    document.getElementById('p2-time').innerText=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }else{
+    banner.style.display='none';
+    if(wasRunning&&!(status&&status.running)){p2Running=false;loadAllFitJobs();loadQueueStats();}
+    p2Running=false;
   }
 }
 
-/* ─────────────────────────────────────
-   QUEUE TAB — load & render
-───────────────────────────────────── */
-function loadAllFitJobs() {
-  document.getElementById('job-cards').innerHTML =
-    '<div class="loader"><span class="lspin"></span>Loading fit jobs…</div>';
-
+function loadQueueStats(){
   google.script.run
-    .withSuccessHandler(function(result) {
-      try {
-        var data = JSON.parse(result);
-        if (!Array.isArray(data)) {
-          queueError(data.error || 'Unexpected response from server.');
-          return;
-        }
-        allFitJobs = data;
-        renderCards();
-        updateBadge(data.length);
-        document.getElementById('s-fit').innerText = data.length;
-      } catch(e) {
-        queueError('Parse error: ' + e.message);
-      }
-    })
-    .withFailureHandler(function(err) {
-      queueError('Failed to load: ' + err.message);
-    })
+    .withSuccessHandler(function(result){
+      try{var d=JSON.parse(result);if(d.error)return;
+        document.getElementById('s-applied').innerText=d.applied||0;
+        document.getElementById('s-inproc').innerText=d.inReview||0;
+        document.getElementById('s-fit').innerText=d.fit||0;
+        updateBadge(d.fit||0);
+      }catch(e){}
+    }).withFailureHandler(function(){}).getQueueStats();
+}
+
+function loadAllFitJobs(){
+  document.getElementById('job-cards').innerHTML='<div class="loader"><span class="lspin"></span>Loading fit jobs…</div>';
+  google.script.run
+    .withSuccessHandler(function(result){
+      try{var data=JSON.parse(result);
+        if(!Array.isArray(data)){queueError(data.error||'Unexpected response.');return;}
+        allFitJobs=data;renderCards();
+      }catch(e){queueError('Parse error: '+e.message);}
+    }).withFailureHandler(function(err){queueError('Failed: '+err.message);})
     .getAllFitJobs();
 }
-
-function renderCards() {
-  var container = document.getElementById('job-cards');
-  if (allFitJobs.length === 0) {
-    container.innerHTML = [
-      '<div class="empty">',
-      '  <div class="empty-icon">🎯</div>',
-      '  <div class="empty-title">No fit jobs right now</div>',
-      '  <div class="empty-sub">Jobs you mark as "fit" in the Job_Search_Cache',
-      '  sheet will appear here. Run Phase 1 or wait for Phase 2.</div>',
-      '</div>'
-    ].join('');
-    return;
-  }
-  container.innerHTML = allFitJobs.map(cardHtml).join('');
+function renderCards(){
+  var c=document.getElementById('job-cards');
+  if(allFitJobs.length===0){c.innerHTML='<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">No fit jobs right now</div><div class="empty-sub">Jobs marked as "fit" in Job_Search_Cache will appear here.</div></div>';return;}
+  c.innerHTML=allFitJobs.map(cardHtml).join('');
 }
-
-function cardHtml(job) {
-  var lc  = job.levelNum >= 4 ? 'lm4' : job.levelNum >= 3 ? 'lm3' : 'lm2';
-  var cv  = job.cvType === 'DE Web2 Marketing Manager' ? '🇩🇪 DE' :
-            job.cvType === 'Web3 Marketing Manager'    ? '🔗 Web3' : '🇬🇧 EN';
-  var src = esc(job.source || 'JobSearch');
-  return [
-    '<div class="job-card" id="card-' + job.rowIndex + '">',
-    '  <div class="jc-top">',
-    '    <div>',
-    '      <div class="jc-title">' + esc(job.title)   + '</div>',
-    '      <div class="jc-co">'    + esc(job.company) + '</div>',
-    '    </div>',
-    '    <span class="lvl ' + lc + '">' + esc(job.matchLevel) + '</span>',
-    '  </div>',
-    '  <div class="jc-meta">',
-    '    <span class="chip">' + job.score + '/40</span>',
-    '    <span class="chip">' + cv  + '</span>',
-    '    <span class="chip">' + src + '</span>',
-    '  </div>',
-    '  <div class="jc-actions">',
-    '    <button class="btn bp sm" style="flex:2;" onclick="analyzeJob(' + job.rowIndex + ')">',
-    '      🔍 Analyze &amp; Register →',
-    '    </button>',
-    '    <button class="btn bg sm" onclick="openJob(\'' + esc(job.url) + '\')">↗ Open</button>',
-    '    <button class="btn bdn sm" onclick="showSkipModal(' + job.rowIndex + ')">✕ Skip</button>',
-    '  </div>',
-    '</div>'
-  ].join('');
+function cardHtml(job){
+  var lc=job.levelNum>=4?'lm4':job.levelNum>=3?'lm3':'lm2';
+  var cv=job.cvType==='DE Web2 Marketing Manager'?'🇩🇪 DE':job.cvType==='Web3 Marketing Manager'?'🔗 Web3':'🇬🇧 EN';
+  return '<div class="job-card" id="card-'+job.rowIndex+'">'+
+    '<div class="jc-top"><div><div class="jc-title">'+esc(job.title)+'</div><div class="jc-co">'+esc(job.company)+'</div></div>'+
+    '<span class="lvl '+lc+'">'+esc(job.matchLevel)+'</span></div>'+
+    '<div class="jc-meta"><span class="chip">'+job.score+'/40</span><span class="chip">'+cv+'</span><span class="chip">'+esc(job.source||'JobSearch')+'</span></div>'+
+    '<div class="jc-actions">'+
+    '<button class="btn bp sm" style="flex:2" onclick="analyzeJob('+job.rowIndex+')">🔍 Analyze &amp; Register →</button>'+
+    '<button class="btn bg sm" onclick="openJob(\''+esc(job.url)+'\')">↗ Open</button>'+
+    '<button class="btn bdn sm" onclick="showSkipModal('+job.rowIndex+')">✕ Skip</button>'+
+    '</div></div>';
 }
-
-function analyzeJob(rowIndex) {
-  var job = allFitJobs.find(function(j) { return j.rowIndex === rowIndex; });
-  if (!job) return;
-
-  currentFitJob = job;
-
-  // Pre-fill Analyze tab
-  document.getElementById('jd-input').value = job.jdText || '';
-  selectCvType(job.cvType || 'EN Web2 Marketing Manager');
-
-  // Show pre-loaded banner
-  document.getElementById('preloaded-text').innerText =
-    job.company + ' — ' + job.title + ' (' + job.matchLevel + ': ' + job.score + '/40)';
-  document.getElementById('preloaded-bar').style.display = 'flex';
-
-  // Hide previous results
-  document.getElementById('smm-results').style.display = 'none';
-  document.getElementById('a-output').style.display    = 'none';
-  document.getElementById('a-loader').style.display    = 'none';
-
-  // Open job URL in new tab so you can read the full JD alongside
-  if (job.url) window.open(job.url, '_blank');
-
-  showTab('analyze', document.getElementById('tab-analyze'));
+function analyzeJob(rowIndex){
+  var job=allFitJobs.find(function(j){return j.rowIndex===rowIndex;});if(!job)return;
+  currentFitJob=job;
+  document.getElementById('jd-input').value=job.jdText||'';
+  selectCvType(job.cvType||'EN Web2 Marketing Manager');
+  document.getElementById('preloaded-text').innerText=job.company+' — '+job.title+' ('+job.matchLevel+': '+job.score+'/40)';
+  document.getElementById('preloaded-bar').style.display='flex';
+  document.getElementById('smm-results').style.display='none';
+  document.getElementById('a-output').style.display='none';
+  document.getElementById('a-loader').style.display='none';
+  if(job.url)window.open(job.url,'_blank');
+  showTab('analyze',document.getElementById('tab-analyze'));
 }
+function openJob(url){if(url)window.open(url,'_blank');}
+function queueError(msg){document.getElementById('job-cards').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load jobs</div><div class="empty-sub">'+esc(msg)+'</div></div>';}
+function updateBadge(count){var b=document.getElementById('q-bdg');b.innerText=count;b.style.display=count>0?'inline':'none';}
 
-function openJob(url) { if (url) window.open(url, '_blank'); }
-
-function queueError(msg) {
-  document.getElementById('job-cards').innerHTML =
-    '<div class="empty"><div class="empty-icon">⚠️</div>' +
-    '<div class="empty-title">Could not load jobs</div>' +
-    '<div class="empty-sub">' + esc(msg) + '</div></div>';
-}
-
-function updateBadge(count) {
-  var b = document.getElementById('q-bdg');
-  b.innerText      = count;
-  b.style.display  = count > 0 ? 'inline' : 'none';
-}
-
-/* ─────────────────────────────────────
-   SKIP MODAL
-───────────────────────────────────── */
-function showSkipModal(rowIndex) {
-  skipTargetRow = rowIndex;
-  var job = allFitJobs.find(function(j) { return j.rowIndex === rowIndex; });
-  document.getElementById('modal-sub').innerText =
-    job ? '"' + job.company + ' — ' + job.title + '"' : 'Select a reason:';
+function showSkipModal(rowIndex){
+  skipTargetRow=rowIndex;
+  var job=allFitJobs.find(function(j){return j.rowIndex===rowIndex;});
+  document.getElementById('modal-sub').innerText=job?'"'+job.company+' — '+job.title+'"':'Select a reason:';
   document.getElementById('skip-modal').classList.add('open');
 }
-
-function closeSkipModal() {
-  document.getElementById('skip-modal').classList.remove('open');
-  skipTargetRow = null;
+function closeSkipModal(){document.getElementById('skip-modal').classList.remove('open');skipTargetRow=null;}
+function confirmSkip(reason){
+  if(!skipTargetRow)return;var rowIndex=skipTargetRow;closeSkipModal();
+  var card=document.getElementById('card-'+rowIndex);
+  if(card){card.classList.add('removing');setTimeout(function(){if(card.parentNode)card.parentNode.removeChild(card);},320);}
+  allFitJobs=allFitJobs.filter(function(j){return j.rowIndex!==rowIndex;});
+  loadQueueStats();if(allFitJobs.length===0)setTimeout(renderCards,350);
+  google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){console.error(e.message);}).skipFitJob(rowIndex,reason);
 }
 
-function confirmSkip(reason) {
-  if (!skipTargetRow) return;
-  var rowIndex = skipTargetRow;
-  closeSkipModal();
-
-  // Remove card from UI with animation
-  var card = document.getElementById('card-' + rowIndex);
-  if (card) {
-    card.classList.add('removing');
-    setTimeout(function() { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
-  }
-
-  // Remove from state array
-  allFitJobs = allFitJobs.filter(function(j) { return j.rowIndex !== rowIndex; });
-  updateBadge(allFitJobs.length);
-  document.getElementById('s-fit').innerText = allFitJobs.length;
-  if (allFitJobs.length === 0) setTimeout(renderCards, 350);
-
-  // Write to sheet (background — non-blocking, UI already updated)
+function selectCvType(type){currentCvType=type;document.querySelectorAll('.cv-btn').forEach(function(b){b.classList.toggle('active',b.dataset.type===type);});}
+function clearPreloaded(){
+  currentFitJob=null;currentSmmData=null;currentCvType=null;
+  document.getElementById('jd-input').value='';
+  document.getElementById('preloaded-bar').style.display='none';
+  document.getElementById('smm-results').style.display='none';
+  document.getElementById('a-output').style.display='none';
+  document.querySelectorAll('.cv-btn').forEach(function(b){b.classList.remove('active');});
+}
+function runSmm(){
+  var jd=document.getElementById('jd-input').value.trim();
+  if(!jd){var ta=document.getElementById('jd-input');ta.style.borderColor='var(--danger)';setTimeout(function(){ta.style.borderColor='';},1500);return;}
+  if(!currentCvType){showAMsg('Please select a CV profile above first.','error');return;}
+  setBusy(true,'Analyzing with Mistral…','15–30 seconds ⏳');
+  document.getElementById('smm-results').style.display='none';document.getElementById('a-output').style.display='none';
   google.script.run
-    .withSuccessHandler(function() {})
-    .withFailureHandler(function(err) { console.error('skipFitJob:', err.message); })
-    .skipFitJob(rowIndex, reason);
-}
-
-/* ─────────────────────────────────────
-   ANALYZE TAB
-───────────────────────────────────── */
-function selectCvType(type) {
-  currentCvType = type;
-  document.querySelectorAll('.cv-btn').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.type === type);
-  });
-}
-
-function clearPreloaded() {
-  currentFitJob = null;
-  currentSmmData = null;
-  currentCvType  = null;
-  document.getElementById('jd-input').value = '';
-  document.getElementById('preloaded-bar').style.display  = 'none';
-  document.getElementById('smm-results').style.display    = 'none';
-  document.getElementById('a-output').style.display       = 'none';
-  document.querySelectorAll('.cv-btn').forEach(function(b) { b.classList.remove('active'); });
-}
-
-function runSmm() {
-  var jd = document.getElementById('jd-input').value.trim();
-  if (!jd) {
-    var ta = document.getElementById('jd-input');
-    ta.style.borderColor = 'var(--danger)';
-    setTimeout(function() { ta.style.borderColor = ''; }, 1500);
-    return;
-  }
-  if (!currentCvType) {
-    showAMsg('Please select a CV profile above first.', 'error');
-    return;
-  }
-  setBusy(true, 'Analyzing with Mistral…', '15–30 seconds ⏳');
-  document.getElementById('smm-results').style.display = 'none';
-  document.getElementById('a-output').style.display    = 'none';
-
-  google.script.run
-    .withSuccessHandler(function(result) {
+    .withSuccessHandler(function(result){
       setBusy(false);
-      try {
-        var data = JSON.parse(result);
-        if (data.error) { showAMsg('SMM error: ' + data.error, 'error'); return; }
-        currentSmmData = data;
-        renderSmm(data);
-      } catch(e) {
-        showAMsg('Parse error: ' + e.message, 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      setBusy(false);
-      showAMsg('Error: ' + err.message, 'error');
-    })
-    .analyzeSkillsMatch(jd, currentCvType);
+      try{var data=JSON.parse(result);if(data.error){showAMsg('SMM error: '+data.error,'error');return;}currentSmmData=data;renderSmm(data);}
+      catch(e){showAMsg('Parse error: '+e.message,'error');}
+    }).withFailureHandler(function(err){setBusy(false);showAMsg('Error: '+err.message,'error');})
+    .analyzeSkillsMatch(jd,currentCvType);
 }
-
-function renderSmm(data) {
-  var total  = data.total_score || 0;
-  var level  = data.match_level || 'M0';
-  var skills = data.skills || [];
-  var color  = scoreColor(total);
-
-  document.getElementById('score-big').innerText        = total;
-  document.getElementById('score-big').style.color      = color;
-  document.getElementById('score-lv').innerText         = level;
-  document.getElementById('score-lv').style.color       = color;
-  document.getElementById('score-card').style.borderColor = color + '60';
-  document.getElementById('score-cv').innerText =
-    currentCvType ? '📄 ' + currentCvType : '';
-
+function renderSmm(data){
+  var total=data.total_score||0,level=data.match_level||'M0',color=scoreColor(total);
+  document.getElementById('score-big').innerText=total;document.getElementById('score-big').style.color=color;
+  document.getElementById('score-lv').innerText=level;document.getElementById('score-lv').style.color=color;
+  document.getElementById('score-card').style.borderColor=color+'60';
+  document.getElementById('score-cv').innerText=currentCvType?'📄 '+currentCvType:'';
   renderLang(data.language_note);
-
-  // Skill bars
-  document.getElementById('skill-bars').innerHTML = skills.map(function(s) {
-    var pct = ((s.score || 0) / 5) * 100;
-    var ic  = s.importance === 'Crucial'   ? 'ic' :
-              s.importance === 'Necessary' ? 'in' : 'io';
-    var bc  = s.score >= 4 ? 'var(--green)' :
-              s.score >= 2 ? 'var(--accent)' :
-              s.score === 0 ? 'var(--danger)' : 'var(--warn)';
-    var il  = (s.importance || '').charAt(0); // C / N / O
-    return [
-      '<div class="skill-row">',
-      '  <div class="sk-name">' + esc(s.name || '') + '</div>',
-      '  <span class="sk-imp ' + ic + '">' + il + '</span>',
-      '  <div class="sk-bw"><div class="sk-bf" style="width:' + pct + '%;background:' + bc + '"></div></div>',
-      '  <div class="sk-sc">' + (s.score || 0) + '/5</div>',
-      '</div>'
-    ].join('');
-  }).join('');
-
-  // Gap tips (only for skills below 4 that have a tip)
-  var gaps = skills.filter(function(s) { return s.gap_tip && (s.score || 0) < 4; });
-  document.getElementById('gap-tips').innerHTML = gaps.length > 0
-    ? gaps.map(function(s) {
-        return '<div class="gap-item">' +
-               '<div class="gap-sk">' + esc(s.name) + ' (' + (s.score||0) + '/5)</div>' +
-               '<div class="gap-tip">' + esc(s.gap_tip) + '</div>' +
-               '</div>';
-      }).join('')
-    : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No major gaps — strong match! ✅</div>';
-
-  document.getElementById('smm-results').style.display = 'block';
-  document.getElementById('smm-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var gaps=(data.skills||[]).filter(function(s){return s.gap_tip&&(s.score||0)<4;});
+  document.getElementById('gap-tips').innerHTML=gaps.length>0
+    ?gaps.map(function(s){return '<div class="gap-item"><div class="gap-sk">'+esc(s.name)+' ('+( s.score||0)+'/5)</div><div class="gap-tip">'+esc(s.gap_tip)+'</div></div>';}).join('')
+    :'<div style="font-size:12px;color:var(--muted);padding:8px 0">No major gaps — strong match! ✅</div>';
+  setChartType('bar');
+  document.getElementById('smm-results').style.display='block';
+  document.getElementById('smm-results').scrollIntoView({behavior:'smooth',block:'start'});
 }
-
-function renderLang(ln) {
-  var el = document.getElementById('lang-note');
-  if (!ln || !ln.text) { el.style.display = 'none'; return; }
-  var cls  = { met:'ln-ok', unmet:'ln-bad', other:'ln-oth', none:'ln-non' }[ln.status] || 'ln-non';
-  var icon = ln.status === 'unmet' ? '⚠️' : ln.status === 'other' ? 'ℹ️' : '✅';
-  el.className = 'lang-note ' + cls;
-  el.style.display = 'flex';
-  document.getElementById('lang-icon').innerText = icon;
-  document.getElementById('lang-text').innerText = ln.text;
+function renderLang(ln){
+  var el=document.getElementById('lang-note');if(!ln||!ln.text){el.style.display='none';return;}
+  var cls={met:'ln-ok',unmet:'ln-bad',other:'ln-oth',none:'ln-non'}[ln.status]||'ln-non';
+  var icon=ln.status==='unmet'?'⚠️':ln.status==='other'?'ℹ️':'✅';
+  el.className='lang-note '+cls;el.style.display='flex';
+  document.getElementById('lang-icon').innerText=icon;document.getElementById('lang-text').innerText=ln.text;
 }
-
-function register() {
-  var jd = document.getElementById('jd-input').value.trim();
-  if (!jd || !currentSmmData || !currentCvType) {
-    showAMsg('Please run Skills Analysis first.', 'error');
-    return;
-  }
-  setBusy(true, 'Generating cover letter & registering…', '20–40 seconds 📝');
-  document.getElementById('a-output').style.display = 'none';
-
+function register(){
+  var jd=document.getElementById('jd-input').value.trim();
+  if(!jd||!currentSmmData||!currentCvType){showAMsg('Please run Skills Analysis first.','error');return;}
+  setBusy(true,'Generating cover letter & registering…','20–40 seconds 📝');
+  document.getElementById('a-output').style.display='none';
   google.script.run
-    .withSuccessHandler(function(res) {
-      setBusy(false);
-      if (res && res.indexOf('Error:') === 0) {
-        showAMsg(res, 'error');
-        return;
-      }
-      showAMsg(res || '✅ Registered successfully!', 'ok');
-
-      // After 2 seconds: clear and go back to Queue, refresh list
-      setTimeout(function() {
-        currentFitJob  = null;
-        currentSmmData = null;
-        resetAnalyze();
-        showTab('queue', document.getElementById('tab-queue'));
-        loadAllFitJobs();
-      }, 2200);
-    })
-    .withFailureHandler(function(err) {
-      setBusy(false);
-      showAMsg('Error: ' + err.message, 'error');
-    })
-    .mainJobProcessor(jd, currentCvType, JSON.stringify(currentSmmData));
+    .withSuccessHandler(function(res){
+      setBusy(false);if(res&&res.indexOf('Error:')===0){showAMsg(res,'error');return;}
+      showAMsg(res||'✅ Registered!','ok');
+      setTimeout(function(){currentFitJob=null;currentSmmData=null;resetAnalyze();showTab('queue',document.getElementById('tab-queue'));loadAllFitJobs();loadQueueStats();},2200);
+    }).withFailureHandler(function(err){setBusy(false);showAMsg('Error: '+err.message,'error');})
+    .mainJobProcessor(jd,currentCvType,JSON.stringify(currentSmmData));
+}
+function resetAnalyze(){
+  currentSmmData=null;currentCvType=null;currentFitJob=null;
+  document.getElementById('jd-input').value='';
+  document.getElementById('smm-results').style.display='none';document.getElementById('a-loader').style.display='none';
+  document.getElementById('a-output').style.display='none';document.getElementById('preloaded-bar').style.display='none';
+  document.getElementById('run-smm-btn').disabled=false;document.getElementById('reg-btn').disabled=false;
+  document.querySelectorAll('.cv-btn').forEach(function(b){b.classList.remove('active');});
+  if(radarChart){radarChart.destroy();radarChart=null;}
+  if(leafletMap){leafletMap.remove();leafletMap=null;leafletMarker=null;}
+  document.getElementById('radar-container').style.display='flex';
+  document.getElementById('map-container').style.display='none';
+  currentChartType='bar';setActiveChartBtn('bar');
+  document.getElementById('radar-container').classList.add('bar-mode');
 }
 
-function resetAnalyze() {
-  currentSmmData = null;
-  currentCvType  = null;
-  document.getElementById('jd-input').value               = '';
-  document.getElementById('smm-results').style.display    = 'none';
-  document.getElementById('a-loader').style.display       = 'none';
-  document.getElementById('a-output').style.display       = 'none';
-  document.getElementById('preloaded-bar').style.display  = 'none';
-  document.getElementById('run-smm-btn').disabled         = false;
-  document.getElementById('reg-btn').disabled             = false;
-  document.querySelectorAll('.cv-btn').forEach(function(b) { b.classList.remove('active'); });
-  if (!currentFitJob) currentFitJob = null;
+function setChartType(type){
+  currentChartType=type;setActiveChartBtn(type);
+  var rc=document.getElementById('radar-container'),mc=document.getElementById('map-container');
+  if(type==='map'){rc.style.display='none';mc.style.display='block';renderGeoMap();}
+  else{rc.style.display='flex';mc.style.display='none';if(type==='bar')rc.classList.add('bar-mode');else rc.classList.remove('bar-mode');if(currentSmmData)renderChartOnly(currentSmmData,currentCvType);}
+}
+function setActiveChartBtn(type){['bar','radar','map'].forEach(function(t){var b=document.getElementById('btn-'+t);if(b)b.classList.toggle('active',t===type);});}
+
+function getImpColor(imp){if(!imp)return '#4285f4';var l=imp.toLowerCase();if(l==='crucial')return '#ea4335';if(l==='necessary')return '#f4b400';return '#4285f4';}
+function renderChartOnly(data,cvType){
+  var skills=data.skills||[],scores=skills.map(function(s){return s.score||0;}),labels=skills.map(function(s){return s.name;}),color=scoreColor(data.total_score||0),ic=skills.map(function(s){return getImpColor(s.importance);}),c=document.getElementById('radar-container');
+  if(radarChart){radarChart.destroy();radarChart=null;}
+  setTimeout(function(){
+    var ctx=document.getElementById('radarChart').getContext('2d');
+    if(currentChartType==='bar'){
+      c.classList.add('bar-mode');
+      radarChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:scores,backgroundColor:ic.map(function(x){return x+'cc';}),borderColor:ic,borderWidth:2,borderRadius:4,borderSkipped:false}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{min:0,max:5,ticks:{stepSize:1,font:{size:11},color:'#9aa0a6'},grid:{color:'#f1f3f4'}},y:{ticks:{font:{size:12},color:'#3c4043'},grid:{display:false}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.raw+'/5  ·  '+(s?s.importance:'');}}}} ,layout:{padding:{right:8}}}});
+    }else{
+      c.classList.remove('bar-mode');
+      radarChart=new Chart(ctx,{type:'radar',data:{labels:labels,datasets:[{label:'Match Score',data:scores,borderColor:color,backgroundColor:color+'2e',borderWidth:2.5,pointBackgroundColor:ic,pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:7,pointHoverRadius:9}]},
+        options:{responsive:true,maintainAspectRatio:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:9},color:'#9aa0a6',backdropColor:'transparent'},grid:{color:'#e0e0e0'},angleLines:{color:'#e0e0e0'},
+          pointLabels:{font:{size:11,weight:'600'},color:'#3c4043',padding:8,callback:function(label){if(label.length<=16)return label;var words=label.split(' '),lines=[],cur='';words.forEach(function(w){if((cur+' '+w).trim().length>16){if(cur)lines.push(cur.trim());cur=w;}else{cur=(cur+' '+w).trim();}});if(cur)lines.push(cur.trim());return lines;}}}},
+        layout:{padding:{top:30,left:70,right:70,bottom:30}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.parsed.r+'/5  ·  '+(s?s.importance:'');}}}}}});
+    }
+  },80);
 }
 
-/* ─────────────────────────────────────
-   HELPERS
-───────────────────────────────────── */
-function setBusy(busy, msg, sub) {
-  document.getElementById('a-loader').style.display = busy ? 'block' : 'none';
-  if (busy) {
-    document.getElementById('al-text').innerText = msg || 'Working…';
-    document.getElementById('al-sub').innerText  = sub || '';
-  }
-  document.getElementById('run-smm-btn').disabled = busy;
-  document.getElementById('reg-btn').disabled     = busy;
+function renderGeoMap(){
+  var mapDiv=document.getElementById('leaflet-map');if(!mapDiv)return;
+  mapDiv.innerHTML='<div class="map-ph">📍 Locating job…</div>';
+  var loc=currentSmmData&&currentSmmData.job_location;
+  if(!loc||(!loc.city&&!loc.country)){mapDiv.innerHTML='<div class="map-ph">📍 Location not found in JD</div>';return;}
+  if(loc.city&&loc.city.toLowerCase()==='remote'){mapDiv.innerHTML='<div class="map-ph" style="color:var(--green)">🌐 Remote — no physical location</div>';return;}
+  google.script.run
+    .withSuccessHandler(function(resultStr){
+      try{var geo=JSON.parse(resultStr);
+        if(!geo.lat||!geo.lng){mapDiv.innerHTML='<div class="map-ph">📍 Could not locate: '+esc((loc.city||'')+(loc.country?', '+loc.country:''))+'</div>';return;}
+        initAndRenderMap(geo,loc);
+      }catch(e){mapDiv.innerHTML='<div class="map-ph cd">Map error</div>';}
+    }).withFailureHandler(function(){mapDiv.innerHTML='<div class="map-ph cd">Geocoding failed</div>';})
+    .geocodeLocation(loc.city,loc.country);
+}
+function initAndRenderMap(geo,loc){
+  var container=document.getElementById('leaflet-map');container.innerHTML='';
+  if(leafletMap){leafletMap.remove();leafletMap=null;leafletMarker=null;}
+  leafletMap=L.map(container).setView([geo.lat,geo.lng],10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>',maxZoom:18,subdomains:'abcd'}).addTo(leafletMap);
+  var icon=L.divIcon({html:'<div style="background:var(--accent);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px #4f8ef740"></div>',className:'',iconSize:[14,14],iconAnchor:[7,7]});
+  leafletMarker=L.marker([geo.lat,geo.lng],{icon:icon}).addTo(leafletMap).bindPopup('<strong>'+(loc.city||'')+'</strong>'+(loc.country?'<br>'+loc.country:'')).openPopup();
+  setTimeout(function(){if(leafletMap)leafletMap.invalidateSize();},200);
 }
 
-function showAMsg(text, type) {
-  var out = document.getElementById('a-output');
-  out.innerText = text;
-  out.className = 'out-msg ' + (type === 'ok' || type === 'success' ? 'out-ok' : 'out-err');
-  out.style.display = 'block';
+function setBusy(busy,msg,sub){
+  document.getElementById('a-loader').style.display=busy?'block':'none';
+  if(busy){document.getElementById('al-text').innerText=msg||'Working…';document.getElementById('al-sub').innerText=sub||'';}
+  document.getElementById('run-smm-btn').disabled=busy;document.getElementById('reg-btn').disabled=busy;
 }
-
-function scoreColor(s) {
-  if (s >= 36) return '#34d399';
-  if (s >= 30) return '#4f8ef7';
-  if (s >= 21) return '#f59e0b';
-  return '#f87171';
-}
-
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function showAMsg(text,type){var out=document.getElementById('a-output');out.innerText=text;out.className='out-msg '+(type==='ok'||type==='success'?'out-ok':'out-err');out.style.display='block';}
+function scoreColor(s){if(s>=36)return '#34d399';if(s>=30)return '#4f8ef7';if(s>=21)return '#f59e0b';return '#f87171';}
+function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 </body>
 </html>

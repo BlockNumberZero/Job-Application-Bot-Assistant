@@ -82,7 +82,7 @@ function getSmmCacheKey(jdText, cvType, cvText) {
                 jdText.replace(/\s+/g, ' ').substring(0, 3000) + '|' +
                 (cvText || '').replace(/\s+/g, ' ').substring(0, 500);
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, input);
-  return 'smm_' + digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+  return 'smm2_' + digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
 }
 
 // Central helper: replaces any "remote" or "home office" variant with "Sassnitz"
@@ -166,6 +166,7 @@ function onOpen() {
     .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
     .addSeparator()
     .addItem('🔍 Audit Cache Quality',                  'auditCacheQuality')
+       .addItem('🎨 Format Job Cache Colors',              'applyJobCacheFormatting')
     .addToUi();
  
   checkCombinedOpenNotifications();
@@ -204,11 +205,13 @@ function refreshAllData() {
   const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
   try {
     updateSankeyData();
-    updateGeoData();
-    updateInterviewGeoData();
-    ui.alert('Success: Dashboard data updated.');
+       updateGeoData();
+       updateInterviewGeoData();
+       updateWeeklyData();
+       if (ui) ui.alert('Success: Dashboard data updated (including weekly trend).');
   } catch (e) {
-    ui.alert('Error updating data: ' + e.toString());
+    Logger.log('refreshAllData error: ' + e.toString());
+    if (ui) ui.alert('Error updating data: ' + e.toString());
   }
 }
 
@@ -241,7 +244,9 @@ function analyzeSkillsMatch(jdInput, cvType, runStart, timeBudgetMs) {
     }
 
     const templateText = DocumentApp.openById(templateDocId).getBody().getText();
-    const cleanedJD = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
+    const cleanedJD = focusJdContent(
+         jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+       ).substring(0, 6000);
 
 // Guard: JD too short for meaningful SMM analysis
 if (cleanedJD.length < 300) {
@@ -318,8 +323,12 @@ TASK:
 4. Classify JD importance: "Crucial" = role cannot be done without it. "Necessary" = strongly preferred. "Optional" = mentioned once or as a plus.
 5. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
 6. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
-
-SCORING RULES:
+7. Job location: extract the city and country where this role is physically based.
+    - Remote only, no office mentioned → { "city": "Remote", "country": null }
+    - City unclear but country stated  → { "city": null, "country": "Germany" }
+    - Completely unknown               → { "city": null, "country": null }
+   
+   SCORING RULES:
 - Scores are based ONLY on what is written in the CV — not on assumptions about the candidate.
 - Do NOT give partial credit for related skills. Score the specific skill requested.
 - The sum of all 8 scores is the total_score (max 40).
@@ -346,10 +355,14 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
   "total_score": 0,
   "match_level": "M0",
   "language_note": {
-    "text": "German C2 (native) required — candidate holds C1, requirement not met.",
-    "status": "unmet"
-  }
-}`;
+       "text": "German C2 (native) required — candidate holds C1, requirement not met.",
+       "status": "unmet"
+     },
+     "job_location": {
+       "city": "Berlin",
+       "country": "Germany"
+     }
+   }`;
 
     const url = "https://api.mistral.ai/v1/chat/completions";
     const options = {
@@ -413,7 +426,7 @@ if (responseCode !== 200) {
     parsed.language_note = { text: 'Language requirement not analyzed.', status: 'none' };
   }
   if (!parsed.language_note.text)   parsed.language_note.text   = 'No language data.';
-  if (!parsed.language_note.status) parsed.language_note.status = 'none';
+  if (!parsed.job_location || typeof parsed.job_location !== 'object') parsed.job_location = { city: null, country: null };
   // recalculate totals
   if (parsed.skills && parsed.skills.length > 0) {
     parsed.total_score = parsed.skills.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
@@ -435,7 +448,7 @@ const parsed = repairAndParseSmm(content);
       parsed.language_note = { text: 'Language requirement not analyzed.', status: 'none' };
     }
     if (!parsed.language_note.text)   parsed.language_note.text   = 'No language data.';
-    if (!parsed.language_note.status) parsed.language_note.status = 'none';
+    if (!parsed.job_location || typeof parsed.job_location !== 'object') parsed.job_location = { city: null, country: null };
  
     // Server-side validation: recalculate total and match level to prevent AI drift
     if (parsed.skills && parsed.skills.length > 0) {
@@ -460,8 +473,9 @@ return resultStr;
 }
 
 function clearSmmCache() {
-  CacheService.getScriptCache().removeAll();
-  Logger.log('SMM cache cleared. Next analysis will call Mistral fresh.');
+  // GAS ScriptCache does not support listing or bulk-clearing all keys.
+  // Cache entries expire automatically after 12 hours — no manual clear needed.
+  Logger.log('SMM cache expires automatically after 12h. No action required.');
 }
 
 function getPhase2Status() {
@@ -475,7 +489,11 @@ function getPhase2Status() {
       props.deleteProperty('PHASE2_STATUS');
       return { running: false };
     }
-    return status;
+    // Add ETA: ~45 seconds average per SMM job
+    const AVG_SMM_SECONDS = 45;
+    const pending          = status.pending || 0;
+    const etaMinutes       = Math.max(1, Math.ceil((pending * AVG_SMM_SECONDS) / 60));
+    return { ...status, etaMinutes };
   } catch(e) {
     return { running: false };
   }
@@ -2394,9 +2412,10 @@ function processRejectionEmails() {
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
     const SKIP_REJECTION_SHEETS = new Set([
-        "Sankey_Data","Geo_Data","SMM_Raw_Data","Interview_Geo_Data",
-        "Job_Search_Cache","Pending_SMM","Alert_Results","M2_Notifications"
-      ]);
+           "Sankey_Data","Geo_Data","SMM_Raw_Data","Interview_Geo_Data",
+           "Job_Search_Cache","Pending_SMM","Alert_Results","M2_Notifications",
+           "Weekly_Data"
+         ]);
       if (!SKIP_REJECTION_SHEETS.has(sheetName) && /\d{4}/.test(sheetName)) {
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
@@ -5874,4 +5893,386 @@ function auditCacheQuality() {
 
   if (ui) ui.alert('⚠️ Cache Quality Audit — ' + flagged.length + ' Suspicious Entry(ies)', message, ui.ButtonSet.OK);
   Logger.log('Cache quality audit: ' + flagged.length + ' suspicious entries flagged.');
+}
+
+/* ============================================================
+   WEB APP — 3 NEW FUNCTIONS FOR Code.js
+   
+   WHERE TO PASTE: Open Code.js in Cloud Shell Editor.
+   Scroll to the very bottom of the file.
+   Paste everything below this comment block at the end.
+   ============================================================ */
+
+
+/**
+ * Serves the JABA Web App when the URL is opened in a browser.
+ * This is the "front door" for the Web App.
+ * The sidebar (showSidebar) continues to work independently.
+ */
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('JABA')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+
+/**
+ * Returns ALL Job_Search_Cache rows where Review_Status = 'fit',
+ * sorted M4 → M3 → M2, then by score descending within each level.
+ * Called by the Queue tab in Index.html on page load and after refresh.
+ */
+function getAllFitJobs() {
+  try {
+    const sheet = getOrCreateJobCacheSheet();
+    if (sheet.getLastRow() < 2) return JSON.stringify([]);
+
+    const data    = sheet.getDataRange().getValues();
+    const fitJobs = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+
+      // Column 11 (index 10) = Review_Status — filter for 'fit' only
+      if ((row[10] || '').toString().trim() !== 'fit') continue;
+
+      const matchLevel = (row[5] || '').toString().trim();
+      const levelNum   = parseInt(matchLevel.replace(/\D/g, '')) || 0;
+
+      fitJobs.push({
+        rowIndex:    i + 1,                             // 1-based sheet row number
+        company:     (row[1]  || '').toString().trim(),  // col 2: Company
+        title:       (row[2]  || '').toString().trim(),  // col 3: Job_Title
+        url:         (row[3]  || '').toString().trim(),  // col 4: URL
+        cvType:      (row[4]  || '').toString().trim(),  // col 5: CV_Type
+        matchLevel,                                      // col 6: Match_Level
+        levelNum,
+        score:       Number(row[6])  || 0,              // col 7: Score
+        fetchSource: (row[7]  || '').toString().trim(),  // col 8: Fetch_Source
+        fetchedUrl:  (row[8]  || '').toString().trim(),  // col 9: Fetched_URL
+        source:      (row[9]  || '').toString().trim(),  // col 10: Source
+        jdText:      (row[11] || '').toString()          // col 12: JD_Text
+      });
+    }
+
+    // Sort: highest level first, then highest score within same level
+    fitJobs.sort((a, b) =>
+      b.levelNum !== a.levelNum
+        ? b.levelNum - a.levelNum
+        : b.score - a.score
+    );
+
+    Logger.log(`getAllFitJobs: ${fitJobs.length} fit job(s) returned`);
+    return JSON.stringify(fitJobs);
+
+  } catch (e) {
+    Logger.log(`getAllFitJobs error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+
+
+/**
+ * Marks a single Job_Search_Cache row as 'discarded'.
+ * Called when the user clicks Skip in the Queue tab and selects a reason.
+ * rowIndex : 1-based sheet row number (comes from getAllFitJobs).
+ * reason   : string — logged only, not stored in the sheet.
+ */
+function skipFitJob(rowIndex, reason) {
+  try {
+    const sheet = getOrCreateJobCacheSheet();
+    // Column 11 = Review_Status
+    sheet.getRange(rowIndex, 11).setValue('discarded');
+    SpreadsheetApp.flush();
+    Logger.log(`skipFitJob: row ${rowIndex} → discarded. Reason: ${reason || 'none given'}`);
+    return JSON.stringify({ success: true });
+  } catch (e) {
+    Logger.log(`skipFitJob error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+
+function focusJdContent(text) {
+  if (!text || text.length < 300) return text;
+ 
+  const lower = text.toLowerCase();
+ 
+  // Patterns that mark the TRUE start of job content
+  const jobStartPatterns = [
+    // German
+    'aufgaben', 'deine aufgaben', 'ihre aufgaben', 'zu deinen aufgaben',
+    'was du machst', 'was du tust', 'was du bei uns',
+    'in dieser rolle', 'wir suchen', 'du verantwortest',
+    'stellenbeschreibung', 'über die stelle',
+    'dein profil', 'anforderungen', 'voraussetzungen',
+    'was wir uns wünschen', 'was du mitbringst',
+    // English
+    'responsibilities', 'what you will do', "what you'll do",
+    'about the role', 'about this role', 'the role',
+    'your role', 'in this role', 'job description',
+    'requirements', "what we're looking for", 'who you are',
+    'you will be', 'we are looking for', "we're looking for",
+    'about the job', 'about the position'
+  ];
+ 
+  let bestStart = -1;
+ 
+  for (const pattern of jobStartPatterns) {
+    const idx = lower.indexOf(pattern);
+    // Only trim noise that is between 150 and 3000 chars from the start.
+    // Below 150: probably already at the job start — don't trim.
+    // Above 3000: the "pattern" found is likely inside the job itself — don't trim.
+    if (idx > 150 && idx < 3000) {
+      if (bestStart === -1 || idx < bestStart) {
+        bestStart = idx;
+      }
+    }
+  }
+ 
+  if (bestStart > 150) {
+    // Include 150 chars of context before the pattern (catches section headings)
+    const trimmed = text.substring(Math.max(0, bestStart - 150));
+    Logger.log(`focusJdContent: trimmed ${bestStart - 150} chars of leading noise`);
+    return trimmed;
+  }
+ 
+  return text;
+}
+ 
+ 
+/**
+ * Geocodes a city + country pair via Nominatim (OpenStreetMap).
+ * Called from the sidebar/web app when the user switches to the Map chart view.
+ * Returns JSON string: { lat, lng, display } or { lat: null, lng: null }.
+ * Note: Nominatim requires a proper User-Agent — never call it client-side.
+ */
+function geocodeLocation(city, country) {
+  try {
+    if (!city && !country) return JSON.stringify({ lat: null, lng: null });
+    if ((city || '').toLowerCase() === 'remote') {
+      return JSON.stringify({ lat: null, lng: null, isRemote: true });
+    }
+ 
+    const query  = [city, country].filter(Boolean).join(', ');
+    const url    = 'https://nominatim.openstreetmap.org/search?q=' +
+                   encodeURIComponent(query) + '&format=json&limit=1';
+ 
+    const res = UrlFetchApp.fetch(url, {
+      headers: {
+        'User-Agent':      'JABA-JobSearch/1.0 (personal-job-application-assistant)',
+        'Accept-Language': 'en'
+      },
+      muteHttpExceptions: true
+    });
+ 
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`geocodeLocation HTTP ${res.getResponseCode()} for "${query}"`);
+      return JSON.stringify({ lat: null, lng: null });
+    }
+ 
+    const results = JSON.parse(res.getContentText());
+    if (!results || results.length === 0) {
+      Logger.log(`geocodeLocation: no results for "${query}"`);
+      return JSON.stringify({ lat: null, lng: null });
+    }
+ 
+    const r = results[0];
+    Logger.log(`geocodeLocation OK: "${query}" → ${r.lat}, ${r.lon}`);
+    return JSON.stringify({
+      lat:     parseFloat(r.lat),
+      lng:     parseFloat(r.lon),
+      display: r.display_name.split(',').slice(0, 2).join(',').trim()
+    });
+ 
+  } catch (e) {
+    Logger.log(`geocodeLocation error: ${e.message}`);
+    return JSON.stringify({ lat: null, lng: null });
+  }
+}
+ 
+ 
+/**
+ * Returns live stats for the sidebar/web app stats strip:
+ * - applied : total application rows across all monthly sheets
+ * - inReview: 'in process' + 'fit' rows in Job_Search_Cache
+ * - fit     : 'fit' rows in Job_Search_Cache
+ */
+function getQueueStats() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const skipSheets = new Set([
+      'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
+      'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
+      'Weekly_Data'
+    ]);
+ 
+    // Count total applied rows across all monthly sheets
+    let applied = 0;
+    ss.getSheets().forEach(function(sheet) {
+      const name = sheet.getName();
+      if (skipSheets.has(name) || !/[A-Za-z]+ \d{4}/.test(name)) return;
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][1]) applied++; // col B = Company
+      }
+    });
+ 
+    // Count cache statuses
+    let inReview = 0;
+    let fit      = 0;
+    const cacheSheet = ss.getSheetByName('Job_Search_Cache');
+    if (cacheSheet && cacheSheet.getLastRow() > 1) {
+      const statuses = cacheSheet
+        .getRange(2, 11, cacheSheet.getLastRow() - 1, 1)
+        .getValues();
+      statuses.forEach(function(row) {
+        const s = (row[0] || '').toString().trim();
+        if (s === 'fit')        { fit++; inReview++; }
+        if (s === 'in process') { inReview++; }
+      });
+    }
+ 
+    return JSON.stringify({ applied, inReview, fit });
+ 
+  } catch (e) {
+    Logger.log(`getQueueStats error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+ 
+ 
+/**
+ * Applies conditional formatting to Job_Search_Cache based on Review_Status
+ * (column K = col 11). Run once from the menu after deployment.
+ * Colors use JABA's dark theme palette.
+ */
+function applyJobCacheFormatting() {
+  const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+  const sheet = getOrCreateJobCacheSheet();
+ 
+  sheet.clearConditionalFormatRules();
+ 
+  const maxRow  = sheet.getMaxRows();
+  const dataRng = sheet.getRange(2, 1, maxRow - 1, 12);
+ 
+  function rule(value, bg, fg) {
+    return SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=$K2="' + value + '"')
+      .setBackground(bg)
+      .setFontColor(fg)
+      .setRanges([dataRng])
+      .build();
+  }
+ 
+  sheet.setConditionalFormatRules([
+    rule('fit',         '#0d2e1e', '#34d399'),  // green — ready to act on
+    rule('in process',  '#0f1f3a', '#4f8ef7'),  // blue  — scored, under review
+    rule('registered',  '#0a1f12', '#22c55e'),  // bright green — applied
+    rule('discarded',   '#1a1a1a', '#6b7280'),  // gray  — skipped
+    rule('suspicious',  '#2d1f0a', '#f59e0b'),  // amber — needs re-check
+    rule('auto',        '#141414', '#4b5563'),  // very muted — M0, auto-dismissed
+  ]);
+ 
+  SpreadsheetApp.flush();
+  Logger.log('applyJobCacheFormatting: conditional formatting applied.');
+ 
+  if (ui) ui.alert(
+    '🎨 Job Cache Color Coding Applied',
+    '🟢 fit         — green\n' +
+    '🔵 in process  — blue\n' +
+    '✅ registered  — bright green\n' +
+    '⚫ discarded   — dark gray\n' +
+    '🟡 suspicious  — amber\n' +
+    '⬛ auto        — very muted\n\n' +
+    'Run again anytime to refresh.',
+    ui.ButtonSet.OK
+  );
+}
+ 
+ 
+/**
+ * Builds a Weekly_Data sheet with application counts per ISO week.
+ * Called by refreshAllData() and can be triggered manually from the menu.
+ * Feeds the weekly trend chart in Looker Studio.
+ */
+function updateWeeklyData() {
+  const ss         = SpreadsheetApp.openById(SpreadsheetApp.getActiveSpreadsheet().getId());
+  const sheets     = ss.getSheets();
+  const weekCounts = {};
+ 
+  const skipSheets = new Set([
+    'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
+    'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
+    'Weekly_Data'
+  ]);
+ 
+  sheets.forEach(function(sheet) {
+    const sheetName = sheet.getName().replace(/\./g, '');
+    if (skipSheets.has(sheetName) || !/[A-Za-z]+ \d{4}/.test(sheetName)) return;
+ 
+    const dataRange = sheet.getDataRange();
+    if (dataRange.getNumRows() < 2) return;
+    const data = dataRange.getValues();
+ 
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[1]) continue;  // empty company = skip
+ 
+      // Column G (index 6) = Application Date (dd.MM.yyyy or Date object)
+      const rawDate = row[6];
+      let dateObj;
+ 
+      if (rawDate instanceof Date && !isNaN(rawDate)) {
+        dateObj = rawDate;
+      } else if (rawDate) {
+        const parts = rawDate.toString().split('.');
+        if (parts.length === 3) {
+          dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+ 
+      if (isNaN(dateObj)) continue;
+ 
+      // ISO week number
+      const year        = dateObj.getFullYear();
+      const startOfYear = new Date(year, 0, 1);
+      const weekNum     = Math.ceil(
+        ((dateObj - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7
+      );
+      const weekLabel   = `W${String(weekNum).padStart(2, '0')} ${year}`;
+ 
+      if (!weekCounts[weekLabel]) {
+        weekCounts[weekLabel] = { year, weekNum, count: 0 };
+      }
+      weekCounts[weekLabel].count++;
+    }
+  });
+ 
+  // Sort chronologically
+  const sorted = Object.keys(weekCounts).sort(function(a, b) {
+    const wa = weekCounts[a], wb = weekCounts[b];
+    return wa.year !== wb.year ? wa.year - wb.year : wa.weekNum - wb.weekNum;
+  });
+ 
+  let weeklySheet = ss.getSheetByName('Weekly_Data');
+  if (!weeklySheet) {
+    weeklySheet = ss.insertSheet('Weekly_Data');
+  } else {
+    weeklySheet.clearContents();
+    weeklySheet.clearFormats();
+  }
+ 
+  const rows    = sorted.map(function(key) {
+    const d = weekCounts[key];
+    return [String(d.year), String(d.weekNum), key, d.count];
+  });
+  const allRows = [['Year', 'Week_Num', 'Week_Label', 'Applications'], ...rows];
+  const range   = weeklySheet.getRange(1, 1, allRows.length, 4);
+  range.setNumberFormat('@STRING@');  // Prevent Looker Studio date conversion
+  range.setValues(allRows);
+ 
+  Logger.log(`updateWeeklyData: ${rows.length} week(s) written.`);
 }

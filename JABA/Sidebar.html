@@ -2,7 +2,9 @@
 <html>
   <head>
     <base target="_top">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
       * { box-sizing: border-box; }
       body {
@@ -13,7 +15,28 @@
         font-size: 13px;
         margin: 0;
       }
-      h3 { color: #4285f4; margin: 0 0 12px 0; font-size: 15px; }
+      h3 { color: #4285f4; margin: 0 0 10px 0; font-size: 15px; }
+
+      /* ── Stats Strip ── */
+      .stats-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .stat-box {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 8px 6px;
+        text-align: center;
+      }
+      .stat-num { font-size: 18px; font-weight: 700; line-height: 1; margin-bottom: 2px; }
+      .stat-lbl { font-size: 9px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.4px; }
+      .sn-blue   { color: #4285f4; }
+      .sn-warn   { color: #f4b400; }
+      .sn-green  { color: #34a853; }
+
       label {
         display: block;
         margin: 12px 0 4px;
@@ -50,11 +73,7 @@
         justify-content: space-between;
         gap: 8px;
       }
-      #fit-count-badge {
-        font-size: 13px;
-        font-weight: 700;
-        color: #3c4043;
-      }
+      #fit-count-badge { font-size: 13px; font-weight: 700; color: #3c4043; }
       #loadFitBtn {
         padding: 7px 12px;
         border-radius: 6px;
@@ -71,11 +90,7 @@
       #loadFitBtn:disabled { background-color: #ccc; cursor: not-allowed; }
 
       /* ── Fit Job Preview ── */
-      #fit-job-preview {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid #f1f3f4;
-      }
+      #fit-job-preview { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f3f4; }
       #fit-job-label  { font-size: 13px; font-weight: 700; color: #202124; margin-bottom: 3px; }
       #fit-job-source { font-size: 11px; color: #9aa0a6; margin-bottom: 8px; }
       #similarity-badge {
@@ -156,12 +171,9 @@
         padding: 4px 12px; border-radius: 20px; background-color: #ccc;
         transition: background-color 0.4s; letter-spacing: 0.5px;
       }
-      #score-label-text {
-        font-size: 11px; color: #9aa0a6;
-        text-transform: uppercase; letter-spacing: 0.5px;
-      }
+      #score-label-text { font-size: 11px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; }
 
-      /* ── Language Requirement Pill ── */
+      /* ── Language Pill ── */
       #language-pill {
         display: none;
         align-items: center;
@@ -174,7 +186,31 @@
         line-height: 1.4;
       }
 
-      /* ── Radar Container ── */
+      /* ── Chart toggle bar ── */
+      #chart-toggle-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .imp-legend { display: flex; gap: 10px; font-size: 11px; color: #9aa0a6; }
+      .chart-type-btns { display: flex; gap: 3px; }
+      .ctype-btn {
+        padding: 3px 8px;
+        border-radius: 5px;
+        border: 1px solid #dadce0;
+        background: white;
+        color: #5f6368;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .ctype-btn:hover  { border-color: #9aa0a6; color: #3c4043; }
+      .ctype-btn.active { border-color: #4285f4; background: #e8f0fe; color: #1a73e8; }
+
+      /* ── Radar / Chart Container ── */
       #radar-container {
         background: white;
         border-radius: 8px;
@@ -184,33 +220,45 @@
         display: flex;
         justify-content: center;
       }
+      #radar-container.bar-mode { padding: 12px 10px 10px; height: 320px; }
       #radarChart { width: 100% !important; max-width: 660px; max-height: 520px; }
 
-      /* ── CV Type Indicator ── */
-      #cv-type-indicator {
-        font-size: 11px; color: #5f6368;
-        text-align: center; margin-bottom: 6px; font-style: italic;
+      /* ── Map Container ── */
+      #map-container {
+        display: none;
+        height: 260px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 10px;
+        position: relative;
       }
+      #leaflet-map { height: 100%; width: 100%; }
+      .map-ph {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        color: #9aa0a6;
+        font-size: 12px;
+        font-style: italic;
+      }
+
+      /* ── CV Type Indicator ── */
+      #cv-type-indicator { font-size: 11px; color: #5f6368; text-align: center; margin-bottom: 6px; font-style: italic; }
 
       /* ── Gap Tips ── */
       #gap-tips-section {
         background: white; border-radius: 8px;
         border: 1px solid #e0e0e0; padding: 10px 12px; margin-bottom: 10px;
       }
-      #gap-tips-title {
-        font-size: 12px; font-weight: 700; color: #3c4043;
-        margin: 0 0 8px; display: flex; align-items: center; gap: 5px;
-      }
-      .gap-tip-item {
-        font-size: 12px; color: #5f6368; padding: 5px 0;
-        border-bottom: 1px solid #f1f3f4; line-height: 1.4;
-      }
+      #gap-tips-title { font-size: 12px; font-weight: 700; color: #3c4043; margin: 0 0 8px; display: flex; align-items: center; gap: 5px; }
+      .gap-tip-item { font-size: 12px; color: #5f6368; padding: 5px 0; border-bottom: 1px solid #f1f3f4; line-height: 1.4; }
       .gap-tip-item:last-child { border-bottom: none; }
       .gap-tip-skill { font-weight: 700; color: #3c4043; }
       .gap-tip-score { color: #9aa0a6; }
-      .gap-tip-importance {
-        font-size: 10px; font-weight: 700; border-radius: 3px; padding: 1px 5px; margin-left: 3px;
-      }
+      .gap-tip-importance { font-size: 10px; font-weight: 700; border-radius: 3px; padding: 1px 5px; margin-left: 3px; }
       .imp-crucial   { background: #fce8e6; color: #c5221f; }
       .imp-necessary { background: #fef7e0; color: #c77c00; }
       .imp-optional  { background: #e8f0fe; color: #1967d2; }
@@ -242,7 +290,7 @@
       .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb !important; }
       .error   { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb !important; }
 
-      /* ── Phase 2 Live Tracker ── */
+      /* ── Phase 2 Banner ── */
       #phase2-banner {
         display: none; align-items: center; gap: 8px;
         background: #fff8e1; border: 1px solid #ffc107;
@@ -257,26 +305,29 @@
       @keyframes p2spin { to { transform: rotate(360deg); } }
       #phase2-checked { margin-left: auto; font-size: 10px; color: #9aa0a6; white-space: nowrap; }
 
-      #chart-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-      #chartToggleBtn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #dadce0;background:white;color:#5f6368;cursor:pointer;font-weight:600}
-      #chartToggleBtn:hover{background:#f1f3f4}
-      .imp-legend{display:flex;gap:10px;font-size:11px;color:#9aa0a6}
-      #radar-container.bar-mode{padding:12px 10px 10px;height:320px}
-
+      /* ── Leaflet dark popup tweaks ── */
+      .leaflet-control-attribution { font-size: 9px !important; }
     </style>
   </head>
 
   <body>
     <h3>🤖 AI Recruitment Suite</h3>
 
-    <!-- ── Phase 2 Live Tracker ── -->
+    <!-- Stats Strip -->
+    <div class="stats-strip">
+      <div class="stat-box"><div class="stat-num sn-blue" id="ss-applied">—</div><div class="stat-lbl">Applied</div></div>
+      <div class="stat-box"><div class="stat-num sn-warn"  id="ss-inproc">—</div><div class="stat-lbl">In Review</div></div>
+      <div class="stat-box"><div class="stat-num sn-green" id="ss-fit">—</div><div class="stat-lbl">Fit Jobs</div></div>
+    </div>
+
+    <!-- Phase 2 Banner -->
     <div id="phase2-banner">
       <div id="phase2-spinner"></div>
       <span id="phase2-text">Phase 2 running…</span>
       <span id="phase2-checked"></span>
     </div>
 
-    <!-- ── FIT JOBS PANEL ── -->
+    <!-- Fit Jobs Panel -->
     <div id="fit-panel">
       <div id="fit-panel-header">
         <span id="fit-count-badge">📋 Loading…</span>
@@ -289,7 +340,7 @@
       </div>
     </div>
 
-    <!-- ── INPUT SECTION ── -->
+    <!-- Input Section -->
     <label for="jdInput">Job Description / URL:</label>
     <textarea id="jdInput" placeholder="Paste a job description or URL — or use Load Next Fit Job above…"></textarea>
 
@@ -300,14 +351,13 @@
       <button class="smm-btn" onclick="runSmm('Web3 Marketing Manager')">🔗<br>Web3</button>
     </div>
 
-    <!-- ── LOADER ── -->
+    <!-- Loader -->
     <div id="loader">Analyzing with Mistral... 🤖</div>
 
-    <!-- ── SMM RESULTS ── -->
+    <!-- SMM Results -->
     <div id="smm-section" style="display:none;">
       <hr class="section-divider">
 
-      <!-- Score Badge -->
       <div id="score-badge">
         <div>
           <div id="score-label-text">Skills Match Score</div>
@@ -316,25 +366,31 @@
         <div id="match-level-pill">M0</div>
       </div>
 
-      <!-- Language Requirement Pill -->
-      <div id="language-pill">
-        <span id="language-pill-text"></span>
-      </div>
-
-      <!-- CV Type Indicator -->
+      <div id="language-pill"><span id="language-pill-text"></span></div>
       <div id="cv-type-indicator"></div>
 
-      <!-- Chart toggle + importance legend -->
+      <!-- Chart toggle -->
       <div id="chart-toggle-bar">
         <div class="imp-legend">
           <span style="color:#ea4335;">● Crucial</span>
           <span style="color:#f4b400;">● Necessary</span>
           <span style="color:#4285f4;">● Optional</span>
         </div>
-        <button id="chartToggleBtn" onclick="toggleChartType()">🕸️ Radar view</button>
+        <div class="chart-type-btns">
+          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">📊</button>
+          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">🕸️</button>
+          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">🗺️</button>
+        </div>
       </div>
+
+      <!-- Chart container -->
       <div id="radar-container" class="bar-mode">
         <canvas id="radarChart"></canvas>
+      </div>
+
+      <!-- Map container -->
+      <div id="map-container">
+        <div id="leaflet-map"></div>
       </div>
 
       <!-- Gap Tips -->
@@ -350,167 +406,68 @@
       </div>
     </div>
 
-    <!-- ── SCAN REJECTIONS ── -->
+    <!-- Scan Rejections -->
     <button id="rejectionBtn" onclick="scanRejections()">Scan Rejections 🤖</button>
 
-    <!-- ── OUTPUT ── -->
+    <!-- Output -->
     <div id="output"></div>
 
     <script>
       /* ── State ── */
       var currentSmmData    = null;
       var currentCvType     = null;
-      var radarChart        = null;
       var currentChartType  = 'bar';
+      var radarChart        = null;
+      var leafletMap        = null;
+      var leafletMarker     = null;
+      var phase2PollTimer   = null;
+      var currentFitJobUrl  = null;
+      var currentFitJobData = null;
+      var loadedRowIndices  = [];
 
-      function getImportanceColor(imp) {
+      /* ── Helpers ── */
+      function getImpColor(imp) {
         if (!imp) return '#4285f4';
         var l = imp.toLowerCase();
         if (l === 'crucial')   return '#ea4335';
         if (l === 'necessary') return '#f4b400';
         return '#4285f4';
       }
-
-      function toggleChartType() {
-        currentChartType = currentChartType === 'bar' ? 'radar' : 'bar';
-        var btn = document.getElementById('chartToggleBtn');
-        var c   = document.getElementById('radar-container');
-        if (currentChartType === 'bar') {
-          btn.innerText = '🕸️ Radar view';
-          c.classList.add('bar-mode');
-        } else {
-          btn.innerText = '📊 Bar view';
-          c.classList.remove('bar-mode');
-        }
-        if (currentSmmData) renderChartOnly(currentSmmData, currentCvType);
+      function getImpClass(imp) {
+        if (!imp) return '';
+        var l = imp.toLowerCase();
+        if (l === 'crucial')   return 'imp-crucial';
+        if (l === 'necessary') return 'imp-necessary';
+        return 'imp-optional';
+      }
+      function getScoreColor(score) {
+        if (score >= 36) return '#34a853';
+        if (score >= 30) return '#4fc3f7';
+        if (score >= 21) return '#f4b400';
+        if (score >= 11) return '#ff6d00';
+        return '#ea4335';
+      }
+      function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
 
-      function renderChartOnly(data, cvType) {
-        var skills = data.skills || [];
-        var scores = skills.map(function(s) { return s.score || 0; });
-        var labels = skills.map(function(s) { return s.name; });
-        var color  = getScoreColor(data.total_score || 0);
-        var ic     = skills.map(function(s) { return getImportanceColor(s.importance); });
-        var c      = document.getElementById('radar-container');
-
-        if (radarChart) { radarChart.destroy(); radarChart = null; }
-
-        setTimeout(function() {
-          var ctx = document.getElementById('radarChart').getContext('2d');
-
-          if (currentChartType === 'bar') {
-            c.classList.add('bar-mode');
-            radarChart = new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: labels,
-                datasets: [{
-                  data: scores,
-                  backgroundColor: ic.map(function(x) { return x + 'cc'; }),
-                  borderColor: ic,
-                  borderWidth: 2,
-                  borderRadius: 4,
-                  borderSkipped: false
-                }]
-              },
-              options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  x: {
-                    min: 0, max: 5,
-                    ticks: { stepSize: 1, font: { size: 11 }, color: '#9aa0a6' },
-                    grid: { color: '#f1f3f4' }
-                  },
-                  y: {
-                    ticks: { font: { size: 12 }, color: '#3c4043' },
-                    grid: { display: false }
-                  }
-                },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(ctx) {
-                        var s = skills[ctx.dataIndex];
-                        return ' ' + ctx.raw + '/5  ·  ' + (s ? s.importance : '');
-                      }
-                    }
-                  }
-                },
-                layout: { padding: { right: 8 } }
-              }
-            });
-
-          } else {
-            c.classList.remove('bar-mode');
-            radarChart = new Chart(ctx, {
-              type: 'radar',
-              data: {
-                labels: labels,
-                datasets: [{
-                  label: 'Match Score',
-                  data: scores,
-                  borderColor: color,
-                  backgroundColor: color + '2e',
-                  borderWidth: 2.5,
-                  pointBackgroundColor: ic,
-                  pointBorderColor: '#fff',
-                  pointBorderWidth: 2,
-                  pointRadius: 7,
-                  pointHoverRadius: 9
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                  r: {
-                    min: 0, max: 5,
-                    ticks: { stepSize: 1, font: { size: 9 }, color: '#9aa0a6', backdropColor: 'transparent' },
-                    grid: { color: '#e0e0e0' },
-                    angleLines: { color: '#e0e0e0' },
-                    pointLabels: {
-                      font: { size: 11, weight: '600' }, color: '#3c4043', padding: 8,
-                      callback: function(label) {
-                        if (label.length <= 16) return label;
-                        var words = label.split(' '), lines = [], cur = '';
-                        words.forEach(function(w) {
-                          if ((cur + ' ' + w).trim().length > 16) {
-                            if (cur) lines.push(cur.trim());
-                            cur = w;
-                          } else { cur = (cur + ' ' + w).trim(); }
-                        });
-                        if (cur) lines.push(cur.trim());
-                        return lines;
-                      }
-                    }
-                  }
-                },
-                layout: { padding: { top: 30, left: 70, right: 70, bottom: 30 } },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(ctx) {
-                        var s = skills[ctx.dataIndex];
-                        return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : '');
-                      }
-                    }
-                  }
-                }
-              }
-            });
-          }
-        }, 80);
+      /* ── Stats ── */
+      function loadSidebarStats() {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            try {
+              var d = JSON.parse(result);
+              if (d.error) return;
+              document.getElementById('ss-applied').innerText = d.applied  || 0;
+              document.getElementById('ss-inproc').innerText  = d.inReview || 0;
+              document.getElementById('ss-fit').innerText     = d.fit      || 0;
+            } catch(e) {}
+          })
+          .withFailureHandler(function() {})
+          .getQueueStats();
       }
-      var phase2PollTimer   = null;
-      var currentFitJobUrl  = null;   // set when a fit job is loaded; opened in new tab on SMM click
-      var currentFitJobData = null;   // full fit job object from cache
-      var loadedRowIndices  = [];     // tracks rows loaded this session so Load Next skips them
 
-      /* ── Phase 2 Live Tracker ── */
+      /* ── Phase 2 ── */
       var POLL_IDLE_MS   = 300000;
       var POLL_ACTIVE_MS = 30000;
 
@@ -540,7 +497,8 @@
 
         if (status && status.running) {
           banner.style.display = 'flex';
-          text.innerText = '⚙️ Phase 2 running — ' + (status.pending || '?') + ' job(s) in queue. SMM paused.';
+          var eta = status.etaMinutes ? ' · ~' + status.etaMinutes + ' min' : '';
+          text.innerText = '⚙️ Phase 2 running — ' + (status.pending || '?') + ' job(s)' + eta + '. SMM paused.';
           setAllDisabled(true);
         } else {
           banner.style.display = 'none';
@@ -579,59 +537,38 @@
             var result;
             try { result = JSON.parse(resultStr); } catch(e) {
               showOutput('Error loading fit job: ' + e.message, 'error');
-              updateFitJobCount();
-              return;
+              updateFitJobCount(); return;
             }
-
             if (result.error || result.empty) {
               document.getElementById('fit-count-badge').innerText = '📋 No fit jobs pending';
               document.getElementById('fit-job-preview').style.display = 'none';
               document.getElementById('loadFitBtn').disabled = true;
-              currentFitJobUrl  = null;
-              currentFitJobData = null;
-              return;
+              currentFitJobUrl = null; currentFitJobData = null; return;
             }
-
-            // Store state
             currentFitJobUrl  = result.url;
             currentFitJobData = result;
             loadedRowIndices.push(result.rowIndex);
-
-            // Populate textarea
             document.getElementById('jdInput').value = result.jdText || '';
-
-            // Show preview info
             document.getElementById('fit-job-label').innerText =
-              result.company + ' — ' + result.title +
-              '  (' + result.matchLevel + ': ' + result.score + '/40)';
+              result.company + ' — ' + result.title + '  (' + result.matchLevel + ': ' + result.score + '/40)';
             document.getElementById('fit-job-source').innerText =
               '📌 ' + result.source +
               (result.urlMatchesFetched ? ' · URL = source page' : ' · URL ≠ source page (company page fetched)');
             document.getElementById('fit-job-preview').style.display = 'block';
-
-            // Reset similarity badge
             setSimilarityBadge('⏳ Verifying JD…', '#f1f3f4', '#5f6368');
-
-            // Update count badge
             var remaining = Math.max(0, result.fitCount - 1);
             document.getElementById('fit-count-badge').innerText =
               remaining > 0
                 ? '📋 ' + remaining + ' fit job' + (remaining !== 1 ? 's' : '') + ' remaining'
                 : '📋 Last fit job loaded';
             document.getElementById('loadFitBtn').disabled = remaining <= 0;
-
-            // Start similarity check (non-blocking async)
             if (result.fetchedUrl) {
               google.script.run
                 .withSuccessHandler(function(simStr) {
-                  try {
-                    var sim = JSON.parse(simStr);
-                    renderSimilarityBadge(sim, result.urlMatchesFetched);
-                  } catch(e) { setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6'); }
+                  try { var sim = JSON.parse(simStr); renderSimilarityBadge(sim, result.urlMatchesFetched); }
+                  catch(e) { setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6'); }
                 })
-                .withFailureHandler(function() {
-                  setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6');
-                })
+                .withFailureHandler(function() { setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6'); })
                 .checkJdSimilarity(result.fetchedUrl, result.jdText);
             } else {
               setSimilarityBadge('⚪ No source URL', '#f1f3f4', '#9aa0a6');
@@ -646,75 +583,127 @@
 
       function setSimilarityBadge(text, bg, color) {
         var b = document.getElementById('similarity-badge');
-        b.innerText = text;
-        b.style.background = bg;
-        b.style.color = color;
+        b.innerText = text; b.style.background = bg; b.style.color = color;
       }
-
       function renderSimilarityBadge(sim, urlMatchesFetched) {
-        if (!sim.accessible) {
-          setSimilarityBadge('⚪ N/A — source not accessible', '#f1f3f4', '#9aa0a6');
-          return;
-        }
-        var s      = sim.score;
+        if (!sim.accessible) { setSimilarityBadge('⚪ N/A — source not accessible', '#f1f3f4', '#9aa0a6'); return; }
+        var s = sim.score;
         var suffix = urlMatchesFetched ? 'source verified' : 'company page verified';
-        if      (s >= 90) setSimilarityBadge('🟢 ' + s + '% — ' + suffix,       '#e6f4ea', '#1e8e3e');
+        if      (s >= 90) setSimilarityBadge('🟢 ' + s + '% — ' + suffix, '#e6f4ea', '#1e8e3e');
         else if (s >= 70) setSimilarityBadge('🟡 ' + s + '% — minor differences', '#fef7e0', '#c77c00');
-        else              setSimilarityBadge('🔴 ' + s + '% — JD may have changed','#fce8e6', '#c5221f');
+        else              setSimilarityBadge('🔴 ' + s + '% — JD may have changed', '#fce8e6', '#c5221f');
       }
 
-      /* ── Color helpers ── */
-      function getScoreColor(score) {
-        if (score >= 36) return '#34a853';
-        if (score >= 30) return '#4fc3f7';
-        if (score >= 21) return '#f4b400';
-        if (score >= 11) return '#ff6d00';
-        return '#ea4335';
-      }
-      function getImportanceClass(imp) {
-        if (!imp) return '';
-        var l = imp.toLowerCase();
-        if (l === 'crucial')   return 'imp-crucial';
-        if (l === 'necessary') return 'imp-necessary';
-        return 'imp-optional';
-      }
-
-      /* ── Button state helpers ── */
-      function setAllDisabled(disabled) {
-        document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = disabled; });
-        ['rejectionBtn','loadFitBtn','registerBtn','resetBtn'].forEach(function(id) {
-          var el = document.getElementById(id);
-          if (el) el.disabled = disabled;
+      /* ── Chart Toggle ── */
+      function setChartType(type) {
+        currentChartType = type;
+        ['bar','radar','map'].forEach(function(t) {
+          var b = document.getElementById('btn-' + t);
+          if (b) b.classList.toggle('active', t === type);
         });
-      }
-      function restoreButtons() {
-        document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = false; });
-        document.getElementById('rejectionBtn').disabled = false;
-        var regBtn = document.getElementById('registerBtn');
-        if (regBtn) regBtn.disabled = !currentSmmData;
-        // loadFitBtn state is managed by updateFitJobCount
-        updateFitJobCount();
+        var rc = document.getElementById('radar-container');
+        var mc = document.getElementById('map-container');
+        if (type === 'map') {
+          rc.style.display = 'none'; mc.style.display = 'block';
+          renderGeoMap();
+        } else {
+          rc.style.display = 'flex'; mc.style.display = 'none';
+          if (type === 'bar') rc.classList.add('bar-mode'); else rc.classList.remove('bar-mode');
+          if (currentSmmData) renderChartOnly(currentSmmData, currentCvType);
+        }
       }
 
-      /* ── Step 1 — Run SMM Analysis ── */
+      function renderChartOnly(data, cvType) {
+        var skills = data.skills || [];
+        var scores = skills.map(function(s) { return s.score || 0; });
+        var labels = skills.map(function(s) { return s.name; });
+        var color  = getScoreColor(data.total_score || 0);
+        var ic     = skills.map(function(s) { return getImpColor(s.importance); });
+        var c      = document.getElementById('radar-container');
+        if (radarChart) { radarChart.destroy(); radarChart = null; }
+        setTimeout(function() {
+          var ctx = document.getElementById('radarChart').getContext('2d');
+          if (currentChartType === 'bar') {
+            c.classList.add('bar-mode');
+            radarChart = new Chart(ctx, {
+              type: 'bar',
+              data: { labels: labels, datasets: [{ data: scores, backgroundColor: ic.map(function(x) { return x + 'cc'; }), borderColor: ic, borderWidth: 2, borderRadius: 4, borderSkipped: false }] },
+              options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                scales: { x: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 }, color: '#9aa0a6' }, grid: { color: '#f1f3f4' } }, y: { ticks: { font: { size: 12 }, color: '#3c4043' }, grid: { display: false } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.raw + '/5  ·  ' + (s ? s.importance : ''); } } } },
+                layout: { padding: { right: 8 } } }
+            });
+          } else {
+            c.classList.remove('bar-mode');
+            radarChart = new Chart(ctx, {
+              type: 'radar',
+              data: { labels: labels, datasets: [{ label: 'Match Score', data: scores, borderColor: color, backgroundColor: color + '2e', borderWidth: 2.5, pointBackgroundColor: ic, pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 7, pointHoverRadius: 9 }] },
+              options: { responsive: true, maintainAspectRatio: true,
+                scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 9 }, color: '#9aa0a6', backdropColor: 'transparent' }, grid: { color: '#e0e0e0' }, angleLines: { color: '#e0e0e0' },
+                  pointLabels: { font: { size: 11, weight: '600' }, color: '#3c4043', padding: 8,
+                    callback: function(label) {
+                      if (label.length <= 16) return label;
+                      var words = label.split(' '), lines = [], cur = '';
+                      words.forEach(function(w) { if ((cur + ' ' + w).trim().length > 16) { if (cur) lines.push(cur.trim()); cur = w; } else { cur = (cur + ' ' + w).trim(); } });
+                      if (cur) lines.push(cur.trim()); return lines;
+                    } } } },
+                layout: { padding: { top: 30, left: 70, right: 70, bottom: 30 } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : ''); } } } } }
+            });
+          }
+        }, 80);
+      }
+
+      /* ── Geo Map ── */
+      function renderGeoMap() {
+        var mapDiv = document.getElementById('leaflet-map'); if (!mapDiv) return;
+        mapDiv.innerHTML = '<div class="map-ph">📍 Locating job…</div>';
+        var loc = currentSmmData && currentSmmData.job_location;
+        if (!loc || (!loc.city && !loc.country)) { mapDiv.innerHTML = '<div class="map-ph">📍 Location not found in JD</div>'; return; }
+        if (loc.city && loc.city.toLowerCase() === 'remote') { mapDiv.innerHTML = '<div class="map-ph" style="color:#34a853">🌐 Remote — no physical location</div>'; return; }
+        google.script.run
+          .withSuccessHandler(function(resultStr) {
+            try {
+              var geo = JSON.parse(resultStr);
+              if (!geo.lat || !geo.lng) { mapDiv.innerHTML = '<div class="map-ph">📍 Could not locate: ' + escHtml((loc.city || '') + (loc.country ? ', ' + loc.country : '')) + '</div>'; return; }
+              initAndRenderMap(geo, loc);
+            } catch(e) { mapDiv.innerHTML = '<div class="map-ph" style="color:#ea4335">Map error</div>'; }
+          })
+          .withFailureHandler(function() { mapDiv.innerHTML = '<div class="map-ph" style="color:#ea4335">Geocoding failed</div>'; })
+          .geocodeLocation(loc.city, loc.country);
+      }
+
+      function initAndRenderMap(geo, loc) {
+        var container = document.getElementById('leaflet-map');
+        container.innerHTML = '';
+        if (leafletMap) { leafletMap.remove(); leafletMap = null; leafletMarker = null; }
+        leafletMap = L.map(container).setView([geo.lat, geo.lng], 10);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>',
+          maxZoom: 18, subdomains: 'abcd'
+        }).addTo(leafletMap);
+        var icon = L.divIcon({
+          html: '<div style="background:#4285f4;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px #4285f440"></div>',
+          className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+        });
+        leafletMarker = L.marker([geo.lat, geo.lng], { icon: icon })
+          .addTo(leafletMap)
+          .bindPopup('<strong>' + escHtml(loc.city || '') + '</strong>' + (loc.country ? '<br>' + escHtml(loc.country) : ''))
+          .openPopup();
+        setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 200);
+      }
+
+      /* ── SMM ── */
       function runSmm(cvType) {
         var jd = document.getElementById('jdInput').value.trim();
-        if (!jd) {
-          showOutput('Please paste a Job Description or load a fit job first.', 'error');
-          return;
-        }
+        if (!jd) { showOutput('Please paste a Job Description or load a fit job first.', 'error'); return; }
         currentCvType = cvType;
         setAllDisabled(true);
         document.getElementById('smm-section').style.display = 'none';
         document.getElementById('output').style.display = 'none';
         document.getElementById('loader').innerText = 'Analyzing skills with Mistral… 🤖';
         document.getElementById('loader').style.display = 'block';
-
-        // Open the job URL in a new tab if a fit job is loaded
-        if (currentFitJobUrl) {
-          window.open(currentFitJobUrl, '_blank');
-        }
-
+        if (currentFitJobUrl) window.open(currentFitJobUrl, '_blank');
         google.script.run
           .withSuccessHandler(function(result) {
             restoreButtons();
@@ -724,9 +713,7 @@
               if (data.error) { showOutput('SMM Error: ' + data.error, 'error'); return; }
               currentSmmData = data;
               renderSmm(data, cvType);
-            } catch(e) {
-              showOutput('Parse error: ' + e.message, 'error');
-            }
+            } catch(e) { showOutput('Parse error: ' + e.message, 'error'); }
           })
           .withFailureHandler(function(err) {
             restoreButtons();
@@ -736,29 +723,27 @@
           .analyzeSkillsMatch(jd, cvType);
       }
 
-      /* ── Render SMM results ── */
       function renderSmm(data, cvType) {
-        var total      = data.total_score || 0;
+        var total = data.total_score || 0;
         var matchLevel = data.match_level || 'M0';
-        var skills     = data.skills      || [];
-        var color      = getScoreColor(total);
+        var skills = data.skills || [];
+        var color = getScoreColor(total);
 
         document.getElementById('score-main').innerText = total;
         document.getElementById('match-level-pill').innerText = matchLevel;
         document.getElementById('score-badge').style.borderColor = color;
         document.getElementById('match-level-pill').style.backgroundColor = color;
-
         renderLanguagePill(data.language_note);
 
-        var cvLabel = {
-          'DE Web2 Marketing Manager': '🇩🇪 DE Web2',
-          'EN Web2 Marketing Manager': '🇬🇧 EN Web2',
-          'Web3 Marketing Manager':    '🔗 Web3'
-        };
+        var cvLabel = { 'DE Web2 Marketing Manager': '🇩🇪 DE Web2', 'EN Web2 Marketing Manager': '🇬🇧 EN Web2', 'Web3 Marketing Manager': '🔗 Web3' };
         document.getElementById('cv-type-indicator').innerText = 'Profile: ' + (cvLabel[cvType] || cvType);
 
-        var labels = skills.map(function(s) { return s.name; });
-        var scores = skills.map(function(s) { return s.score || 0; });
+        // Reset to bar on new result
+        currentChartType = 'bar';
+        ['bar','radar','map'].forEach(function(t) { var b=document.getElementById('btn-'+t); if(b) b.classList.toggle('active',t==='bar'); });
+        document.getElementById('radar-container').style.display = 'flex';
+        document.getElementById('map-container').style.display = 'none';
+        document.getElementById('radar-container').classList.add('bar-mode');
 
         document.getElementById('smm-section').style.display = 'block';
         renderChartOnly(data, cvType);
@@ -768,11 +753,9 @@
         skills.forEach(function(s) {
           var div = document.createElement('div');
           div.className = 'gap-tip-item';
-          var impClass = getImportanceClass(s.importance);
-          var evText = (s.evidence && s.evidence !== 'Not found in CV')
-          ? '📄 ' + escHtml(s.evidence)
-          : '🚫 Not found in CV';
-        div.innerHTML =
+          var impClass = getImpClass(s.importance);
+          var evText = (s.evidence && s.evidence !== 'Not found in CV') ? '📄 ' + escHtml(s.evidence) : '🚫 Not found in CV';
+          div.innerHTML =
             '<span class="gap-tip-skill">' + escHtml(s.name) + '</span>' +
             ' <span class="gap-tip-score">(' + (s.score || 0) + '/5)</span>' +
             ' <span class="gap-tip-importance ' + impClass + '">' + escHtml(s.importance || '') + '</span>' +
@@ -782,57 +765,41 @@
         });
       }
 
-      /* ── Language Requirement Pill ── */
       function renderLanguagePill(langNote) {
         var pill = document.getElementById('language-pill');
         var text = document.getElementById('language-pill-text');
-
         if (!langNote || !langNote.text) { pill.style.display = 'none'; return; }
-
         var cfg = {
           unmet: { icon: '⚠️ ', bg: '#fce8e6', color: '#c5221f', border: '1px solid #f4c7c3' },
           met:   { icon: '✅ ', bg: '#e6f4ea', color: '#1e8e3e', border: '1px solid #ceead6' },
           other: { icon: 'ℹ️ ', bg: '#fef7e0', color: '#c77c00', border: '1px solid #fde293' },
           none:  { icon: '✅ ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' }
         }[langNote.status] || { icon: '✅ ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' };
-
-        pill.style.display    = 'flex';
-        pill.style.background = cfg.bg;
-        pill.style.color      = cfg.color;
-        pill.style.border     = cfg.border;
-        text.innerText        = cfg.icon + langNote.text;
+        pill.style.display = 'flex'; pill.style.background = cfg.bg; pill.style.color = cfg.color; pill.style.border = cfg.border;
+        text.innerText = cfg.icon + langNote.text;
       }
 
-      /* ── Step 2 — Generate & Register ── */
+      /* ── Register ── */
       function proceedToRegister() {
         var jd = document.getElementById('jdInput').value.trim();
-        if (!jd || !currentSmmData || !currentCvType) {
-          showOutput('Please run an SMM analysis first.', 'error');
-          return;
-        }
+        if (!jd || !currentSmmData || !currentCvType) { showOutput('Please run an SMM analysis first.', 'error'); return; }
         setAllDisabled(true);
         document.getElementById('output').style.display = 'none';
         document.getElementById('loader').innerText = 'Generating cover letter & registering… 🤖';
         document.getElementById('loader').style.display = 'block';
-
         google.script.run
           .withSuccessHandler(function(res) {
             document.getElementById('loader').style.display = 'none';
-            if (res && res.startsWith('Error:')) {
-              restoreButtons();
-              showOutput(res, 'error');
-            } else {
+            if (res && res.startsWith('Error:')) { restoreButtons(); showOutput(res, 'error'); }
+            else {
               showOutput(res, 'success');
-              currentFitJobUrl  = null;
-              currentFitJobData = null;
-              resetAll();
-              updateFitJobCount();
+              currentFitJobUrl = null; currentFitJobData = null;
+              resetAll(); updateFitJobCount(); loadSidebarStats();
             }
           })
           .withFailureHandler(function(err) {
             document.getElementById('loader').style.display = 'none';
-            restoreButtons();
-            showOutput('Error: ' + err.message, 'error');
+            restoreButtons(); showOutput('Error: ' + err.message, 'error');
           })
           .mainJobProcessor(jd, currentCvType, JSON.stringify(currentSmmData));
       }
@@ -844,59 +811,61 @@
         document.getElementById('fit-job-preview').style.display = 'none';
         document.getElementById('language-pill').style.display = 'none';
         if (radarChart) { radarChart.destroy(); radarChart = null; }
-        currentSmmData    = null;
-        currentCvType     = null;
-        currentFitJobUrl  = null;
-        currentFitJobData = null;
-        loadedRowIndices  = [];
-        currentChartType  = 'bar';
-        var btn = document.getElementById('chartToggleBtn');
-        if (btn) btn.innerText = '🕸️ Radar view';
-        var cont = document.getElementById('radar-container');
-        if (cont) cont.classList.add('bar-mode');
+        if (leafletMap) { leafletMap.remove(); leafletMap = null; leafletMarker = null; }
+        document.getElementById('radar-container').style.display = 'flex';
+        document.getElementById('map-container').style.display = 'none';
+        document.getElementById('radar-container').classList.add('bar-mode');
+        currentSmmData = null; currentCvType = null;
+        currentFitJobUrl = null; currentFitJobData = null;
+        loadedRowIndices = []; currentChartType = 'bar';
+        ['bar','radar','map'].forEach(function(t) { var b=document.getElementById('btn-'+t); if(b) b.classList.toggle('active',t==='bar'); });
       }
 
       /* ── Scan Rejections ── */
       function scanRejections() {
         var rejBtn = document.getElementById('rejectionBtn');
-        setAllDisabled(true);
-        rejBtn.innerText = 'Scanning Inbox…';
+        setAllDisabled(true); rejBtn.innerText = 'Scanning Inbox…';
         document.getElementById('output').style.display = 'none';
         document.getElementById('loader').innerText = 'Scanning for rejections… 🤖';
         document.getElementById('loader').style.display = 'block';
-
         google.script.run
           .withSuccessHandler(function(res) {
-            restoreButtons();
-            rejBtn.innerText = 'Scan Rejections 🤖';
+            restoreButtons(); rejBtn.innerText = 'Scan Rejections 🤖';
             document.getElementById('loader').style.display = 'none';
             showOutput(res, 'success');
           })
           .withFailureHandler(function(err) {
-            restoreButtons();
-            rejBtn.innerText = 'Scan Rejections 🤖';
+            restoreButtons(); rejBtn.innerText = 'Scan Rejections 🤖';
             document.getElementById('loader').style.display = 'none';
             showOutput('Error: ' + err.message, 'error');
           })
           .processRejectionEmails();
       }
 
-      /* ── Helpers ── */
-      function showOutput(text, type) {
-        var out = document.getElementById('output');
-        out.innerText = text;
-        out.className = type;
-        out.style.display = 'block';
+      /* ── Button state helpers ── */
+      function setAllDisabled(disabled) {
+        document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = disabled; });
+        ['rejectionBtn','loadFitBtn','registerBtn','resetBtn'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.disabled = disabled;
+        });
       }
-      function escHtml(str) {
-        return String(str)
-          .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-          .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      function restoreButtons() {
+        document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = false; });
+        document.getElementById('rejectionBtn').disabled = false;
+        var regBtn = document.getElementById('registerBtn');
+        if (regBtn) regBtn.disabled = !currentSmmData;
+        updateFitJobCount();
       }
 
-      // Startup
+      function showOutput(text, type) {
+        var out = document.getElementById('output');
+        out.innerText = text; out.className = type; out.style.display = 'block';
+      }
+
+      /* ── Startup ── */
       startPhase2Poll();
       updateFitJobCount();
+      loadSidebarStats();
     </script>
   </body>
 </html>
