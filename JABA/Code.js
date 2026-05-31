@@ -6045,33 +6045,44 @@ function focusJdContent(text) {
  * Returns JSON string: { lat, lng, display } or { lat: null, lng: null }.
  * Note: Nominatim requires a proper User-Agent — never call it client-side.
  */
+/**
+ * Geocodes a city + country pair.
+ * Tier 1: hardcoded lookup table (instant, zero API calls)
+ * Tier 2: Open-Meteo Geocoding API (free, no key, works from GCP IPs)
+ * Results cached in Script Properties for instant repeat lookups.
+ * Same return format: JSON string { lat, lng, display } or { lat: null, lng: null }
+ */
 function geocodeLocation(city, country) {
   if (!city && !country) return JSON.stringify({ lat: null, lng: null });
-  if ((city || '').toLowerCase().trim() === 'remote') {
+  const cityClean = (city || '').trim();
+  if (/^(remote|homeoffice|home\s*office|home-office)$/i.test(cityClean)) {
     return JSON.stringify({ lat: null, lng: null, isRemote: true });
   }
 
-  // Build a clean cache key: GEO_ + sanitized city name
-  // e.g. "Stuttgart" → "GEO_stuttgart", "München" → "GEO_muenchen"
-  const cacheKey = 'GEO_' + (city || '')
-    .toLowerCase().trim()
+  // ── Build a stable cache key ──────────────────────────────────────────────
+  const cacheKey = 'GEO2_' + cityClean
+    .toLowerCase()
     .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
     .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
 
   const props = PropertiesService.getScriptProperties();
 
-  // ── Tier 1: Script Properties cache (instant, grows automatically) ──
+  // ── Check cache first (both success and known-failures) ──────────────────
   try {
     const cached = props.getProperty(cacheKey);
     if (cached) {
+      if (cached === 'NOTFOUND') {
+        Logger.log(`geocodeLocation: cached miss → "${cityClean}"`);
+        return JSON.stringify({ lat: null, lng: null });
+      }
       const parts = cached.split(',');
-      const lat   = parseFloat(parts[0]);
-      const lng   = parseFloat(parts[1]);
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
       if (!isNaN(lat) && !isNaN(lng)) {
-        Logger.log(`geocodeLocation: cache hit → "${city}" (${lat}, ${lng})`);
+        Logger.log(`geocodeLocation: cache hit → "${cityClean}" (${lat}, ${lng})`);
         return JSON.stringify({
           lat, lng,
-          display: (city || '') + (country ? ', ' + country : ''),
+          display: cityClean + (country ? ', ' + country : ''),
           source: 'cache'
         });
       }
@@ -6080,47 +6091,176 @@ function geocodeLocation(city, country) {
     Logger.log(`geocodeLocation: cache read error: ${e.message}`);
   }
 
-  // ── Tier 2: Nominatim API (free, no key needed) ──────────────────────
-  try {
-    const query = [city, country].filter(Boolean).join(', ');
-    const url   = 'https://nominatim.openstreetmap.org/search?q=' +
-                  encodeURIComponent(query) + '&format=json&limit=1';
+  // ── Tier 1: hardcoded lookup table ────────────────────────────────────────
+  // Covers the most common German cities + major European job hubs.
+  const COORDS = {
+    // German cities — alphabetical
+    'aachen':        [50.7753, 6.0839],
+    'augsburg':      [48.3705, 10.8978],
+    'berlin':        [52.5200, 13.4050],
+    'bielefeld':     [52.0302, 8.5325],
+    'bochum':        [51.4818, 7.2162],
+    'bonn':          [50.7374, 7.0982],
+    'braunschweig':  [52.2689, 10.5268],
+    'bremen':        [53.0793, 8.8017],
+    'chemnitz':      [50.8279, 12.9214],
+    'cologne':       [50.9333, 6.9500],
+    'darmstadt':     [49.8728, 8.6512],
+    'dortmund':      [51.5136, 7.4653],
+    'dresden':       [51.0504, 13.7373],
+    'duesseldorf':   [51.2217, 6.7762],
+    'duisburg':      [51.4344, 6.7623],
+    'erfurt':        [50.9848, 11.0299],
+    'essen':         [51.4556, 7.0116],
+    'frankfurt':     [50.1109, 8.6821],
+    'freiburg':      [47.9990, 7.8421],
+    'gelsenkirchen': [51.5177, 7.0857],
+    'halle':         [51.4828, 11.9697],
+    'hamburg':       [53.5753, 10.0153],
+    'hannover':      [52.3759, 9.7320],
+    'heidelberg':    [49.3988, 8.6724],
+    'heilbronn':     [49.1427, 9.2109],
+    'ingolstadt':    [48.7665, 11.4257],
+    'karlsruhe':     [49.0069, 8.4037],
+    'kassel':        [51.3127, 9.4797],
+    'kiel':          [54.3233, 10.1228],
+    'koblenz':       [50.3569, 7.5890],
+    'koeln':         [50.9333, 6.9500],
+    'langenfeld':    [51.1088, 6.9481],
+    'leipzig':       [51.3397, 12.3731],
+    'luebeck':       [53.8655, 10.6866],
+    'ludwigshafen':  [49.4774, 8.4453],
+    'magdeburg':     [52.1205, 11.6276],
+    'mainz':         [49.9929, 8.2473],
+    'mannheim':      [49.4875, 8.4660],
+    'muenchen':      [48.1351, 11.5820],
+    'munich':        [48.1351, 11.5820],
+    'muenster':      [51.9607, 7.6261],
+    'nuernberg':     [49.4521, 11.0767],
+    'nuremberg':     [49.4521, 11.0767],
+    'oberhausen':    [51.4697, 6.8509],
+    'oldenburg':     [53.1434, 8.2146],
+    'osnabrueck':    [52.2799, 8.0472],
+    'potsdam':       [52.3906, 13.0645],
+    'regensburg':    [49.0134, 12.1016],
+    'rostock':       [54.0887, 12.1404],
+    'saarbruecken':  [49.2354, 6.9965],
+    'sassnitz':      [54.5167, 13.6333],
+    'stuttgart':     [48.7758, 9.1829],
+    'ulm':           [48.3984, 9.9922],
+    'wiesbaden':     [50.0782, 8.2398],
+    'wolfsburg':     [52.4227, 10.7865],
+    'wuerzburg':     [49.7913, 9.9534],
+    // Major European job hubs
+    'amsterdam':     [52.3676, 4.9041],
+    'antwerp':       [51.2194, 4.4025],
+    'athens':        [37.9838, 23.7275],
+    'barcelona':     [41.3851, 2.1734],
+    'brussels':      [50.8503, 4.3517],
+    'budapest':      [47.4979, 19.0402],
+    'copenhagen':    [55.6761, 12.5683],
+    'dublin':        [53.3498, -6.2603],
+    'dubai':         [25.2048, 55.2708],
+    'helsinki':      [60.1699, 24.9384],
+    'istanbul':      [41.0082, 28.9784],
+    'lisbon':        [38.7223, -9.1393],
+    'london':        [51.5074, -0.1278],
+    'luxembourg':    [49.6116, 6.1319],
+    'madrid':        [40.4168, -3.7038],
+    'milan':         [45.4642, 9.1900],
+    'oslo':          [59.9139, 10.7522],
+    'paris':         [48.8566, 2.3522],
+    'prague':        [50.0755, 14.4378],
+    'riga':          [56.9496, 24.1052],
+    'rome':          [41.9028, 12.4964],
+    'stockholm':     [59.3293, 18.0686],
+    'tallinn':       [59.4370, 24.7536],
+    'vienna':        [48.2082, 16.3738],
+    'vilnius':       [54.6872, 25.2797],
+    'warsaw':        [52.2297, 21.0122],
+    'zurich':        [47.3769, 8.5417],
+    // Aliases / common misspellings
+    'wien':          [48.2082, 16.3738],
+    'bruessel':      [50.8503, 4.3517],
+    'zuerich':       [47.3769, 8.5417],
+    'kopenhagen':    [55.6761, 12.5683],
+    'prag':          [50.0755, 14.4378],
+    'lissabon':      [38.7223, -9.1393],
+    'mailand':       [45.4642, 9.1900],
+    'rom':           [41.9028, 12.4964],
+    'warschau':      [52.2297, 21.0122],
+    'moskau':        [55.7558, 37.6173],
+  };
 
-    const res = UrlFetchApp.fetch(url, {
-      headers: {
-        'User-Agent':      'JABA-JobSearch/1.0 (personal-job-application-assistant)',
-        'Accept-Language': 'en'
-      },
+  // Normalise city for lookup: lowercase + umlaut substitution
+  const cityNorm = cityClean
+    .toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z]/g,'');
+
+  if (COORDS[cityNorm]) {
+    const [lat, lng] = COORDS[cityNorm];
+    Logger.log(`geocodeLocation: hardcoded hit → "${cityClean}" (${lat}, ${lng})`);
+    try { props.setProperty(cacheKey, lat + ',' + lng); } catch(e) {}
+    return JSON.stringify({
+      lat, lng,
+      display: cityClean + (country ? ', ' + country : ''),
+      source: 'hardcoded'
+    });
+  }
+
+  // ── Tier 2: Open-Meteo Geocoding API (free, no key, GCP-friendly) ─────────
+  try {
+    const query   = encodeURIComponent(cityClean + (country ? ', ' + country : ''));
+    const apiUrl  = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+                    encodeURIComponent(cityClean) +
+                    '&count=5&language=en&format=json';
+
+    const res = UrlFetchApp.fetch(apiUrl, {
+      method: 'get',
+      headers: { 'Accept': 'application/json' },
       muteHttpExceptions: true
     });
 
     if (res.getResponseCode() !== 200) {
-      Logger.log(`geocodeLocation: Nominatim HTTP ${res.getResponseCode()} for "${query}"`);
+      Logger.log(`geocodeLocation: Open-Meteo HTTP ${res.getResponseCode()} for "${cityClean}"`);
+      try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e) {}
       return JSON.stringify({ lat: null, lng: null });
     }
 
-    const results = JSON.parse(res.getContentText());
-    if (!results || results.length === 0) {
-      Logger.log(`geocodeLocation: no results for "${query}"`);
+    const data    = JSON.parse(res.getContentText());
+    const results = data.results || [];
+
+    if (results.length === 0) {
+      Logger.log(`geocodeLocation: Open-Meteo no results for "${cityClean}"`);
+      try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e) {}
       return JSON.stringify({ lat: null, lng: null });
     }
 
-    const lat     = parseFloat(results[0].lat);
-    const lng     = parseFloat(results[0].lon);
-    const display = results[0].display_name.split(',').slice(0, 2).join(',').trim();
-
-    // ── Save to Script Properties so next call is instant ──────────────
-    try {
-      props.setProperty(cacheKey, lat + ',' + lng);
-      Logger.log(`geocodeLocation: "${city}" saved to cache as "${cacheKey}" → ${lat},${lng}`);
-    } catch(e) {
-      Logger.log(`geocodeLocation: cache save failed (non-fatal): ${e.message}`);
+    // Pick the best result: prefer country match if available
+    let best = results[0];
+    if (country) {
+      const countryLower = country.toLowerCase();
+      const countryMatch = results.find(r =>
+        (r.country || '').toLowerCase().includes(countryLower) ||
+        (r.country_code || '').toLowerCase() === countryLower.substring(0, 2)
+      );
+      if (countryMatch) best = countryMatch;
     }
 
-    return JSON.stringify({ lat, lng, display, source: 'nominatim' });
+    const lat     = best.latitude;
+    const lng     = best.longitude;
+    const display = best.name + (best.admin1 ? ', ' + best.admin1 : '') +
+                    (best.country ? ', ' + best.country : '');
+
+    try { props.setProperty(cacheKey, lat + ',' + lng); } catch(e) {}
+    Logger.log(`geocodeLocation: Open-Meteo OK → "${cityClean}" → ${display} (${lat}, ${lng})`);
+
+    return JSON.stringify({ lat, lng, display, source: 'open-meteo' });
 
   } catch(e) {
-    Logger.log(`geocodeLocation error: ${e.message}`);
+    Logger.log(`geocodeLocation: Open-Meteo exception: ${e.message}`);
+    try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(ee) {}
     return JSON.stringify({ lat: null, lng: null });
   }
 }
