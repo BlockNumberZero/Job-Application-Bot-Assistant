@@ -728,6 +728,18 @@ function detectCvTypeFromText(text) {
 }
 
 function stripHtmlToText(html) {
+  // ── Adzuna-specific structural noise removal ──────────────────────────────
+  // Remove the country-selector modal (always at the top of Adzuna pages)
+  html = html.replace(/<[^>]*id=["'][^"']*country[^"']*["'][^>]*>[\s\S]*?<\/(?:div|section|form)>/gi, ' ');
+  // Remove the "Ähnliche Jobs" / "Similar Jobs" carousel section at the bottom
+  // This section starts with a heading containing "hnliche Jobs" and runs to end of main content
+  html = html.replace(/<[^>]*>[\s]*[ÄA]hnliche Jobs[\s\S]*$/i, ' ');
+  html = html.replace(/<[^>]*>[\s]*Similar Jobs[\s\S]*$/i, ' ');
+  // Remove "Jetzt ähnliche Jobs per E-Mail erhalten" block and everything after it
+  html = html.replace(/Jetzt\s+[äa]hnliche\s+Jobs[\s\S]*$/i, ' ');
+  // Remove "Job-E-Mail bestellen" subscription block
+  html = html.replace(/Job-E-Mail\s+bestellen[\s\S]*$/i, ' ');
+  // ── Standard structural removal ───────────────────────────────────────────
   return html
     // Remove entire semantic sections that are never JD content
     .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
@@ -6021,7 +6033,7 @@ function focusJdContent(text) {
     // Only trim noise that is between 150 and 3000 chars from the start.
     // Below 150: probably already at the job start — don't trim.
     // Above 3000: the "pattern" found is likely inside the job itself — don't trim.
-    if (idx > 150 && idx < 3000) {
+    if (idx > 150 && idx < 6000) {
       if (bestStart === -1 || idx < bestStart) {
         bestStart = idx;
       }
