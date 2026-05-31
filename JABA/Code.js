@@ -6046,16 +6046,46 @@ function focusJdContent(text) {
  * Note: Nominatim requires a proper User-Agent — never call it client-side.
  */
 function geocodeLocation(city, country) {
+  if (!city && !country) return JSON.stringify({ lat: null, lng: null });
+  if ((city || '').toLowerCase().trim() === 'remote') {
+    return JSON.stringify({ lat: null, lng: null, isRemote: true });
+  }
+
+  // Build a clean cache key: GEO_ + sanitized city name
+  // e.g. "Stuttgart" → "GEO_stuttgart", "München" → "GEO_muenchen"
+  const cacheKey = 'GEO_' + (city || '')
+    .toLowerCase().trim()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+
+  const props = PropertiesService.getScriptProperties();
+
+  // ── Tier 1: Script Properties cache (instant, grows automatically) ──
   try {
-    if (!city && !country) return JSON.stringify({ lat: null, lng: null });
-    if ((city || '').toLowerCase() === 'remote') {
-      return JSON.stringify({ lat: null, lng: null, isRemote: true });
+    const cached = props.getProperty(cacheKey);
+    if (cached) {
+      const parts = cached.split(',');
+      const lat   = parseFloat(parts[0]);
+      const lng   = parseFloat(parts[1]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        Logger.log(`geocodeLocation: cache hit → "${city}" (${lat}, ${lng})`);
+        return JSON.stringify({
+          lat, lng,
+          display: (city || '') + (country ? ', ' + country : ''),
+          source: 'cache'
+        });
+      }
     }
- 
-    const query  = [city, country].filter(Boolean).join(', ');
-    const url    = 'https://nominatim.openstreetmap.org/search?q=' +
-                   encodeURIComponent(query) + '&format=json&limit=1';
- 
+  } catch(e) {
+    Logger.log(`geocodeLocation: cache read error: ${e.message}`);
+  }
+
+  // ── Tier 2: Nominatim API (free, no key needed) ──────────────────────
+  try {
+    const query = [city, country].filter(Boolean).join(', ');
+    const url   = 'https://nominatim.openstreetmap.org/search?q=' +
+                  encodeURIComponent(query) + '&format=json&limit=1';
+
     const res = UrlFetchApp.fetch(url, {
       headers: {
         'User-Agent':      'JABA-JobSearch/1.0 (personal-job-application-assistant)',
@@ -6063,27 +6093,33 @@ function geocodeLocation(city, country) {
       },
       muteHttpExceptions: true
     });
- 
+
     if (res.getResponseCode() !== 200) {
-      Logger.log(`geocodeLocation HTTP ${res.getResponseCode()} for "${query}"`);
+      Logger.log(`geocodeLocation: Nominatim HTTP ${res.getResponseCode()} for "${query}"`);
       return JSON.stringify({ lat: null, lng: null });
     }
- 
+
     const results = JSON.parse(res.getContentText());
     if (!results || results.length === 0) {
       Logger.log(`geocodeLocation: no results for "${query}"`);
       return JSON.stringify({ lat: null, lng: null });
     }
- 
-    const r = results[0];
-    Logger.log(`geocodeLocation OK: "${query}" → ${r.lat}, ${r.lon}`);
-    return JSON.stringify({
-      lat:     parseFloat(r.lat),
-      lng:     parseFloat(r.lon),
-      display: r.display_name.split(',').slice(0, 2).join(',').trim()
-    });
- 
-  } catch (e) {
+
+    const lat     = parseFloat(results[0].lat);
+    const lng     = parseFloat(results[0].lon);
+    const display = results[0].display_name.split(',').slice(0, 2).join(',').trim();
+
+    // ── Save to Script Properties so next call is instant ──────────────
+    try {
+      props.setProperty(cacheKey, lat + ',' + lng);
+      Logger.log(`geocodeLocation: "${city}" saved to cache as "${cacheKey}" → ${lat},${lng}`);
+    } catch(e) {
+      Logger.log(`geocodeLocation: cache save failed (non-fatal): ${e.message}`);
+    }
+
+    return JSON.stringify({ lat, lng, display, source: 'nominatim' });
+
+  } catch(e) {
     Logger.log(`geocodeLocation error: ${e.message}`);
     return JSON.stringify({ lat: null, lng: null });
   }

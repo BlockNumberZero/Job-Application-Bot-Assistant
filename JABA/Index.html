@@ -485,14 +485,32 @@ function renderGeoMap(){
     }).withFailureHandler(function(){mapDiv.innerHTML='<div class="map-ph cd">Geocoding failed</div>';})
     .geocodeLocation(loc.city,loc.country);
 }
-function initAndRenderMap(geo,loc){
-  var container=document.getElementById('leaflet-map');container.innerHTML='';
-  if(leafletMap){leafletMap.remove();leafletMap=null;leafletMarker=null;}
-  leafletMap=L.map(container).setView([geo.lat,geo.lng],10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>',maxZoom:18,subdomains:'abcd'}).addTo(leafletMap);
-  var icon=L.divIcon({html:'<div style="background:var(--accent);width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px #4f8ef740"></div>',className:'',iconSize:[14,14],iconAnchor:[7,7]});
-  leafletMarker=L.marker([geo.lat,geo.lng],{icon:icon}).addTo(leafletMap).bindPopup('<strong>'+(loc.city||'')+'</strong>'+(loc.country?'<br>'+loc.country:'')).openPopup();
-  setTimeout(function(){if(leafletMap)leafletMap.invalidateSize();},200);
+function initAndRenderMap(geo, loc) {
+  // Recreate the inner div completely — prevents Leaflet re-init bug
+  var mc = document.getElementById('map-container');
+  mc.innerHTML = '<div id="leaflet-map" style="height:100%;width:100%"></div>';
+  leafletMap = null; leafletMarker = null;
+
+  var mapDiv = document.getElementById('leaflet-map');
+  leafletMap = L.map(mapDiv).setView([geo.lat, geo.lng], 11);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    maxZoom: 18
+  }).addTo(leafletMap);
+
+  var icon = L.divIcon({
+    html: '<div style="background:#4f8ef7;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px rgba(79,142,247,0.3)"></div>',
+    className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+  });
+
+  leafletMarker = L.marker([geo.lat, geo.lng], { icon: icon })
+    .addTo(leafletMap)
+    .bindPopup('<strong>' + esc(loc.city || '') + '</strong>' +
+               (loc.country ? '<br>' + esc(loc.country) : ''))
+    .openPopup();
+
+  setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 300);
 }
 
 function setBusy(busy,msg,sub){

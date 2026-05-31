@@ -674,23 +674,30 @@
       }
 
       function initAndRenderMap(geo, loc) {
-        var container = document.getElementById('leaflet-map');
-        container.innerHTML = '';
-        if (leafletMap) { leafletMap.remove(); leafletMap = null; leafletMarker = null; }
-        leafletMap = L.map(container).setView([geo.lat, geo.lng], 10);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>',
-          maxZoom: 18, subdomains: 'abcd'
+        var mc = document.getElementById('map-container');
+        mc.innerHTML = '<div id="leaflet-map" style="height:100%;width:100%"></div>';
+        leafletMap = null; leafletMarker = null;
+
+        var mapDiv = document.getElementById('leaflet-map');
+        leafletMap = L.map(mapDiv).setView([geo.lat, geo.lng], 11);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+          maxZoom: 18
         }).addTo(leafletMap);
+
         var icon = L.divIcon({
-          html: '<div style="background:#4285f4;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px #4285f440"></div>',
+          html: '<div style="background:#4285f4;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px rgba(66,133,244,0.25)"></div>',
           className: '', iconSize: [14, 14], iconAnchor: [7, 7]
         });
+
         leafletMarker = L.marker([geo.lat, geo.lng], { icon: icon })
           .addTo(leafletMap)
-          .bindPopup('<strong>' + escHtml(loc.city || '') + '</strong>' + (loc.country ? '<br>' + escHtml(loc.country) : ''))
+          .bindPopup('<strong>' + escHtml(loc.city || '') + '</strong>' +
+                    (loc.country ? '<br>' + escHtml(loc.country) : ''))
           .openPopup();
-        setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 200);
+
+        setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 300);
       }
 
       /* ── SMM ── */
