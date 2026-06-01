@@ -2024,17 +2024,15 @@ function findNextEmptyRow(sheet) {
 function getOrCreateMonthlyTab() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Build the target month name from today's date
   const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace(/\./g, '');
 
-  // If the tab already exists, nothing to do
   const existing = ss.getSheetByName(month);
-  if (existing) return existing;
+  if (existing) {
+    ss.setActiveSheet(existing);
+    return existing;
+  }
 
   // ── Find the most recent monthly tab ────────────────────────────────────────
-  // Month tabs are named like "May 2026". We parse every sheet name and keep
-  // the one whose date is latest. Non-month tabs (Sankey_Data, Geo_Data, etc.)
-  // simply fail the parse and are skipped.
   const MONTH_NAMES = {
     jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
     jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
@@ -2056,16 +2054,48 @@ function getOrCreateMonthlyTab() {
     }
   });
 
-  // ── Copy the template (or fall back to a blank sheet) ───────────────────────
+  // ── Copy the template tab ────────────────────────────────────────────────────
   let sheet;
   if (templateSheet) {
     sheet = templateSheet.copyTo(ss);
     sheet.setName(month);
-    // Move new tab to the end (after all existing sheets)
     ss.moveActiveSheet(ss.getSheets().length);
+    ss.setActiveSheet(sheet); // ← fixes "Wählen Sie zunächst ein aktives Tabellenblatt aus"
+
+    // ── Wipe U, V, W entirely first (row 1 header + everything) ─────────────
+    const lastRow = sheet.getMaxRows();
+    sheet.getRange(1, 21, lastRow, 3)
+         .clearContent()
+         .clearFormats()
+         .clearDataValidations();
+
+    // ── Clear ALL data in rows 2+ columns A–T ────────────────────────────────
+    // Delete every value, formula, and format in the data area so the new
+    // month starts completely empty — except row 1 (headers) which is untouched.
+    // We do this column-by-column to skip S (col 19) which holds the =JOIN formula.
+
+    // Columns A–R (1–18): clear everything
+    sheet.getRange(2, 1, lastRow - 1, 18)
+         .clearContent()
+         .clearDataValidations();
+
+    // Column S (19): keep — the =JOIN formula must stay
+    // Column T (20): clear content only
+    sheet.getRange(2, 20, lastRow - 1, 1).clearContent();
+
+    // ── Re-apply data validations (dropdowns) from the template ──────────────
+    // clearDataValidations() removes the dropdown rules on A–R and T.
+    // We restore them by reading row 2 of the template and stamping them
+    // across all data rows in the new sheet.
+    const colsWithDropdowns = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20];
+    colsWithDropdowns.forEach(function(col) {
+      const validation = templateSheet.getRange(2, col).getDataValidation();
+      if (!validation) return;
+      sheet.getRange(2, col, lastRow - 1, 1).setDataValidation(validation);
+    });
+
   } else {
-    // No monthly tab found at all — first-time setup: build from scratch
-    // (keeps backward compatibility with fresh installs)
+    // ── Fallback: no monthly tab found, build from scratch ───────────────────
     sheet = ss.insertSheet(month);
     const headers = [
       "Match Level", "Companies", "Position", "Application Platform", "Location",
@@ -2083,31 +2113,8 @@ function getOrCreateMonthlyTab() {
     sheet.getRange("S2:S").setFormula(emojiFormula);
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
-    return sheet;
+    ss.setActiveSheet(sheet);
   }
-
-  // ── Clear data rows (2 onward) in columns A–T ───────────────────────────────
-  // We clear content + validations BUT not formats — this preserves dropdowns
-  // styling, background colors, borders etc. that were copied from the template.
-  // Column S (index 19) is skipped so its =JOIN formula is kept intact.
-  const lastRow = sheet.getMaxRows();
-
-  // Columns A–R (1–18): clear content + data validations
-  sheet.getRange(2, 1, lastRow - 1, 18).clearContent().clearDataValidations();
-
-  // Column S (19): keep the =JOIN formula — do NOT clear
-  // Column T (20): clear content only
-  sheet.getRange(2, 20, lastRow - 1, 1).clearContent();
-
-  // Re-apply data validations from the template onto the new sheet's rows 2+
-  // (clearDataValidations removed them — we copy them back from row 2 of the template)
-  _copyValidationsFromTemplate(templateSheet, sheet, lastRow);
-
-  // ── Wipe columns U, V, W entirely (row 1 header + all rows) ─────────────────
-  sheet.getRange(1, 21, lastRow, 3)
-       .clearContent()
-       .clearFormats()
-       .clearDataValidations();
 
   SpreadsheetApp.flush();
   return sheet;
@@ -5097,6 +5104,25 @@ function deletePhase2Triggers() {
 
 /* ── PHASE 1 ───────────────────────────────────────────────── */
 function runJobSearchPhase1() {
+
+  try {
+    _runJobSearchPhase1Impl();
+  } catch (e) {
+    if (e.message && (e.message.includes('INTERNAL') || e.message.includes('server error occurred'))) {
+      Logger.log('⚠️ GAS INTERNAL storage error — scheduling retry in 10 min: ' + e.message);
+      ScriptApp.newTrigger('runJobSearchPhase1')
+        .timeBased()
+        .after(10 * 60 * 1000)
+        .create();
+      return;
+    }
+    throw e;
+  }
+}
+
+
+function _runJobSearchPhase1Impl() {
+
   Logger.log('=== JABA Phase 1: Fetch & Filter ===');
 
   cleanJobCache();
