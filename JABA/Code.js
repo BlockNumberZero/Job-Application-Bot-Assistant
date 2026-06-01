@@ -461,7 +461,15 @@ const parsed = repairAndParseSmm(content);
       else                               parsed.match_level = "M4";
     }
 
-    Logger.log(`SMM Analysis complete — ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
+    // ── Location fallback: if JD had no location, search by company name ──
+    // companyName is extracted from jdInput only when it was passed as a URL;
+    // for plain JD text we don't have a reliable company name here, so
+    // location_source stays "jd" and the sidebar/processor enriches it later.
+    const hasJdLocation = (parsed.job_location &&
+      (parsed.job_location.city || parsed.job_location.country));
+    parsed.location_source = hasJdLocation ? 'jd' : 'unknown';
+
+    Logger.log(`SMM Analysis complete — ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level} | Location: ${hasJdLocation ? JSON.stringify(parsed.job_location) : 'none (will enrich later)'}`);
     const resultStr = JSON.stringify(parsed);
 scriptCache.put(cacheKey, resultStr, 43200); // cache for 12 hours
 return resultStr;
@@ -1657,7 +1665,37 @@ COVER LETTER RULES:
 
     const companyName = co ? co.trim() : "Unknown";
     const position    = pos ? pos.trim() : "Unknown";
-    const location    = normalizeLocation(city);
+
+    // ── Location resolution ───────────────────────────────────────────────
+    // Priority 1: location from JD (via SMM job_location field)
+    // Priority 2: location from company name lookup (Germany only for sheet)
+    // Priority 3: Mistral's CITY field from the pipe-delimited output
+    let resolvedCity = city ? city.trim() : '';
+
+    if (smmData) {
+      // Enrich SMM data with company location if JD had none
+      enrichSmmLocation(smmData, companyName);
+
+      const jl = smmData.job_location;
+      if (jl && (jl.city || jl.country)) {
+        if (smmData.location_source === 'jd') {
+          // JD location is authoritative — always use it
+          resolvedCity = jl.city || resolvedCity;
+          Logger.log(`Location from JD: "${resolvedCity}"`);
+        } else if (smmData.location_source === 'company_lookup') {
+          // Company lookup — only use for sheet if German location
+          if (jl.city && isGermanLocation(jl.city)) {
+            resolvedCity = jl.city;
+            Logger.log(`Location from company lookup (German): "${resolvedCity}"`);
+          } else if (jl.city) {
+            Logger.log(`Location from company lookup (non-German, map only): "${jl.city}" — not written to sheet`);
+            // resolvedCity stays as Mistral's city guess (may be empty)
+          }
+        }
+      }
+    }
+
+    const location = normalizeLocation(resolvedCity);
 
     let cleanedSalary = "";
     if (salary) {
@@ -1984,33 +2022,116 @@ function findNextEmptyRow(sheet) {
 }
 
 function getOrCreateMonthlyTab() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace(/\./g, '');
-  let sheet   = ss.getSheetByName(month);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  if (!sheet) {
+  // Build the target month name from today's date
+  const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace(/\./g, '');
+
+  // If the tab already exists, nothing to do
+  const existing = ss.getSheetByName(month);
+  if (existing) return existing;
+
+  // ── Find the most recent monthly tab ────────────────────────────────────────
+  // Month tabs are named like "May 2026". We parse every sheet name and keep
+  // the one whose date is latest. Non-month tabs (Sankey_Data, Geo_Data, etc.)
+  // simply fail the parse and are skipped.
+  const MONTH_NAMES = {
+    jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
+    jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
+  };
+
+  let templateSheet = null;
+  let latestDate    = null;
+
+  ss.getSheets().forEach(function(s) {
+    const parts = s.getName().trim().split(/\s+/);
+    if (parts.length !== 2) return;
+    const mon = MONTH_NAMES[parts[0].toLowerCase().slice(0, 3)];
+    const yr  = parseInt(parts[1], 10);
+    if (mon === undefined || isNaN(yr)) return;
+    const d = new Date(yr, mon, 1);
+    if (!latestDate || d > latestDate) {
+      latestDate    = d;
+      templateSheet = s;
+    }
+  });
+
+  // ── Copy the template (or fall back to a blank sheet) ───────────────────────
+  let sheet;
+  if (templateSheet) {
+    sheet = templateSheet.copyTo(ss);
+    sheet.setName(month);
+    // Move new tab to the end (after all existing sheets)
+    ss.moveActiveSheet(ss.getSheets().length);
+  } else {
+    // No monthly tab found at all — first-time setup: build from scratch
+    // (keeps backward compatibility with fresh installs)
     sheet = ss.insertSheet(month);
     const headers = [
       "Match Level", "Companies", "Position", "Application Platform", "Location",
       "Status", "Application Date", "Days Posted", "Notes",
       "Applied", "HR Interview", "1st Interview", "2nd Interview", "3rd Interview",
       "4th Interview", "Offer", "Ignored", "Rejected",
-      "Status Path", "Email Rejection",
-      "Source", "Target", "Count"
+      "Status Path", "Email Rejection"
     ];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setBackground("#4285f4").setFontColor("white").setFontWeight("bold");
-
+    sheet.getRange(1, 1, 1, headers.length)
+         .setValues([headers])
+         .setBackground("#4285f4")
+         .setFontColor("white")
+         .setFontWeight("bold");
     const emojiFormula = '=JOIN(""; IF(J2>0;"📩";""); IF(K2>0;"0️⃣";""); IF(L2>0;"1️⃣";""); IF(M2>0;"2️⃣";""); IF(N2>0;"3️⃣";""); IF(O2>0;"4️⃣";""); IF(P2>0;"🎉";""); IF(Q2>0;"⚪";""); IF(R2>0;"🛑";""))';
     sheet.getRange("S2:S").setFormula(emojiFormula);
-
-    const lastHeaderCol = headers.length;
-    sheet.getRange(2, lastHeaderCol + 1).setFormula('=UNIQUE(E2:E)');
-    sheet.getRange(2, lastHeaderCol + 2).setFormula('=ARRAYFORMULA(IF(X2:X=""; ""; COUNTIF(E$2:E; X2:X)))');
-
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
+    return sheet;
   }
+
+  // ── Clear data rows (2 onward) in columns A–T ───────────────────────────────
+  // We clear content + validations BUT not formats — this preserves dropdowns
+  // styling, background colors, borders etc. that were copied from the template.
+  // Column S (index 19) is skipped so its =JOIN formula is kept intact.
+  const lastRow = sheet.getMaxRows();
+
+  // Columns A–R (1–18): clear content + data validations
+  sheet.getRange(2, 1, lastRow - 1, 18).clearContent().clearDataValidations();
+
+  // Column S (19): keep the =JOIN formula — do NOT clear
+  // Column T (20): clear content only
+  sheet.getRange(2, 20, lastRow - 1, 1).clearContent();
+
+  // Re-apply data validations from the template onto the new sheet's rows 2+
+  // (clearDataValidations removed them — we copy them back from row 2 of the template)
+  _copyValidationsFromTemplate(templateSheet, sheet, lastRow);
+
+  // ── Wipe columns U, V, W entirely (row 1 header + all rows) ─────────────────
+  sheet.getRange(1, 21, lastRow, 3)
+       .clearContent()
+       .clearFormats()
+       .clearDataValidations();
+
+  SpreadsheetApp.flush();
   return sheet;
+}
+
+
+/**
+ * Copies data validations from templateSheet row 2 (columns A–T, excluding S)
+ * and applies them to all data rows in the new sheet.
+ * This is needed because clearDataValidations() removes the dropdown rules
+ * that were brought over by copyTo().
+ */
+function _copyValidationsFromTemplate(templateSheet, newSheet, lastRow) {
+  // Columns to restore validations for: A-R (1-18) and T (20). Skip S (19).
+  const colsToRestore = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20];
+
+  colsToRestore.forEach(function(col) {
+    const templateCell = templateSheet.getRange(2, col);
+    const validation   = templateCell.getDataValidation();
+    if (!validation) return; // no dropdown on this column — skip
+
+    // Apply to the full data range in the new sheet
+    newSheet.getRange(2, col, lastRow - 1, 1).setDataValidation(validation);
+  });
 }
 
 function debugEmailBody() {
@@ -4243,8 +4364,11 @@ function runDailyJobSearch() {
     else if (levelNum === 1) diag.scored_m1++;
     else                     diag.scored_m2_plus++;
  
-    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
- 
+    // ── Location enrichment ───────────────────────────────────────────────
+    enrichSmmLocation(smmResult, job.company);
+
+    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source} | Location: ${JSON.stringify(smmResult.job_location)} (${smmResult.location_source || 'unknown'})`);
+
     addJobToCache(job, smmResult, cvType, extracted.source, job.url, 'JobSearch', extracted.text);
  
     if (levelNum >= 2) {
@@ -5221,7 +5345,10 @@ function runPhase2() {
     const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
     const dots     = buildJobDots(smmResult);
 
-    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${source}`);
+    // ── Location enrichment — fills job_location when JD had none ────────
+    enrichSmmLocation(smmResult, company);
+
+    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${source} | Location: ${JSON.stringify(smmResult.job_location)} (${smmResult.location_source || 'unknown'})`);
     addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source, extractedText || '');
 
     // All alert jobs (including M0) go to Alert_Results for full visibility
@@ -6050,7 +6177,165 @@ function focusJdContent(text) {
   return text;
 }
  
- 
+/**
+ * Resolves a company's headquarters city when the JD contains no location.
+ * Uses Tavily Search (1 credit) + Groq extraction.
+ * Results cached in Script Properties — same company never looked up twice.
+ * Returns { city, country, fromCompany: true } or { city: null, country: null }.
+ */
+function resolveCompanyLocation(companyName) {
+  if (!companyName || companyName === 'Unknown') {
+    return { city: null, country: null };
+  }
+
+  // ── Cache check ───────────────────────────────────────────────────────────
+  const props      = PropertiesService.getScriptProperties();
+  const cacheKey   = 'COMPLOC_' + companyName
+    .toLowerCase()
+    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')
+    .substring(0, 40);
+
+  try {
+    const cached = props.getProperty(cacheKey);
+    if (cached) {
+      if (cached === 'NOTFOUND') {
+        Logger.log(`resolveCompanyLocation: cached miss → "${companyName}"`);
+        return { city: null, country: null };
+      }
+      const parsed = JSON.parse(cached);
+      Logger.log(`resolveCompanyLocation: cache hit → "${companyName}" → ${parsed.city}, ${parsed.country}`);
+      return { ...parsed, fromCompany: true };
+    }
+  } catch(e) {
+    Logger.log(`resolveCompanyLocation: cache read error: ${e.message}`);
+  }
+
+  // ── Tavily Search (1 credit) ──────────────────────────────────────────────
+  const tavilyKey = getTavilyKey();
+  if (!tavilyKey) {
+    Logger.log('resolveCompanyLocation: TAVILY_API_KEY not set');
+    return { city: null, country: null };
+  }
+
+  let snippet = null;
+  try {
+    const searchRes = UrlFetchApp.fetch('https://api.tavily.com/search', {
+      method:             'post',
+      contentType:        'application/json',
+      payload:            JSON.stringify({
+        api_key:      tavilyKey,
+        query:        `"${companyName}" Unternehmen Standort Hauptsitz`,
+        search_depth: 'basic',
+        max_results:  3,
+        include_raw_content: false,
+        exclude_domains: ['linkedin.com', 'xing.com', 'glassdoor.com', 'kununu.com']
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (searchRes.getResponseCode() === 200) {
+      const data    = JSON.parse(searchRes.getContentText());
+      const results = data.results || [];
+      // Concatenate the top 3 snippets for better extraction accuracy
+      snippet = results
+        .map(r => (r.title || '') + ' ' + (r.content || ''))
+        .join(' ')
+        .substring(0, 1500);
+      Logger.log(`resolveCompanyLocation: Tavily got ${results.length} results for "${companyName}"`);
+    } else {
+      Logger.log(`resolveCompanyLocation: Tavily HTTP ${searchRes.getResponseCode()}`);
+    }
+  } catch(e) {
+    Logger.log(`resolveCompanyLocation: Tavily exception: ${e.message}`);
+  }
+
+  if (!snippet || snippet.trim().length < 30) {
+    try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e) {}
+    return { city: null, country: null };
+  }
+
+  // ── Groq extraction ───────────────────────────────────────────────────────
+  const systemPrompt = 'You extract company headquarters location from text snippets. JSON only, no markdown.';
+  const userPrompt   = `Extract the city and country where "${companyName}" is headquartered.
+
+TEXT:
+${snippet}
+
+Rules:
+- city: the specific city name only (e.g. "Berlin"), or null if not clearly stated
+- country: the country name in English (e.g. "Germany"), or null if not clearly stated
+- If multiple cities are mentioned, pick the one most likely to be the HQ
+- If the company is clearly remote-only with no physical HQ, set both to null
+
+Respond ONLY with JSON: {"city": "Berlin", "country": "Germany"}`;
+
+  const raw = callGroqApi(systemPrompt, userPrompt, 'llama-3.1-8b-instant', 60);
+
+  if (!raw) {
+    Logger.log(`resolveCompanyLocation: Groq returned nothing for "${companyName}"`);
+    try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e) {}
+    return { city: null, country: null };
+  }
+
+  try {
+    const extracted = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    const city      = extracted.city    || null;
+    const country   = extracted.country || null;
+
+    if (!city && !country) {
+      try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e) {}
+      return { city: null, country: null };
+    }
+
+    // Cache the successful result
+    try {
+      props.setProperty(cacheKey, JSON.stringify({ city, country }));
+    } catch(e) {}
+
+    Logger.log(`resolveCompanyLocation: resolved "${companyName}" → ${city}, ${country}`);
+    return { city, country, fromCompany: true };
+
+  } catch(e) {
+    Logger.log(`resolveCompanyLocation: Groq parse error: ${e.message} | raw: ${raw}`);
+    try { props.setProperty(cacheKey, 'NOTFOUND'); } catch(e2) {}
+    return { city: null, country: null };
+  }
+}
+
+/**
+ * Enriches an SMM result object with company-lookup location when the JD
+ * provided no location. Modifies parsed in place and returns it.
+ *
+ * companyName : string — the company name from the job listing
+ * parsed      : object — already-parsed SMM JSON result
+ *
+ * Sets parsed.location_source to:
+ *   "jd"             — location came from JD text (already set, untouched)
+ *   "company_lookup" — location found via company name search
+ *   "unknown"        — no location found anywhere
+ */
+function enrichSmmLocation(parsed, companyName) {
+  // Already has a JD location — nothing to do
+  if (parsed.location_source === 'jd' &&
+      parsed.job_location &&
+      (parsed.job_location.city || parsed.job_location.country)) {
+    return parsed;
+  }
+
+  const resolved = resolveCompanyLocation(companyName);
+
+  if (resolved.city || resolved.country) {
+    parsed.job_location    = { city: resolved.city, country: resolved.country };
+    parsed.location_source = 'company_lookup';
+    Logger.log(`enrichSmmLocation: "${companyName}" → ${resolved.city}, ${resolved.country}`);
+  } else {
+    parsed.location_source = 'unknown';
+  }
+
+  return parsed;
+}
+
 /**
  * Geocodes a city + country pair via Nominatim (OpenStreetMap).
  * Called from the sidebar/web app when the user switches to the Map chart view.
