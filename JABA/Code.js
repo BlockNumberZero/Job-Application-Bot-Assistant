@@ -2023,16 +2023,13 @@ function findNextEmptyRow(sheet) {
 
 function getOrCreateMonthlyTab() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-
   const month = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "MMM yyyy").replace(/\./g, '');
 
+  // If tab already exists, return it directly
   const existing = ss.getSheetByName(month);
-  if (existing) {
-    ss.setActiveSheet(existing);
-    return existing;
-  }
+  if (existing) return existing;
 
-  // ── Find the most recent monthly tab ────────────────────────────────────────
+  // ── Find the most recent monthly tab by parsing tab names as dates ──────────
   const MONTH_NAMES = {
     jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
     jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
@@ -2054,49 +2051,61 @@ function getOrCreateMonthlyTab() {
     }
   });
 
-  // ── Copy the template tab ────────────────────────────────────────────────────
-  let sheet;
+  // ── Create a fresh new sheet ─────────────────────────────────────────────────
+  const sheet = ss.insertSheet(month);
+  SpreadsheetApp.flush();
+
   if (templateSheet) {
-    sheet = templateSheet.copyTo(ss);
-    sheet.setName(month);
-    ss.moveActiveSheet(ss.getSheets().length);
-    ss.setActiveSheet(sheet); // ← fixes "Wählen Sie zunächst ein aktives Tabellenblatt aus"
+    // ── Read header row values and formatting from the template ──────────────
+    // We only copy row 1 (headers) and the dropdown validations from row 2.
+    // We do NOT use copyTo() — it fails in web app context.
 
-    // ── Wipe U, V, W entirely first (row 1 header + everything) ─────────────
-    const lastRow = sheet.getMaxRows();
-    sheet.getRange(1, 21, lastRow, 3)
-         .clearContent()
-         .clearFormats()
-         .clearDataValidations();
+    const templateHeaderRange = templateSheet.getRange(1, 1, 1, 20);
 
-    // ── Clear ALL data in rows 2+ columns A–T ────────────────────────────────
-    // Delete every value, formula, and format in the data area so the new
-    // month starts completely empty — except row 1 (headers) which is untouched.
-    // We do this column-by-column to skip S (col 19) which holds the =JOIN formula.
+    // Copy header values (A1:T1)
+    const headerValues = templateHeaderRange.getValues();
+    sheet.getRange(1, 1, 1, 20).setValues(headerValues);
 
-    // Columns A–R (1–18): clear everything
-    sheet.getRange(2, 1, lastRow - 1, 18)
-         .clearContent()
-         .clearDataValidations();
+    // Copy header background colors
+    const bgColors = templateHeaderRange.getBackgrounds();
+    sheet.getRange(1, 1, 1, 20).setBackgrounds(bgColors);
 
-    // Column S (19): keep — the =JOIN formula must stay
-    // Column T (20): clear content only
-    sheet.getRange(2, 20, lastRow - 1, 1).clearContent();
+    // Copy header font colors
+    const fontColors = templateHeaderRange.getFontColors();
+    sheet.getRange(1, 1, 1, 20).setFontColors(fontColors);
 
-    // ── Re-apply data validations (dropdowns) from the template ──────────────
-    // clearDataValidations() removes the dropdown rules on A–R and T.
-    // We restore them by reading row 2 of the template and stamping them
-    // across all data rows in the new sheet.
+    // Copy header font weights
+    const fontWeights = templateHeaderRange.getFontWeights();
+    sheet.getRange(1, 1, 1, 20).setFontWeights(fontWeights);
+
+    // Copy header font sizes
+    const fontSizes = templateHeaderRange.getFontSizes();
+    sheet.getRange(1, 1, 1, 20).setFontSizes(fontSizes);
+
+    // Copy header font families
+    const fontFamilies = templateHeaderRange.getFontFamilies();
+    sheet.getRange(1, 1, 1, 20).setFontFamilies(fontFamilies);
+
+    // Copy column widths for A–T (columns 1–20)
+    for (let col = 1; col <= 20; col++) {
+      const width = templateSheet.getColumnWidth(col);
+      sheet.setColumnWidth(col, width);
+    }
+
+    // Copy frozen rows setting
+    const frozenRows = templateSheet.getFrozenRows();
+    if (frozenRows > 0) sheet.setFrozenRows(frozenRows);
+
+    // ── Re-apply dropdown validations from template row 2 ───────────────────
     const colsWithDropdowns = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20];
     colsWithDropdowns.forEach(function(col) {
       const validation = templateSheet.getRange(2, col).getDataValidation();
       if (!validation) return;
-      sheet.getRange(2, col, lastRow - 1, 1).setDataValidation(validation);
+      sheet.getRange(2, col, 1000, 1).setDataValidation(validation);
     });
 
   } else {
-    // ── Fallback: no monthly tab found, build from scratch ───────────────────
-    sheet = ss.insertSheet(month);
+    // ── Fallback: no monthly tab found — build from scratch ─────────────────
     const headers = [
       "Match Level", "Companies", "Position", "Application Platform", "Location",
       "Status", "Application Date", "Days Posted", "Notes",
@@ -2109,12 +2118,13 @@ function getOrCreateMonthlyTab() {
          .setBackground("#4285f4")
          .setFontColor("white")
          .setFontWeight("bold");
-    const emojiFormula = '=JOIN(""; IF(J2>0;"📩";""); IF(K2>0;"0️⃣";""); IF(L2>0;"1️⃣";""); IF(M2>0;"2️⃣";""); IF(N2>0;"3️⃣";""); IF(O2>0;"4️⃣";""); IF(P2>0;"🎉";""); IF(Q2>0;"⚪";""); IF(R2>0;"🛑";""))';
-    sheet.getRange("S2:S").setFormula(emojiFormula);
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
-    ss.setActiveSheet(sheet);
   }
+
+  // ── Apply =JOIN formula to column S (rows 2 onward) ─────────────────────────
+  const emojiFormula = '=JOIN(""; IF(J2>0;"📩";""); IF(K2>0;"0️⃣";""); IF(L2>0;"1️⃣";""); IF(M2>0;"2️⃣";""); IF(N2>0;"3️⃣";""); IF(O2>0;"4️⃣";""); IF(P2>0;"🎉";""); IF(Q2>0;"⚪";""); IF(R2>0;"🛑";""))';
+  sheet.getRange("S2:S").setFormula(emojiFormula);
 
   SpreadsheetApp.flush();
   return sheet;
