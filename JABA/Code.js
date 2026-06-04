@@ -1160,6 +1160,11 @@ function processIndeedAlertEmails_Phase1() {
   let totalQueued  = 0;
   let totalSkipped = 0;
   let totalCached  = 0;
+  let totalApplied = 0;
+
+  // Load applied jobs once — avoids per-job sheet reads and prevents
+  // queuing a job that's already been registered in a monthly tab.
+  const appliedSetIndeed = buildAppliedJobsSet();
 
   for (const thread of threads) {
     if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
@@ -1249,6 +1254,23 @@ function processIndeedAlertEmails_Phase1() {
         continue;
       }
 
+      // ── Already applied check (post-JD-fetch, consistent with job search) ──
+      const indeedApplyKey = job.company.toLowerCase().trim() + '||' +
+                             normalizeJobTitle(job.title).toLowerCase().trim();
+      if (appliedSetIndeed.has(indeedApplyKey)) {
+        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} — skipping`);
+        const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
+        writeToAlertResults(skipDate, 'Indeed', job.company, job.title,
+                            job.url, fetchedUrl, 0, 'already_applied',
+                            'Already applied', '', '', threadId);
+        addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
+                      '', 'already_applied', fetchedUrl, 'Indeed', '');
+        totalApplied++;
+        Utilities.sleep(300);
+        continue;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       // Write to Pending_SMM — Phase 2 handles SMM scoring
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
@@ -1285,7 +1307,7 @@ function processIndeedAlertEmails_Phase1() {
 
   props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
   SpreadsheetApp.flush();
-  Logger.log(`Indeed Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached`);
+  Logger.log(`Indeed Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached | ${totalApplied} already_applied`);
 
   if (totalQueued > 0) {
     deletePhase2Triggers();
@@ -1299,6 +1321,7 @@ function processIndeedAlertEmails_Phase1() {
     `✅ Queued for SMM: ${totalQueued}`,
     `⚠  Skipped (no valid JD): ${totalSkipped}`,
     `⏭  Already cached: ${totalCached}`,
+    `✅ Already applied (skipped): ${totalApplied}`,
     totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
   ].filter(Boolean).join('\n');
 
@@ -1737,7 +1760,32 @@ COVER LETTER RULES:
     }
     const finalNotes = notes.join(" | ");
 
-    const rowData   = [[finalMatch, companyName, position, detectedPlatform, location, "Applied", dateStr, "", finalNotes]];
+    // ── German language requirement (column H) ────────────────────────────
+    // Maps SMM language_note to a short label for analysis of C2 rejections.
+    // EN requirements are intentionally ignored — Rey holds C2 English.
+    // Blank = no German requirement stated, or only English required.
+    let langReq = '';
+    if (smmData && smmData.language_note) {
+      const ln = smmData.language_note;
+      if (ln.status === 'unmet') {
+        // C2 / native / Muttersprache required — the rejection risk case
+        langReq = 'C2 required';
+      } else if (ln.status === 'met') {
+        // Check if it is a German C1 requirement (not just English)
+        const lnText = (ln.text || '').toLowerCase();
+        if (lnText.includes('german') || lnText.includes('deutsch')) {
+          langReq = 'C1 required';
+        }
+        // English-only "met" → leave blank (not relevant to analysis)
+      } else if (ln.status === 'other') {
+        // Third language required (French, Dutch, etc.)
+        langReq = 'Other';
+      }
+      // status === 'none' → leave blank
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    const rowData   = [[finalMatch, companyName, position, detectedPlatform, location, "Applied", dateStr, langReq, finalNotes]];
     const targetRow = findNextEmptyRow(sheet);
     sheet.getRange(targetRow, 1, 1, 9).setValues(rowData);
     updateRowStatusLogic(sheet, targetRow, "Applied");
@@ -2097,18 +2145,28 @@ function getOrCreateMonthlyTab() {
     if (frozenRows > 0) sheet.setFrozenRows(frozenRows);
 
     // ── Re-apply dropdown validations from template row 2 ───────────────────
-    const colsWithDropdowns = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20];
+    const colsWithDropdowns = [1,2,3,4,5,6,7,9,10,11,12,13,14,15,16,17,18,20];
     colsWithDropdowns.forEach(function(col) {
       const validation = templateSheet.getRange(2, col).getDataValidation();
       if (!validation) return;
       sheet.getRange(2, col, 1000, 1).setDataValidation(validation);
     });
 
+    // ── Column H: Language Requirement dropdown ───────────────────────────
+    // Applied fresh here because the template predates this column.
+    // Uses requireValueInList (same style as cols A, D, F) — no inline arrow.
+    const langReqValidation = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['C2 required', 'C1 required', 'Other'], true)
+      .setAllowInvalid(true)
+      .build();
+    sheet.getRange(2, 8, 1000, 1).setDataValidation(langReqValidation);
+    // ─────────────────────────────────────────────────────────────────────
+
   } else {
     // ── Fallback: no monthly tab found — build from scratch ─────────────────
     const headers = [
       "Match Level", "Companies", "Position", "Application Platform", "Location",
-      "Status", "Application Date", "Days Posted", "Notes",
+      "Status", "Application Date", "Language Req.", "Notes",
       "Applied", "HR Interview", "1st Interview", "2nd Interview", "3rd Interview",
       "4th Interview", "Offer", "Ignored", "Rejected",
       "Status Path", "Email Rejection"
@@ -2120,6 +2178,14 @@ function getOrCreateMonthlyTab() {
          .setFontWeight("bold");
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
+
+    // ── Column H: Language Requirement dropdown ───────────────────────────
+    const langReqValidation = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['C2 required', 'C1 required', 'Other'], true)
+      .setAllowInvalid(true)
+      .build();
+    sheet.getRange(2, 8, 1000, 1).setDataValidation(langReqValidation);
+    // ─────────────────────────────────────────────────────────────────────
   }
 
   // ── Apply =JOIN formula to column S (rows 2 onward) ─────────────────────────
@@ -3419,13 +3485,15 @@ function fetchAllJobSources() {
   Logger.log('--- Fetching job sources ---');
  
   // Full-JD sources (no Tavily needed)
-  addJobs(fetchRemotiveJobs(),   'Remotive');
+  addJobs(fetchRemotiveJobs(),      'Remotive');
   Utilities.sleep(500);
-  addJobs(fetchJobicyJobs(),     'Jobicy');
+  addJobs(fetchJobicyJobs(),        'Jobicy');
   Utilities.sleep(500);
-  addJobs(fetchArbeitnowJobs(),  'Arbeitnow');
+  addJobs(fetchArbeitnowJobs(),     'Arbeitnow');
   Utilities.sleep(500);
-  addJobs(fetchRemoteOkJobs(),   'Remote OK');
+  addJobs(fetchRemoteOkJobs(),      'Remote OK');
+  Utilities.sleep(500);
+  addJobs(fetchWorkingNomadsJobs(), 'Working Nomads');
   Utilities.sleep(500);
  
   // Adzuna multi-country (snippet, Tavily used when needed)
@@ -3736,6 +3804,55 @@ function fetchRemoteOkJobs() {
 
   } catch(e) {
     Logger.log(`Remote OK error: ${e.message}`);
+    return [];
+  }
+}
+
+/* ── Working Nomads API (free, no key, remote jobs) ── */
+function fetchWorkingNomadsJobs() {
+  try {
+    const res = UrlFetchApp.fetch(
+      'https://www.workingnomads.com/api/exposed_jobs/?category=marketing',
+      {
+        method: 'get',
+        headers: { 'Accept': 'application/json' },
+        muteHttpExceptions: true
+      }
+    );
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`Working Nomads HTTP ${res.getResponseCode()}`);
+      return [];
+    }
+
+    const data = JSON.parse(res.getContentText());
+    const jobs = Array.isArray(data) ? data : (data.jobs || []);
+
+    const results = [];
+    for (const job of jobs) {
+      const title = (job.title || '').trim();
+      if (!isRelevantJobTitle(title)) continue;
+
+      // Working Nomads descriptions are HTML — strip tags
+      const rawDesc = job.description || job.short_description || '';
+      const desc    = stripHtmlToText(rawDesc).substring(0, 10000);
+
+      results.push({
+        title:           title,
+        company:         (job.company_name || job.company || 'Unknown').trim(),
+        city:            'Remote',
+        url:             job.url || job.job_url || '',
+        description:     desc,
+        id:              'workingnomads_' + (job.id || Math.random()),
+        pubDate:         job.pub_date || job.created_at || '',
+        descriptionFull: desc.length > 300  // treat as full if description is substantial
+      });
+    }
+
+    Logger.log(`Working Nomads: ${results.length} relevant jobs`);
+    return results;
+
+  } catch(e) {
+    Logger.log(`Working Nomads error: ${e.message}`);
     return [];
   }
 }
@@ -4548,6 +4665,10 @@ function processArbeitsagenturAlertEmails_Phase1() {
   let totalQueued  = 0;
   let totalSkipped = 0;
   let totalCached  = 0;
+  let totalApplied = 0;
+
+  // Load applied jobs once — same pattern as Indeed Phase 1 and job search.
+  const appliedSetBa = buildAppliedJobsSet();
 
   for (const thread of threads) {
     if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
@@ -4631,6 +4752,23 @@ function processArbeitsagenturAlertEmails_Phase1() {
         continue;
       }
 
+      // ── Already applied check (post-JD-fetch, consistent with job search) ──
+      const baApplyKey = job.company.toLowerCase().trim() + '||' +
+                         normalizeJobTitle(job.title).toLowerCase().trim();
+      if (appliedSetBa.has(baApplyKey)) {
+        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} — skipping`);
+        const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
+        writeToAlertResults(skipDate, 'BA', job.company, job.title,
+                            job.url, fetchedUrl, 0, 'already_applied',
+                            'Already applied', '', '', threadId);
+        addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
+                      '', 'already_applied', fetchedUrl, 'BA', '');
+        totalApplied++;
+        Utilities.sleep(300);
+        continue;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
         '', '',
@@ -4664,7 +4802,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
 
   props.setProperty('LAST_BA_ALERT_SCAN', new Date().toISOString());
   SpreadsheetApp.flush();
-  Logger.log(`BA Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached`);
+  Logger.log(`BA Phase 1: ${totalQueued} queued | ${totalSkipped} skipped | ${totalCached} cached | ${totalApplied} already_applied`);
 
   if (totalQueued > 0) {
     deletePhase2Triggers();
@@ -4678,6 +4816,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
     `✅ Queued for SMM: ${totalQueued}`,
     `⚠  Skipped (no valid JD): ${totalSkipped}`,
     `⏭  Already cached: ${totalCached}`,
+    `✅ Already applied (skipped): ${totalApplied}`,
     totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
   ].filter(Boolean).join('\n');
 
