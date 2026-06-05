@@ -1764,26 +1764,19 @@ COVER LETTER RULES:
     // Maps SMM language_note to a short label for analysis of C2 rejections.
     // EN requirements are intentionally ignored — Rey holds C2 English.
     // Blank = no German requirement stated, or only English required.
+    // ── Derive column H language requirement from SMM language_note ──
     let langReq = '';
     if (smmData && smmData.language_note) {
       const ln = smmData.language_note;
       if (ln.status === 'unmet') {
-        // C2 / native / Muttersprache required — the rejection risk case
         langReq = 'C2 required';
-      } else if (ln.status === 'met') {
-        // Check if it is a German C1 requirement (not just English)
-        const lnText = (ln.text || '').toLowerCase();
-        if (lnText.includes('german') || lnText.includes('deutsch')) {
-          langReq = 'C1 required';
-        }
-        // English-only "met" → leave blank (not relevant to analysis)
+      } else if (ln.status === 'met' && ln.text && ln.text.toLowerCase().includes('c1')) {
+        langReq = 'C1 required';
       } else if (ln.status === 'other') {
-        // Third language required (French, Dutch, etc.)
         langReq = 'Other';
       }
-      // status === 'none' → leave blank
+      // status === 'met' for English, or status === 'none' → stays blank intentionally
     }
-    // ─────────────────────────────────────────────────────────────────────
 
     const rowData   = [[finalMatch, companyName, position, detectedPlatform, location, "Applied", dateStr, langReq, finalNotes]];
     const targetRow = findNextEmptyRow(sheet);
