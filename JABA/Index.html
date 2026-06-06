@@ -427,11 +427,15 @@ function register(){
     .mainJobProcessor(jd,currentCvType,JSON.stringify(currentSmmData));
 }
 function resetAnalyze(){
+  var hadFitJob = currentFitJob !== null; // remember if we came from Queue
   currentSmmData=null;currentCvType=null;currentFitJob=null;
   document.getElementById('jd-input').value='';
-  document.getElementById('smm-results').style.display='none';document.getElementById('a-loader').style.display='none';
-  document.getElementById('a-output').style.display='none';document.getElementById('preloaded-bar').style.display='none';
-  document.getElementById('run-smm-btn').disabled=false;document.getElementById('reg-btn').disabled=false;
+  document.getElementById('smm-results').style.display='none';
+  document.getElementById('a-loader').style.display='none';
+  document.getElementById('a-output').style.display='none';
+  document.getElementById('preloaded-bar').style.display='none';
+  document.getElementById('run-smm-btn').disabled=false;
+  document.getElementById('reg-btn').disabled=false;
   document.querySelectorAll('.cv-btn').forEach(function(b){b.classList.remove('active');});
   if(radarChart){radarChart.destroy();radarChart=null;}
   if(leafletMap){leafletMap.remove();leafletMap=null;leafletMarker=null;}
@@ -439,6 +443,9 @@ function resetAnalyze(){
   document.getElementById('map-container').style.display='none';
   currentChartType='bar';setActiveChartBtn('bar');
   document.getElementById('radar-container').classList.add('bar-mode');
+  // If the user came from Queue and hit Reset without registering,
+  // refresh the Queue so the card reappears immediately.
+  if(hadFitJob){loadAllFitJobs();loadQueueStats();}
 }
 
 function setChartType(type){
@@ -458,7 +465,7 @@ function renderChartOnly(data,cvType){
     if(currentChartType==='bar'){
       c.classList.add('bar-mode');
       radarChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:scores,backgroundColor:ic.map(function(x){return x+'cc';}),borderColor:ic,borderWidth:2,borderRadius:4,borderSkipped:false}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{min:0,max:5,ticks:{stepSize:1,font:{size:11},color:'#9aa0a6'},grid:{color:'#f1f3f4'}},y:{ticks:{font:{size:12},color:'#3c4043'},grid:{display:false}}},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{min:0,max:5,ticks:{stepSize:1,font:{size:11},color:'#9aa0a6'},grid:{color:'#2a2f3d'}},y:{ticks:{font:{size:12},color:'var(--text,#e8eaf0)'},grid:{display:false}}},
         plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.raw+'/5  ·  '+(s?s.importance:'');}}}} ,layout:{padding:{right:8}}}});
     }else{
       c.classList.remove('bar-mode');

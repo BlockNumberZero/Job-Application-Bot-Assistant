@@ -30,7 +30,7 @@ PLATFORM_DOMAINS: {
 };
 
 const PROMPT_VERSIONS = {
-  SMM:           'v1.4',
+  SMM:           'v1.5',  // language_note extracted separately, not scored
   REJECTION:     'v1.2',
   COVER_LETTER:  'v1.3'
 };
@@ -166,39 +166,74 @@ function onOpen() {
     .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
     .addSeparator()
     .addItem('🔍 Audit Cache Quality',                  'auditCacheQuality')
-       .addItem('🎨 Format Job Cache Colors',              'applyJobCacheFormatting')
+    .addItem('🎨 Format Job Cache Colors',              'applyJobCacheFormatting')
     .addToUi();
- 
-  checkCombinedOpenNotifications();
 
-// ── Add this new function near checkUnreadM2Alerts ──
+  checkCombinedOpenNotifications();
+}
+
+/**
+ * Shows a combined startup popup for:
+ *  1. Unread M2+ jobs in Alert_Results (marks them read after display)
+ *  2. Pending notification text stored by sendDailyNotificationSummary
+ * Called by onOpen(). Defined at top level so it can be tested independently.
+ */
 function checkCombinedOpenNotifications() {
   const messages = [];
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Alert_Results');
     if (sheet && sheet.getLastRow() >= 2) {
-      const data = sheet.getRange(2,1,sheet.getLastRow()-1,12).getValues();
+      const data   = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getValues();
       const unread = [];
-      data.forEach((row,i) => {
-        const n = parseInt((row[7]||'').toString().replace(/\D/g,''))||0;
-        if (n>=2 && !row[11]) unread.push({rowIndex:i+2,company:row[2],title:row[3],level:row[7],score:row[6],source:row[1]});
+      data.forEach(function(row, i) {
+        const n = parseInt((row[7] || '').toString().replace(/\D/g, '')) || 0;
+        if (n >= 2 && !row[11]) {
+          unread.push({
+            rowIndex: i + 2,
+            company:  row[2],
+            title:    row[3],
+            level:    row[7],
+            score:    row[6],
+            source:   row[1]
+          });
+        }
       });
       if (unread.length > 0) {
-        const lines = unread.map(j=>`${j.source==='BA'?'🏛':'🔔'} ${j.company} — ${j.title} (${j.level}: ${j.score}/40)`).join('\n');
-        messages.push(`🚨 ${unread.length} new M2+ Alert Job${unread.length>1?'s':''}:\n${lines}\n\nSee Alert_Results tab for links.`);
-        unread.forEach(j => sheet.getRange(j.rowIndex,12).setValue(true));
+        const lines = unread.map(function(j) {
+          return (j.source === 'BA' ? '🏛' : '🔔') + ' ' +
+                 j.company + ' — ' + j.title +
+                 ' (' + j.level + ': ' + j.score + '/40)';
+        }).join('\n');
+        messages.push(
+          '🚨 ' + unread.length + ' new M2+ Alert Job' + (unread.length > 1 ? 's' : '') +
+          ':\n' + lines +
+          '\n\nSee Alert_Results tab for links.'
+        );
+        unread.forEach(function(j) {
+          sheet.getRange(j.rowIndex, 12).setValue(true);
+        });
         SpreadsheetApp.flush();
       }
     }
-  } catch(e) { Logger.log('combinedNotif alerts: '+e.message); }
+  } catch(e) {
+    Logger.log('combinedNotif alerts: ' + e.message);
+  }
   try {
     const props = PropertiesService.getScriptProperties();
     const text  = props.getProperty('PENDING_NOTIFICATION_TEXT');
-    if (text) { messages.push(text+'\n\nOpen Job_Search_Cache → mark "fit" → register via sidebar.'); props.deleteProperty('PENDING_NOTIFICATION_TEXT'); }
-  } catch(e) { Logger.log('combinedNotif pending: '+e.message); }
-  if (messages.length===0) return;
-  SpreadsheetApp.getUi().alert('📋 JABA Updates', messages.join('\n\n──────\n\n'), SpreadsheetApp.getUi().ButtonSet.OK);
-}
+    if (text) {
+      messages.push(text + '\n\nOpen Job_Search_Cache → mark "fit" → register via sidebar.');
+      props.deleteProperty('PENDING_NOTIFICATION_TEXT');
+    }
+  } catch(e) {
+    Logger.log('combinedNotif pending: ' + e.message);
+  }
+  if (messages.length === 0) return;
+  SpreadsheetApp.getUi().alert(
+    '📋 JABA Updates',
+    messages.join('\n\n──────\n\n'),
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 function refreshAllData() {
@@ -879,10 +914,11 @@ function buildAlertLabel(smmResult) {
 
 
 /* ============================================================
-   MAIN: processIndeedAlertEmails
-   Run from Apps Script menu.
+   DEPRECATED: processIndeedAlertEmails
+   Replaced by processIndeedAlertEmails_Phase1 + runPhase2.
+   Kept as dead code reference only — do not run or trigger.
    ============================================================ */
-function processIndeedAlertEmails() {
+function _DEPRECATED_processIndeedAlertEmails() {
   const props    = PropertiesService.getScriptProperties();
   const timezone = CONFIG.TIMEZONE;
   const runStart = Date.now();
@@ -3939,18 +3975,21 @@ function isValidJobTitleForSearch(title) {
 
 function detectCvTypeForSearch(jdText, jobTitle) {
   const combined = ((jobTitle || '') + ' ' + (jdText || '').substring(0, 800)).toLowerCase();
- 
-  const web3Signals = ['web3', 'blockchain', 'crypto', 'defi', 'nft', 'token', 'dao'];
+
+  // 'token' intentionally excluded — appears in too many non-Web3 contexts
+  // (API tokens, auth tokens, loyalty tokens, promo codes).
+  const web3Signals = ['web3', 'blockchain', 'crypto', 'defi', 'nft', 'dao',
+                       'smart contract', 'solidity', 'decentralized'];
   if (web3Signals.some(s => combined.includes(s))) return 'Web3 Marketing Manager';
- 
+
   const deSignals = [
     '(m/w/d)', '(w/m/d)', '(w/d/m)',
-    '(m/w/x)',   // ← new: Allianz, Deutsche companies
-    '(m/f/d)',   // ← new: EN-in-DE postings
+    '(m/w/x)',   // Allianz, Deutsche companies
+    '(m/f/d)',   // EN-in-DE postings
     'vollzeit', 'bewerbung', 'berufserfahrung', 'aufgaben'
   ];
   if (deSignals.some(s => combined.includes(s))) return 'DE Web2 Marketing Manager';
- 
+
   return 'EN Web2 Marketing Manager';
 }
 
@@ -4817,10 +4856,11 @@ function processArbeitsagenturAlertEmails_Phase1() {
 }
 
 /**
- * Main BA alert processor.
- * Run from the menu or via a time-based trigger.
+ * DEPRECATED: Main BA alert processor.
+ * Replaced by processArbeitsagenturAlertEmails_Phase1 + runPhase2.
+ * Kept as dead code reference only — do not run or trigger.
  */
-function processArbeitsagenturAlertEmails() {
+function _DEPRECATED_processArbeitsagenturAlertEmails() {
   const props    = PropertiesService.getScriptProperties();
   const timezone = CONFIG.TIMEZONE;
   const runStart = Date.now();
@@ -5071,17 +5111,35 @@ function writeToAlertResults(dateStr, source, company, title,
 }
 
 /* ── Delete rows older than 7 days — called at Phase 1 start ── */
+/**
+ * Parses an Alert_Results date string stored as "dd.MM.yyyy HH:mm".
+ * Returns a Date object, or null if the string cannot be parsed.
+ * Uses explicit DD/MM/YYYY parsing because new Date("05.06.2026 14:30")
+ * produces Invalid Date in V8/GAS — the dot-separated format is not ISO.
+ */
+function parseAlertResultsDate(str) {
+  if (!str) return null;
+  const m = str.toString().match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (!m) return null;
+  // months are 0-indexed in JS Date
+  return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+}
+
 function cleanAlertResults() {
   const sheet = getOrCreateAlertResultsSheet();
   if (sheet.getLastRow() < 2) return;
   const cutoff   = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
   const dates    = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
   const toDelete = [];
-  dates.forEach((row, i) => {
-    if (row[0] && new Date(row[0]) < cutoff) toDelete.push(i + 2);
+  dates.forEach(function(row, i) {
+    const entryDate = parseAlertResultsDate(row[0]);
+    if (entryDate && entryDate < cutoff) toDelete.push(i + 2);
   });
   for (let i = toDelete.length - 1; i >= 0; i--) sheet.deleteRow(toDelete[i]);
-  if (toDelete.length > 0) Logger.log(`Alert_Results: removed ${toDelete.length} expired row(s).`);
+  if (toDelete.length > 0) {
+    SpreadsheetApp.flush();
+    Logger.log('Alert_Results: removed ' + toDelete.length + ' expired row(s).');
+  }
 }
 
 /* ── Write to hidden M2_Notifications cell (triggers mobile push) ── */
@@ -5580,149 +5638,9 @@ function runPhase2() {
   }
 }
 
-/* ── PHASE 2 ───────────────────────────────────────────────── */
-function runJobSearchPhase2() {
-  const TIME_BUDGET_MS = 280000; // 4.67 min safety wall
-  const runStart       = Date.now();
 
-  Logger.log('=== JABA Phase 2: SMM Batch ===');
-
-  // Always clean up the trigger that just fired
-  deletePhase2Triggers();
-
-  const sheet = getOrCreatePendingSmmSheet();
-  if (sheet.getLastRow() < 2) {
-    Logger.log('Phase 2: Pending_SMM empty — nothing to do.');
-    return;
-  }
-
-  const allData = sheet.getRange(2, 1, sheet.getLastRow() - 1, 14).getValues();
-
-  // Separate pending rows (Status empty) from accumulated M2+ results
-  const pendingEntries = [];
-  const m2PlusRows     = [];
-  allData.forEach((row, i) => {
-    const status = (row[10] || '').toString().trim();
-    if (status === 'M2+') { m2PlusRows.push(row); }
-    else                  { pendingEntries.push({ sheetRow: i + 2, data: row }); }
-  });
-
-  Logger.log(`Phase 2: ${pendingEntries.length} pending, ${m2PlusRows.length} M2+ already found`);
-
-  if (pendingEntries.length === 0) {
-    Logger.log('Phase 2: no pending rows — sending final report');
-    sendPhase2Report(m2PlusRows);
-    return;
-  }
-
-  // ── Process up to PHASE2_BATCH_SIZE pending rows ──────────
-  const batch        = pendingEntries.slice(0, PHASE2_BATCH_SIZE);
-  const rowsToDelete = [];
-
-  for (const { sheetRow, data } of batch) {
-    if (Date.now() - runStart > TIME_BUDGET_MS - 90000) {
-      Logger.log('⏱ Phase 2 time budget — stopping early');
-      break;
-    }
-
-    const company         = data[1];
-    const title           = data[2];
-    const url             = data[3];
-    const city            = data[4];
-    const country         = data[5];
-    const description     = data[6];
-    const descriptionFull = data[7] === 'TRUE' || data[7] === true;
-    const jobId           = data[9];
-    const job             = { title, company, city, country, url, description, descriptionFull, id: jobId };
-
-    Logger.log(`\n"${title}" — ${company}`);
-
-    const extracted = smartExtractJD(url, description, descriptionFull);
-    if (!extracted) {
-      Logger.log('  ✗ JD fetch failed');
-      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'failed');
-      rowsToDelete.push(sheetRow);
-      Utilities.sleep(500);
-      continue;
-    }
-
-    const isTrusted = descriptionFull || extracted.source === 'api_full';
-    if (!isJdRelevantToJob(extracted.text, company, title, isTrusted)) {
-      Logger.log('  ✗ JD irrelevant');
-      addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, 'unknown', 'irrelevant_jd');
-      rowsToDelete.push(sheetRow);
-      Utilities.sleep(500);
-      continue;
-    }
-
-    const cvType = detectCvTypeForSearch(extracted.text, title);
-
-    let smmResult;
-    try {
-      const raw = analyzeSkillsMatch(extracted.text, cvType, runStart, TIME_BUDGET_MS);
-      smmResult = JSON.parse(raw);
-      if (smmResult.error) throw new Error(smmResult.error);
-    } catch (e) {
-      Logger.log(`  ✗ SMM error: ${e.message}`);
-      rowsToDelete.push(sheetRow);
-      Utilities.sleep(3000);
-      continue;
-    }
-
-    const score    = smmResult.total_score || 0;
-    const level    = smmResult.match_level  || 'M0';
-    const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
-
-    Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source}`);
-    addJobToCache(job, smmResult, cvType, extracted.source);
-
-    if (levelNum >= 2) {
-      // Mark row as M2+ and write scoring data — keep in sheet for report
-      sheet.getRange(sheetRow, 11).setValue('M2+');
-      sheet.getRange(sheetRow, 12).setValue(cvType);
-      sheet.getRange(sheetRow, 13).setValue(extracted.source);
-      sheet.getRange(sheetRow, 14).setValue(JSON.stringify(smmResult));
-      Logger.log(`  ✓ M2+ — kept for report`);
-    } else {
-      rowsToDelete.push(sheetRow);
-    }
-
-    Utilities.sleep(1500);
-  }
-
-  // Delete non-M2+ rows in reverse order (preserves row indices)
-  for (let i = rowsToDelete.length - 1; i >= 0; i--) {
-    try { sheet.deleteRow(rowsToDelete[i]); } catch(e) { Logger.log(`Row delete error: ${e.message}`); }
-  }
-  SpreadsheetApp.flush();
-
-  // Count remaining pending rows after deletions
-  let remainingPending = 0;
-  if (sheet.getLastRow() > 1) {
-    remainingPending = sheet.getRange(2, 11, sheet.getLastRow() - 1, 1)
-      .getValues()
-      .filter(r => (r[0] || '').toString().trim() !== 'M2+')
-      .length;
-  }
-
-  Logger.log(`Phase 2 batch done. Remaining pending: ${remainingPending}`);
-
-  if (remainingPending > 0) {
-    ScriptApp.newTrigger('runJobSearchPhase2')
-      .timeBased()
-      .after(PHASE2_DELAY_MS)
-      .create();
-    Logger.log('Next Phase 2 trigger created — runs in 15 min');
-  } else {
-    Logger.log('All candidates processed — building final report');
-    const finalLastRow = sheet.getLastRow();
-    const finalM2Plus  = finalLastRow > 1
-      ? sheet.getRange(2, 1, finalLastRow - 1, 14).getValues()
-              .filter(r => (r[10] || '').toString().trim() === 'M2+')
-      : [];
-    sendPhase2Report(finalM2Plus);
-  }
-}
+// runJobSearchPhase2 removed — superseded by runPhase2 (universal handler).
+// deletePhase2Triggers() still cleans up this name as a safety net.
 
 /* ── Send report and clear Pending_SMM ─────────────────────── */
 function sendPhase2Report(m2PlusRows) {
