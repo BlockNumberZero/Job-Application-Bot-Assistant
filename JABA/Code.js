@@ -6194,7 +6194,87 @@ function getAllFitJobs() {
     return JSON.stringify({ error: e.message });
   }
 }
-
+/* ============================================================
+   FEATURE: MONTHLY SHEET DATA READER
+   Returns all data from a named monthly tab as JSON for the
+   web app Scan table. Includes headers + all rows.
+   Also returns the list of all available monthly tab names
+   so the web app can build the month navigator.
+   ============================================================ */
+function getMonthlySheetNames() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const SKIP_SHEETS = new Set([
+      'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
+      'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
+      'Weekly_Data'
+    ]);
+ 
+    // Month parsing helper — returns a sortable date from "Jun 2026" etc.
+    const MONTH_NAMES = {
+      jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
+      jul:6,aug:7,sep:8,oct:9,nov:10,dec:11
+    };
+ 
+    const months = [];
+    ss.getSheets().forEach(function(s) {
+      const name = s.getName();
+      if (SKIP_SHEETS.has(name)) return;
+      const parts = name.trim().split(/\s+/);
+      if (parts.length !== 2) return;
+      const mon = MONTH_NAMES[parts[0].toLowerCase().slice(0, 3)];
+      const yr  = parseInt(parts[1], 10);
+      if (mon === undefined || isNaN(yr)) return;
+      months.push({ name, sortKey: yr * 12 + mon });
+    });
+ 
+    // Sort newest first
+    months.sort((a, b) => b.sortKey - a.sortKey);
+    return JSON.stringify(months.map(m => m.name));
+  } catch (e) {
+    Logger.log(`getMonthlySheetNames error: ${e.message}`);
+    return JSON.stringify([]);
+  }
+}
+ 
+function getMonthlySheetData(tabName) {
+  try {
+    if (!tabName) return JSON.stringify({ error: 'No tab name provided' });
+ 
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(tabName);
+    if (!sheet) return JSON.stringify({ error: `Tab "${tabName}" not found` });
+ 
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 1) return JSON.stringify({ rows: [], tabName });
+ 
+    // Read all 20 columns (A–T).  Cols J–R (10–18) are binary stage columns.
+    const NUM_COLS = 20;
+    const allData  = sheet.getRange(1, 1, lastRow, NUM_COLS).getValues();
+ 
+    // Row 0 = headers, rows 1+ = data
+    const headers = allData[0].map(h => (h || '').toString());
+    const rows    = [];
+ 
+    for (let i = 1; i < allData.length; i++) {
+      const row = allData[i];
+      // Skip completely empty rows (no company in col B)
+      if (!row[1]) continue;
+      rows.push(row.map(cell => {
+        // Dates come back as Date objects from Sheets — format them
+        if (cell instanceof Date && !isNaN(cell)) {
+          return Utilities.formatDate(cell, CONFIG.TIMEZONE, 'dd.MM.yyyy');
+        }
+        return cell === null || cell === undefined ? '' : cell;
+      }));
+    }
+ 
+    return JSON.stringify({ headers, rows, tabName });
+  } catch (e) {
+    Logger.log(`getMonthlySheetData error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
 
 /**
  * Marks a single Job_Search_Cache row as 'discarded'.
@@ -6215,7 +6295,67 @@ function skipFitJob(rowIndex, reason) {
     return JSON.stringify({ error: e.message });
   }
 }
-
+/* ============================================================
+   FEATURE: MONTHLY SHEET CELL UPDATER
+   Called from the web app Scan table on every cell edit.
+   Writes one value to a specific row + column in a monthly tab.
+   For Status column (F = col 6): also calls updateRowStatusLogic
+   and handles Rejected → Email Rejection timestamp.
+   tabName  : e.g. "Jun 2026"
+   rowIndex : 1-based sheet row (2 = first data row)
+   colIndex : 1-based column (1 = A, 6 = F, etc.)
+   value    : new cell value as string
+   ============================================================ */
+function updateMonthlyCell(tabName, rowIndex, colIndex, value) {
+  try {
+    if (!tabName || !rowIndex || !colIndex) {
+      return JSON.stringify({ error: 'Missing parameters' });
+    }
+ 
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(tabName);
+    if (!sheet) return JSON.stringify({ error: `Tab "${tabName}" not found` });
+ 
+    const cell = sheet.getRange(rowIndex, colIndex);
+ 
+    // Column 7 (G) = Application Date — store as-is (string dd.MM.yyyy)
+    // Column 10–18 (J–R) = binary stage columns — store as integer
+    if (colIndex >= 10 && colIndex <= 18) {
+      cell.setValue(value === '1' || value === true || value === 1 ? 1 : 0);
+    } else {
+      cell.setValue(value);
+    }
+ 
+    // Column 6 (F) = Status — trigger binary column update + Rejected timestamp
+    if (colIndex === 6) {
+      updateRowStatusLogic(sheet, rowIndex, value);
+ 
+      if (value === 'Rejected') {
+        const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
+        sheet.getRange(rowIndex, 20).setValue(`${dateStr} 🙅🏽‍♂️`);
+      }
+ 
+      // Flag Interview_Reached in SMM_Raw_Data for HR/1st Interview
+      const interviewStatuses = ['HR Interview', '1st Interview'];
+      if (interviewStatuses.includes(value)) {
+        const company = sheet.getRange(rowIndex, 2).getValue().toString().trim();
+        const appDate = sheet.getRange(rowIndex, 7).getValue();
+        flagSmmInterviewReached(company, appDate);
+      }
+ 
+      // Clear binary columns if status is cleared
+      if (!value) {
+        sheet.getRange(rowIndex, 9, 1, 10).clearContent();
+      }
+    }
+ 
+    SpreadsheetApp.flush();
+    return JSON.stringify({ success: true });
+  } catch (e) {
+    Logger.log(`updateMonthlyCell error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
 function focusJdContent(text) {
   if (!text || text.length < 300) return text;
  
@@ -6697,7 +6837,54 @@ function getQueueStats() {
     return JSON.stringify({ error: e.message });
   }
 }
+/* ============================================================
+   FEATURE: DUPLICATE DETECTION
+   Called from sidebar / web app BEFORE triggering SMM.
+   Checks ALL monthly tabs for an exact match on
+   Company (col B) + normalised Position (col C).
+   Returns JSON string:
+     { found: false }
+     { found: true, tabName: "Jun 2026", company: "ACME", position: "CRM Manager" }
+   ============================================================ */
+function checkIfAlreadyApplied(company, position) {
+  try {
+    if (!company || !position) return JSON.stringify({ found: false });
  
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const nc = company.toLowerCase().trim();
+    const np = normalizeJobTitle(position).toLowerCase().trim();
+ 
+    const SKIP_SHEETS = new Set([
+      'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
+      'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
+      'Weekly_Data'
+    ]);
+ 
+    for (const sheet of ss.getSheets()) {
+      const name = sheet.getName();
+      if (SKIP_SHEETS.has(name) || !/[A-Za-z]+ \d{4}/.test(name)) continue;
+      if (sheet.getLastRow() < 2) continue;
+ 
+      const data = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+      for (const row of data) {
+        const rc = (row[0] || '').toString().toLowerCase().trim();
+        const rp = normalizeJobTitle((row[1] || '').toString()).toLowerCase().trim();
+        if (rc === nc && rp === np) {
+          return JSON.stringify({
+            found:    true,
+            tabName:  name,
+            company:  (row[0] || '').toString().trim(),
+            position: (row[1] || '').toString().trim()
+          });
+        }
+      }
+    }
+    return JSON.stringify({ found: false });
+  } catch (e) {
+    Logger.log(`checkIfAlreadyApplied error: ${e.message}`);
+    return JSON.stringify({ found: false });
+  }
+} 
  
 /**
  * Applies conditional formatting to Job_Search_Cache based on Review_Status

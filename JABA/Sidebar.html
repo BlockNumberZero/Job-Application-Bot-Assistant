@@ -103,6 +103,24 @@
         color: #5f6368;
       }
 
+      /* ── DUPLICATE WARNING BANNER ── */
+      #duplicate-banner {
+        display: none;
+        align-items: flex-start;
+        gap: 8px;
+        background: #fff8e1;
+        border: 1px solid #f4b400;
+        border-radius: 6px;
+        padding: 9px 12px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: #7c5a00;
+        line-height: 1.4;
+      }
+      #duplicate-banner .dup-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+      #duplicate-banner .dup-text { flex: 1; }
+      #duplicate-banner .dup-text strong { color: #5a3e00; }
+
       /* ── SMM Button Group ── */
       .smm-btn-group { display: flex; gap: 5px; margin-top: 6px; }
       .smm-btn {
@@ -344,11 +362,17 @@
     <label for="jdInput">Job Description / URL:</label>
     <textarea id="jdInput" placeholder="Paste a job description or URL — or use Load Next Fit Job above…"></textarea>
 
+    <!-- ── DUPLICATE WARNING BANNER (shown before SMM buttons) ── -->
+    <div id="duplicate-banner">
+      <span class="dup-icon">⚠️</span>
+      <span class="dup-text" id="duplicate-text">Already applied</span>
+    </div>
+
     <label>Analyze Skills Match (SMM):</label>
     <div class="smm-btn-group">
-      <button class="smm-btn" onclick="runSmm('DE Web2 Marketing Manager')">🇩🇪 DE<br>Web2</button>
-      <button class="smm-btn" onclick="runSmm('EN Web2 Marketing Manager')">🇬🇧 EN<br>Web2</button>
-      <button class="smm-btn" onclick="runSmm('Web3 Marketing Manager')">🔗<br>Web3</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('DE Web2 Marketing Manager')">🇩🇪 DE<br>Web2</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('EN Web2 Marketing Manager')">🇬🇧 EN<br>Web2</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('Web3 Marketing Manager')">🔗<br>Web3</button>
     </div>
 
     <!-- Loader -->
@@ -424,6 +448,7 @@
       var currentFitJobUrl  = null;
       var currentFitJobData = null;
       var loadedRowIndices  = [];
+      var pendingCvType     = null;  // used by duplicate-check flow
 
       /* ── Helpers ── */
       function getImpColor(imp) {
@@ -531,6 +556,7 @@
       function loadNextFitJob() {
         document.getElementById('loadFitBtn').disabled = true;
         document.getElementById('fit-count-badge').innerText = '📋 Loading…';
+        hideDuplicateBanner();
 
         google.script.run
           .withSuccessHandler(function(resultStr) {
@@ -592,6 +618,66 @@
         if      (s >= 90) setSimilarityBadge('🟢 ' + s + '% — ' + suffix, '#e6f4ea', '#1e8e3e');
         else if (s >= 70) setSimilarityBadge('🟡 ' + s + '% — minor differences', '#fef7e0', '#c77c00');
         else              setSimilarityBadge('🔴 ' + s + '% — JD may have changed', '#fce8e6', '#c5221f');
+      }
+
+      /* ── Duplicate Banner Helpers ── */
+      function showDuplicateBanner(tabName, company, position) {
+        var banner = document.getElementById('duplicate-banner');
+        var text   = document.getElementById('duplicate-text');
+        text.innerHTML =
+          '<strong>⚠️ Already applied in ' + escHtml(tabName) + '</strong> — ' +
+          escHtml(company) + ' · ' + escHtml(position) +
+          '<br><span style="font-size:11px;opacity:0.8;">SMM buttons still active — you can re-analyse or choose a different position.</span>';
+        banner.style.display = 'flex';
+      }
+      function hideDuplicateBanner() {
+        document.getElementById('duplicate-banner').style.display = 'none';
+      }
+
+      /* ── SMM with duplicate check ── */
+      function runSmmWithDupCheck(cvType) {
+        var jd = document.getElementById('jdInput').value.trim();
+        if (!jd) { showOutput('Please paste a Job Description or load a fit job first.', 'error'); return; }
+
+        pendingCvType = cvType;
+
+        // Extract company + position from loaded fit job if available,
+        // otherwise we skip the check (no reliable names from plain JD text).
+        if (currentFitJobData && currentFitJobData.company && currentFitJobData.title) {
+          setAllDisabled(true);
+          document.getElementById('loader').innerText = 'Checking for duplicates…';
+          document.getElementById('loader').style.display = 'block';
+
+          google.script.run
+            .withSuccessHandler(function(resultStr) {
+              document.getElementById('loader').style.display = 'none';
+              try {
+                var r = JSON.parse(resultStr);
+                if (r.found) {
+                  restoreButtons();
+                  showDuplicateBanner(r.tabName, r.company, r.position);
+                  // Still allow SMM — user decides
+                  runSmm(pendingCvType);
+                } else {
+                  hideDuplicateBanner();
+                  runSmm(pendingCvType);
+                }
+              } catch(e) {
+                hideDuplicateBanner();
+                runSmm(pendingCvType);
+              }
+            })
+            .withFailureHandler(function() {
+              document.getElementById('loader').style.display = 'none';
+              hideDuplicateBanner();
+              runSmm(pendingCvType);
+            })
+            .checkIfAlreadyApplied(currentFitJobData.company, currentFitJobData.title);
+        } else {
+          // No fit job loaded — run SMM directly, no duplicate check possible
+          hideDuplicateBanner();
+          runSmm(cvType);
+        }
       }
 
       /* ── Chart Toggle ── */
@@ -700,7 +786,7 @@
         setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 300);
       }
 
-      /* ── SMM ── */
+      /* ── SMM (core — called after duplicate check) ── */
       function runSmm(cvType) {
         var jd = document.getElementById('jdInput').value.trim();
         if (!jd) { showOutput('Please paste a Job Description or load a fit job first.', 'error'); return; }
@@ -745,7 +831,6 @@
         var cvLabel = { 'DE Web2 Marketing Manager': '🇩🇪 DE Web2', 'EN Web2 Marketing Manager': '🇬🇧 EN Web2', 'Web3 Marketing Manager': '🔗 Web3' };
         document.getElementById('cv-type-indicator').innerText = 'Profile: ' + (cvLabel[cvType] || cvType);
 
-        // Reset to bar on new result
         currentChartType = 'bar';
         ['bar','radar','map'].forEach(function(t) { var b=document.getElementById('btn-'+t); if(b) b.classList.toggle('active',t==='bar'); });
         document.getElementById('radar-container').style.display = 'flex';
@@ -817,12 +902,13 @@
         document.getElementById('smm-section').style.display = 'none';
         document.getElementById('fit-job-preview').style.display = 'none';
         document.getElementById('language-pill').style.display = 'none';
+        hideDuplicateBanner();
         if (radarChart) { radarChart.destroy(); radarChart = null; }
         if (leafletMap) { leafletMap.remove(); leafletMap = null; leafletMarker = null; }
         document.getElementById('radar-container').style.display = 'flex';
         document.getElementById('map-container').style.display = 'none';
         document.getElementById('radar-container').classList.add('bar-mode');
-        currentSmmData = null; currentCvType = null;
+        currentSmmData = null; currentCvType = null; pendingCvType = null;
         currentFitJobUrl = null; currentFitJobData = null;
         loadedRowIndices = []; currentChartType = 'bar';
         ['bar','radar','map'].forEach(function(t) { var b=document.getElementById('btn-'+t); if(b) b.classList.toggle('active',t==='bar'); });
