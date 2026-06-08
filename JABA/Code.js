@@ -7022,3 +7022,291 @@ function updateWeeklyData() {
  
   Logger.log(`updateWeeklyData: ${rows.length} week(s) written.`);
 }
+
+/* ============================================================
+   FEATURE 3: JABA_Config — dropdown chip colors
+   Functions: setupJabaConfig, getJabaConfig,
+              saveJabaConfigValue, deleteJabaConfigValue,
+              applyConfigToNewMonthlyTabs
+   ============================================================ */
+
+/**
+ * JABA_Config sheet schema (hidden):
+ * Col A: Column   — e.g. "Platform", "Status", "Match Level", "Language Req."
+ * Col B: Value    — e.g. "LinkedIn"
+ * Col C: Background — hex e.g. "#1d4ed8"
+ * Col D: Text Color  — hex e.g. "#ffffff"
+ *
+ * Run once from Apps Script editor or add a menu item.
+ */
+function setupJabaConfig() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  let   sheet = ss.getSheetByName('JABA_Config');
+
+  if (sheet) {
+    // Already exists — ask before overwriting
+    const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+    if (ui) {
+      const resp = ui.alert(
+        'JABA_Config already exists',
+        'Do you want to reset it to defaults? This will overwrite all custom colors.',
+        ui.ButtonSet.YES_NO
+      );
+      if (resp !== ui.Button.YES) return;
+      sheet.clearContents();
+    }
+  } else {
+    sheet = ss.insertSheet('JABA_Config');
+    sheet.hideSheet();
+  }
+
+  // Seed data — all four dropdown columns
+  const rows = [
+    // ── Match Level ──────────────────────────────────────────
+    ['Match Level', 'M0',        '#374151', '#9ca3af'],
+    ['Match Level', 'M1',        '#78350f', '#fcd34d'],
+    ['Match Level', 'M2',        '#1e3a5f', '#60a5fa'],
+    ['Match Level', 'M3',        '#2e1065', '#a78bfa'],
+    ['Match Level', 'M4',        '#064e3b', '#34d399'],
+    ['Match Level', '🚀 Web3',   '#064e3b', '#34d399'],
+
+    // ── Status ───────────────────────────────────────────────
+    ['Status', 'Applied',        '#064e3b', '#34d399'],
+    ['Status', 'HR Interview',   '#1e3a5f', '#4f8ef7'],
+    ['Status', '1st Interview',  '#2e1065', '#a78bfa'],
+    ['Status', '2nd Interview',  '#2e1065', '#a78bfa'],
+    ['Status', '3rd Interview',  '#2e1065', '#a78bfa'],
+    ['Status', '4th Interview',  '#2e1065', '#a78bfa'],
+    ['Status', 'Offer',          '#713f12', '#fbbf24'],
+    ['Status', 'Ignored',        '#1f2937', '#6b7280'],
+    ['Status', 'Rejected',       '#450a0a', '#f87171'],
+
+    // ── Platform ─────────────────────────────────────────────
+    ['Platform', 'LinkedIn',           '#1d4ed8', '#ffffff'],
+    ['Platform', 'Indeed',             '#2563eb', '#ffffff'],
+    ['Platform', 'Stepstone',          '#dc2626', '#ffffff'],
+    ['Platform', 'Arbeitsagentur',     '#374151', '#9ca3af'],
+    ['Platform', 'Arbeitnow',          '#ffffff', '#00abd3'],
+    ['Platform', 'Kimeta',             '#ffffff', '#b8ce52'],
+    ['Platform', 'Studysmaster',       '#ffffff', '#0039ff'],
+    ['Platform', 'Workwise',           '#ffffff', '#000000'],
+    ['Platform', 'Remotive',           '#7c3aed', '#ffffff'],
+    ['Platform', 'Jobicy',             '#0f766e', '#ffffff'],
+    ['Platform', 'Working Nomads',     '#0369a1', '#ffffff'],
+    ['Platform', 'Cryptojobslist',     '#f59e0b', '#000000'],
+    ['Platform', 'Cryptocurrencyjobs', '#f59e0b', '#000000'],
+    ['Platform', 'Web3career',         '#6d28d9', '#ffffff'],
+    ['Platform', 'WeWorkRemotely',     '#16a34a', '#ffffff'],
+    ['Platform', 'EuroJobs',           '#1e40af', '#ffffff'],
+    ['Platform', 'Himalayas',          '#0c4a6e', '#ffffff'],
+    ['Platform', 'Adzuna',             '#0d9488', '#ffffff'],
+    ['Platform', 'Own website',        '#374151', '#9ca3af'],
+
+    // ── Language Req. ─────────────────────────────────────────
+    ['Language Req.', 'C2 required', '#450a0a', '#f87171'],
+    ['Language Req.', 'C1 required', '#064e3b', '#34d399'],
+    ['Language Req.', 'Other',       '#1e3a5f', '#60a5fa'],
+  ];
+
+  sheet.getRange(1, 1, rows.length, 4).setValues(rows);
+  SpreadsheetApp.flush();
+
+  Logger.log(`JABA_Config seeded: ${rows.length} rows.`);
+
+  const ui2 = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+  if (ui2) ui2.alert(
+    '✅ JABA_Config created',
+    `${rows.length} dropdown values seeded.\n\nThe sheet is hidden — edit colors via the Web App config panel.`,
+    ui2.ButtonSet.OK
+  );
+}
+
+
+/**
+ * Returns the full JABA_Config as a nested JSON object:
+ * { "Platform": { "LinkedIn": { bg: "#1d4ed8", text: "#ffffff" }, ... }, ... }
+ * Called from Web App / Sidebar on Scan tab open.
+ */
+function getJabaConfig() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('JABA_Config');
+
+    // Fallback: if sheet doesn't exist yet, return empty config
+    if (!sheet || sheet.getLastRow() < 1) {
+      return JSON.stringify({});
+    }
+
+    const data   = sheet.getRange(1, 1, sheet.getLastRow(), 4).getValues();
+    const config = {};
+
+    data.forEach(function(row) {
+      const col   = (row[0] || '').toString().trim();
+      const val   = (row[1] || '').toString().trim();
+      const bg    = (row[2] || '').toString().trim();
+      const text  = (row[3] || '').toString().trim();
+      if (!col || !val) return;
+      if (!config[col]) config[col] = {};
+      config[col][val] = { bg, text };
+    });
+
+    return JSON.stringify(config);
+  } catch(e) {
+    Logger.log(`getJabaConfig error: ${e.message}`);
+    return JSON.stringify({});
+  }
+}
+
+
+/**
+ * Add or update a single dropdown value in JABA_Config.
+ * If the value already exists for that column, updates colors in place.
+ * If not, appends a new row.
+ * columnName : e.g. "Platform"
+ * value      : e.g. "LinkedIn"
+ * bg         : hex background color
+ * textColor  : hex text color
+ */
+function saveJabaConfigValue(columnName, value, bg, textColor) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    let   sheet = ss.getSheetByName('JABA_Config');
+    if (!sheet) {
+      // Auto-create if missing
+      setupJabaConfig();
+      sheet = ss.getSheetByName('JABA_Config');
+      if (!sheet) return JSON.stringify({ error: 'Could not create JABA_Config sheet.' });
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 1) {
+      const data = sheet.getRange(1, 1, lastRow, 2).getValues();
+      for (let i = 0; i < data.length; i++) {
+        const existingCol = (data[i][0] || '').toString().trim();
+        const existingVal = (data[i][1] || '').toString().trim();
+        if (existingCol === columnName && existingVal === value) {
+          // Update existing row in place
+          sheet.getRange(i + 1, 3, 1, 2).setValues([[bg, textColor]]);
+          SpreadsheetApp.flush();
+          Logger.log(`saveJabaConfigValue: updated "${columnName}" / "${value}"`);
+          return JSON.stringify({ success: true, action: 'updated' });
+        }
+      }
+    }
+
+    // Not found — append new row
+    sheet.appendRow([columnName, value, bg, textColor]);
+    SpreadsheetApp.flush();
+    Logger.log(`saveJabaConfigValue: added "${columnName}" / "${value}"`);
+    return JSON.stringify({ success: true, action: 'added' });
+
+  } catch(e) {
+    Logger.log(`saveJabaConfigValue error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+
+
+/**
+ * Deletes a value from JABA_Config.
+ * columnName : e.g. "Platform"
+ * value      : e.g. "LinkedIn"
+ */
+function deleteJabaConfigValue(columnName, value) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('JABA_Config');
+    if (!sheet || sheet.getLastRow() < 1) {
+      return JSON.stringify({ error: 'JABA_Config sheet not found.' });
+    }
+
+    const data    = sheet.getRange(1, 1, sheet.getLastRow(), 2).getValues();
+    const toDelete = [];
+
+    data.forEach(function(row, i) {
+      if ((row[0] || '').toString().trim() === columnName &&
+          (row[1] || '').toString().trim() === value) {
+        toDelete.push(i + 1); // 1-based
+      }
+    });
+
+    // Delete in reverse order
+    for (let i = toDelete.length - 1; i >= 0; i--) {
+      sheet.deleteRow(toDelete[i]);
+    }
+
+    SpreadsheetApp.flush();
+    Logger.log(`deleteJabaConfigValue: removed "${columnName}" / "${value}" (${toDelete.length} row(s))`);
+    return JSON.stringify({ success: true, deleted: toDelete.length });
+
+  } catch(e) {
+    Logger.log(`deleteJabaConfigValue error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}
+
+
+/**
+ * Re-applies dropdown validation lists from JABA_Config to all existing
+ * monthly tabs. Only updates the validation list — does NOT reformat
+ * cells that already have values.
+ *
+ * Column mapping:
+ *   Match Level   → col 1 (A)
+ *   Platform      → col 4 (D)
+ *   Status        → col 6 (F)
+ *   Language Req. → col 8 (H)
+ */
+function applyConfigToNewMonthlyTabs() {
+  try {
+    const ss     = SpreadsheetApp.getActiveSpreadsheet();
+    const config = JSON.parse(getJabaConfig());
+
+    const COL_MAP = {
+      'Match Level':   1,
+      'Platform':      4,
+      'Status':        6,
+      'Language Req.': 8
+    };
+
+    const SKIP_SHEETS = new Set([
+      'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
+      'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
+      'Weekly_Data', 'JABA_Config'
+    ]);
+
+    let updated = 0;
+
+    ss.getSheets().forEach(function(sheet) {
+      const name = sheet.getName();
+      if (SKIP_SHEETS.has(name) || !/[A-Za-z]+ \d{4}/.test(name)) return;
+
+      const maxRows = sheet.getMaxRows();
+
+      Object.entries(COL_MAP).forEach(function([colName, colIndex]) {
+        const values = Object.keys(config[colName] || {});
+        if (values.length === 0) return;
+
+        const rule = SpreadsheetApp.newDataValidation()
+          .requireValueInList(values, true)
+          .setAllowInvalid(true)
+          .build();
+
+        // Apply to data rows only (row 2 onward), skip header
+        sheet.getRange(2, colIndex, maxRows - 1, 1).setDataValidation(rule);
+        updated++;
+      });
+    });
+
+    SpreadsheetApp.flush();
+    Logger.log(`applyConfigToNewMonthlyTabs: updated ${updated} validation range(s).`);
+
+    const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
+    if (ui) ui.alert(`✅ Done. Dropdown lists updated across all monthly tabs (${updated} ranges).`);
+    return JSON.stringify({ success: true, updated });
+
+  } catch(e) {
+    Logger.log(`applyConfigToNewMonthlyTabs error: ${e.message}`);
+    return JSON.stringify({ error: e.message });
+  }
+}

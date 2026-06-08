@@ -265,6 +265,57 @@
     /* Stats page placeholder */
     .coming{text-align:center;padding:60px 20px;color:var(--muted)}
     .coming-icon{font-size:40px;margin-bottom:16px}.coming-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}.coming-desc{font-size:13px;max-width:280px;margin:0 auto}
+
+    /* ── Colored Dropdown Chips ── */
+    .d-chip{display:inline-flex;align-items:center;gap:0;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;overflow:hidden;max-width:100%;vertical-align:middle}
+    .d-chip-label{padding:3px 7px;flex:1;overflow:hidden;text-overflow:ellipsis}
+    .d-chip-arrow{padding:3px 5px;font-size:9px;opacity:.7;border-left:1px solid rgba(0,0,0,.12);flex-shrink:0;line-height:1.4}
+    .d-chip:hover .d-chip-arrow{opacity:1}
+
+    /* ── Dropdown value picker (floats below chip) ── */
+    .chip-dropdown{position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px;max-width:220px;padding:6px 0;display:none}
+    .chip-dropdown.open{display:block}
+    .chip-dd-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .1s}
+    .chip-dd-option:hover{background:var(--sur2)}
+    .chip-dd-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+    .chip-dd-label{font-size:12px;color:var(--text);flex:1}
+    .chip-dd-edit{display:flex;align-items:center;gap:6px;padding:7px 10px;border-top:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--muted);transition:color .15s}
+    .chip-dd-edit:hover{color:var(--accent)}
+
+    /* ── Config Sidebar ── */
+    #cfg-sidebar{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:600;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,.4)}
+    #cfg-sidebar.open{right:0}
+    #cfg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:599;display:none}
+    #cfg-overlay.open{display:block}
+    .cfg-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cfg-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+    .cfg-close{width:28px;height:28px;border:none;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px}
+    .cfg-close:hover{background:var(--sur2);color:var(--text)}
+    .cfg-body{flex:1;overflow-y:auto;padding:12px 16px}
+    .cfg-body::-webkit-scrollbar{width:4px}
+    .cfg-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .cfg-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px}
+
+    /* Value rows in config sidebar */
+    .cfg-val-row{background:var(--sur2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .cfg-val-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .cfg-val-preview{padding:3px 10px;border-radius:4px;font-size:12px;font-weight:700;flex-shrink:0}
+    .cfg-val-name{font-size:12px;color:var(--text);flex:1;font-weight:600}
+    .cfg-val-del{width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+    .cfg-val-del:hover{background:#f8717118;color:var(--danger)}
+    .cfg-color-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .cfg-color-grp{display:flex;flex-direction:column;gap:5px}
+    .cfg-color-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .cfg-swatches{display:flex;flex-wrap:wrap;gap:4px}
+    .cfg-swatch{width:18px;height:18px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
+    .cfg-swatch:hover{transform:scale(1.15)}
+    .cfg-swatch.selected{border-color:white;transform:scale(1.1)}
+    .cfg-hex{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 7px;margin-top:3px;outline:none}
+    .cfg-hex:focus{border-color:var(--accent)}
+    .cfg-add-row{border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .cfg-add-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .cfg-new-name{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:12px;padding:5px 8px;outline:none;margin-bottom:8px}
+    .cfg-new-name:focus{border-color:var(--accent)}
   </style>
 </head>
 <body>
@@ -480,6 +531,26 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     CONFIG SIDEBAR + CHIP DROPDOWN
+     ══════════════════════════════════════ -->
+<div id="cfg-overlay" onclick="closeCfgSidebar()"></div>
+<div id="cfg-sidebar">
+  <div class="cfg-header">
+    <div class="cfg-title" id="cfg-title">Edit options</div>
+    <button class="cfg-close" onclick="closeCfgSidebar()">✕</button>
+  </div>
+  <div class="cfg-body" id="cfg-body">
+    <div class="loader"><span class="lspin"></span>Loading…</div>
+  </div>
+  <div class="cfg-footer">
+    <button class="btn bp" style="flex:1" onclick="cfgApplyToAllTabs()">↻ Apply to all tabs</button>
+  </div>
+</div>
+
+<!-- Floating chip value-picker dropdown -->
+<div id="chip-dropdown" class="chip-dropdown"></div>
+
 <script>
 /* ══════════════════════════════════════════════════
    SHARED STATE
@@ -487,6 +558,12 @@
 var allFitJobs=[],currentFitJob=null,currentSmmData=null,currentCvType=null;
 var currentChartType='bar',skipTargetRow=null,p2Timer=null,p2Running=false;
 var radarChart=null,leafletMap=null,leafletMarker=null;
+
+/* Config state */
+var jabaConfig={};          // full config loaded from JABA_Config sheet
+var cfgActiveColumn='';     // which column is open in config sidebar
+var cfgPendingChanges={};   // unsaved changes: { "val": { bg, text } }
+var chipDropdownTarget=null;// { tabName, colIndex, sheetRow, el } for active chip dropdown
 
 /* Scan tab state */
 var scanAllMonths=[];       // all month names, newest first
@@ -832,6 +909,13 @@ function initScanTab(){
   if(scanInitialized&&scanAllMonths.length>0)return;
   scanInitialized=true;
   showScanLoader();
+  // Load config + month names in parallel
+  google.script.run
+    .withSuccessHandler(function(result){
+      try{jabaConfig=JSON.parse(result);}catch(e){jabaConfig={};}
+    })
+    .withFailureHandler(function(){jabaConfig={};})
+    .getJabaConfig();
   google.script.run
     .withSuccessHandler(function(result){
       try{
@@ -1036,18 +1120,17 @@ function renderTableBody(){
         html+='<span class="bin-dot'+(isOn?' on':'')+'" data-col="'+(c+1)+'" data-row="'+sheetRow+'" onclick="toggleBinaryCell(this,\''+scanActiveMonth+'\','+(c+1)+','+sheetRow+')" title="Click to toggle" style="cursor:pointer"></span>';
         html+='</td>';
       }else if(c===COL_MATCH){
-        /* Match level — colored + select */
-        var mlClass=matchLevelClass(val);
-        html+='<td class="'+mlClass+'">'+renderSelectCell(val,MATCH_OPTS,scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Match level — colored chip */
+        html+='<td>'+renderChipCell(val,'Match Level',scanActiveMonth,c+1,sheetRow)+'</td>';
       }else if(c===COL_STATUS){
-        /* Status — chip visual + select */
-        html+='<td>'+renderSelectCell(val,STATUS_OPTS,scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Status — colored chip */
+        html+='<td>'+renderChipCell(val,'Status',scanActiveMonth,c+1,sheetRow)+'</td>';
       }else if(c===COL_PLATFORM){
-        /* Platform — chip visual + select */
-        html+='<td>'+renderSelectCell(val,PLATFORM_OPTS,scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Platform — colored chip */
+        html+='<td>'+renderChipCell(val,'Platform',scanActiveMonth,c+1,sheetRow)+'</td>';
       }else if(c===COL_LANG){
-        /* Language req — chip + select */
-        html+='<td>'+renderSelectCell(val,LANG_OPTS,scanActiveMonth,c+1,sheetRow,true)+'</td>';
+        /* Language req — colored chip (allow empty) */
+        html+='<td>'+renderChipCell(val,'Language Req.',scanActiveMonth,c+1,sheetRow,true)+'</td>';
       }else if(c===COL_STATUS_PATH){
         /* Status path — read-only emoji */
         html+='<td style="font-size:13px;letter-spacing:1px">'+esc(val)+'</td>';
@@ -1194,6 +1277,397 @@ function matchLevelClass(val){
    SHARED HELPERS
    ══════════════════════════════════════════════════ */
 function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ══════════════════════════════════════════════════
+   COLORED CHIP SYSTEM
+   ══════════════════════════════════════════════════ */
+
+/* Config column name → JABA_Config key */
+var COL_TO_CFG={'Match Level':'Match Level','Status':'Status','Platform':'Platform','Language Req.':'Language Req.'};
+
+/* Fallback colors when JABA_Config has no entry for a value */
+var CHIP_FALLBACKS={
+  'Match Level':{'M0':['#374151','#9ca3af'],'M1':['#78350f','#fcd34d'],'M2':['#1e3a5f','#60a5fa'],'M3':['#2e1065','#a78bfa'],'M4':['#064e3b','#34d399'],'🚀 Web3':['#064e3b','#34d399']},
+  'Status':{'Applied':['#064e3b','#34d399'],'HR Interview':['#1e3a5f','#4f8ef7'],'1st Interview':['#2e1065','#a78bfa'],'2nd Interview':['#2e1065','#a78bfa'],'3rd Interview':['#2e1065','#a78bfa'],'4th Interview':['#2e1065','#a78bfa'],'Offer':['#713f12','#fbbf24'],'Ignored':['#1f2937','#6b7280'],'Rejected':['#450a0a','#f87171']},
+  'Platform':{'LinkedIn':['#1d4ed8','#ffffff'],'Indeed':['#2563eb','#ffffff'],'Stepstone':['#dc2626','#ffffff'],'Arbeitsagentur':['#374151','#9ca3af'],'Arbeitnow':['#ffffff','#00abd3'],'Kimeta':['#ffffff','#b8ce52'],'Studysmaster':['#ffffff','#0039ff'],'Workwise':['#ffffff','#000000'],'Remotive':['#7c3aed','#ffffff'],'Jobicy':['#0f766e','#ffffff'],'Working Nomads':['#0369a1','#ffffff'],'Adzuna':['#0d9488','#ffffff'],'Own website':['#374151','#9ca3af']},
+  'Language Req.':{'C2 required':['#450a0a','#f87171'],'C1 required':['#064e3b','#34d399'],'Other':['#1e3a5f','#60a5fa']}
+};
+
+/* Swatch palette for color picker */
+var SWATCH_PALETTE=[
+  '#ffffff','#f8fafc','#f1f5f9','#e2e8f0','#94a3b8','#64748b','#475569','#334155','#1e293b','#0f172a',
+  '#fef2f2','#fecaca','#f87171','#ef4444','#dc2626','#b91c1c','#7f1d1d','#450a0a',
+  '#fff7ed','#fed7aa','#fb923c','#f97316','#ea580c','#c2410c','#7c2d12',
+  '#fefce8','#fef08a','#facc15','#eab308','#ca8a04','#a16207','#713f12',
+  '#f0fdf4','#bbf7d0','#34d399','#22c55e','#16a34a','#15803d','#166534','#064e3b',
+  '#ecfdf5','#6ee7b7','#10b981','#059669','#047857','#065f46',
+  '#eff6ff','#bfdbfe','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e3a8a',
+  '#eef2ff','#c7d2fe','#818cf8','#6366f1','#4f46e5','#4338ca','#3730a3',
+  '#faf5ff','#ddd6fe','#a78bfa','#8b5cf6','#7c3aed','#6d28d9','#4c1d95','#2e1065',
+  '#fdf4ff','#f0abfc','#e879f9','#d946ef','#c026d3','#a21caf','#701a75',
+  '#000000','#111827','#1f2937','#374151','#4b5563','#6b7280','#9ca3af','#d1d5db',
+  '#0c4a6e','#0369a1','#0284c7','#0ea5e9','#38bdf8','#7dd3fc',
+  '#134e4a','#0f766e','#0d9488','#14b8a6','#2dd4bf','#5eead4',
+];
+
+function getChipColors(cfgKey,value){
+  var cfg=jabaConfig[cfgKey];
+  if(cfg&&cfg[value])return{bg:cfg[value].bg,text:cfg[value].text};
+  var fb=CHIP_FALLBACKS[cfgKey];
+  if(fb&&fb[value])return{bg:fb[value][0],text:fb[value][1]};
+  return{bg:'#374151',text:'#9ca3af'};
+}
+
+function renderChipCell(val,cfgKey,tabName,colIndex,sheetRow,allowEmpty){
+  var safeVal=esc(val);
+  var safeTab=esc(tabName);
+  if(!val&&allowEmpty){
+    return '<span class="d-chip" style="background:#1e2330;color:#6b7280;border:1px dashed #2a2f3d;" '+
+      'onclick="openChipDropdown(event,\''+safeTab+'\','+colIndex+','+sheetRow+',\''+cfgKey+'\',this)">'+
+      '<span class="d-chip-label" style="font-style:italic;font-weight:400">—</span>'+
+      '<span class="d-chip-arrow">▾</span></span>';
+  }
+  if(!val)val='';
+  var colors=getChipColors(cfgKey,val);
+  var border=colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff'?'border:1px solid #d1d5db;':'';
+  return '<span class="d-chip" style="background:'+colors.bg+';color:'+colors.text+';'+border+'" '+
+    'onclick="openChipDropdown(event,\''+safeTab+'\','+colIndex+','+sheetRow+',\''+cfgKey+'\',this)">'+
+    '<span class="d-chip-label">'+safeVal+'</span>'+
+    '<span class="d-chip-arrow" style="border-left-color:'+colors.text+'30">▾</span></span>';
+}
+
+/* ── Chip dropdown (value picker) ── */
+function openChipDropdown(e,tabName,colIndex,sheetRow,cfgKey,chipEl){
+  e.stopPropagation();
+  closeChipDropdown();
+  chipDropdownTarget={tabName:tabName,colIndex:colIndex,sheetRow:sheetRow,cfgKey:cfgKey,chipEl:chipEl};
+
+  var dd=document.getElementById('chip-dropdown');
+  var opts=getDropdownOptions(cfgKey);
+  var html='';
+
+  opts.forEach(function(opt){
+    var colors=getChipColors(cfgKey,opt);
+    var border=colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
+    html+='<div class="chip-dd-option" onclick="selectChipValue(\''+esc(opt)+'\')">'+
+      '<span class="chip-dd-swatch" style="background:'+colors.bg+';'+border+'"></span>'+
+      '<span class="chip-dd-label">'+esc(opt)+'</span></div>';
+  });
+
+  html+='<div class="chip-dd-edit" onclick="openCfgSidebar(\''+cfgKey+'\')">'+
+    '<span>⚙️</span><span>Edit options →</span></div>';
+
+  dd.innerHTML=html;
+
+  // Position below the chip
+  var rect=chipEl.getBoundingClientRect();
+  dd.style.left=Math.min(rect.left,window.innerWidth-230)+'px';
+  dd.style.top=(rect.bottom+4)+'px';
+  dd.classList.add('open');
+
+  // Close on outside click
+  setTimeout(function(){
+    document.addEventListener('click',closeChipDropdown,{once:true});
+  },10);
+}
+
+function closeChipDropdown(){
+  var dd=document.getElementById('chip-dropdown');
+  if(dd){dd.classList.remove('open');dd.innerHTML='';}
+  chipDropdownTarget=null;
+}
+
+function selectChipValue(value){
+  if(!chipDropdownTarget)return;
+  var t=chipDropdownTarget;
+  closeChipDropdown();
+
+  // Update in-memory data
+  var rawRowIndex=t.sheetRow-2;
+  if(rawRowIndex>=0&&rawRowIndex<scanRawRows.length){
+    scanRawRows[rawRowIndex][t.colIndex-1]=value;
+  }
+
+  // Re-render the chip in place
+  if(t.chipEl&&t.chipEl.parentNode){
+    t.chipEl.parentNode.innerHTML=renderChipCell(value,t.cfgKey,t.tabName,t.colIndex,t.sheetRow,t.cfgKey==='Language Req.');
+  }
+
+  // Save to sheet
+  showSaveIndicator('saving');
+  google.script.run
+    .withSuccessHandler(function(res){
+      try{var r=JSON.parse(res);if(r.error){showSaveIndicator('error');return;}
+        showSaveIndicator('saved');
+        if(t.colIndex===6){setTimeout(function(){refreshStatusPath(t.tabName,t.sheetRow);},800);}
+      }catch(e){showSaveIndicator('error');}
+    })
+    .withFailureHandler(function(){showSaveIndicator('error');})
+    .updateMonthlyCell(t.tabName,t.sheetRow,t.colIndex,value);
+}
+
+function getDropdownOptions(cfgKey){
+  var cfg=jabaConfig[cfgKey];
+  if(cfg&&Object.keys(cfg).length>0) return Object.keys(cfg);
+  // Fallbacks
+  var fb={'Match Level':MATCH_OPTS,'Status':STATUS_OPTS,'Platform':PLATFORM_OPTS,'Language Req.':LANG_OPTS};
+  return fb[cfgKey]||[];
+}
+
+/* ── Config Sidebar ── */
+function openCfgSidebar(cfgKey){
+  closeChipDropdown();
+  cfgActiveColumn=cfgKey;
+  cfgPendingChanges={};
+  document.getElementById('cfg-title').innerText='Edit options — '+cfgKey;
+  renderCfgBody();
+  document.getElementById('cfg-sidebar').classList.add('open');
+  document.getElementById('cfg-overlay').classList.add('open');
+}
+
+function closeCfgSidebar(){
+  document.getElementById('cfg-sidebar').classList.remove('open');
+  document.getElementById('cfg-overlay').classList.remove('open');
+  cfgPendingChanges={};
+}
+
+function renderCfgBody(){
+  var body=document.getElementById('cfg-body');
+  var cfg=cfgKey=>jabaConfig[cfgActiveColumn]||{};
+  var values=getDropdownOptions(cfgActiveColumn);
+  var html='';
+
+  values.forEach(function(val){
+    var colors=getChipColors(cfgActiveColumn,val);
+    var bg=colors.bg,tx=colors.text;
+    var border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
+    html+='<div class="cfg-val-row" id="cfgrow-'+cssId(val)+'">';
+    html+='<div class="cfg-val-top">';
+    html+='<span class="cfg-val-preview" id="cfgprev-'+cssId(val)+'" style="background:'+bg+';color:'+tx+';'+border+'">'+esc(val)+'</span>';
+    html+='<span class="cfg-val-name">'+esc(val)+'</span>';
+    html+='<button class="cfg-val-del" title="Delete" onclick="cfgDeleteValue(\''+esc(val)+'\')">✕</button>';
+    html+='</div>';
+    html+='<div class="cfg-color-row">';
+    // Background
+    html+='<div class="cfg-color-grp">';
+    html+='<div class="cfg-color-lbl">Background</div>';
+    html+='<div class="cfg-swatches" id="cfgswbg-'+cssId(val)+'">'+swatchesHtml(bg,'bg',val)+'</div>';
+    html+='<input class="cfg-hex" id="cfghexbg-'+cssId(val)+'" value="'+esc(bg)+'" maxlength="7" '+
+      'oninput="cfgHexInput(this,\'bg\',\''+esc(val)+'\')" placeholder="#rrggbb">';
+    html+='</div>';
+    // Text color
+    html+='<div class="cfg-color-grp">';
+    html+='<div class="cfg-color-lbl">Text color</div>';
+    html+='<div class="cfg-swatches" id="cfgswtx-'+cssId(val)+'">'+swatchesHtml(tx,'text',val)+'</div>';
+    html+='<input class="cfg-hex" id="cfghextx-'+cssId(val)+'" value="'+esc(tx)+'" maxlength="7" '+
+      'oninput="cfgHexInput(this,\'text\',\''+esc(val)+'\')" placeholder="#rrggbb">';
+    html+='</div>';
+    html+='</div></div>';
+  });
+
+  // Add new value section
+  html+='<div class="cfg-add-row">';
+  html+='<div class="cfg-add-label">+ Add new option</div>';
+  html+='<input class="cfg-new-name" id="cfg-new-val-name" placeholder="Value name…">';
+  html+='<div class="cfg-color-row">';
+  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Background</div>';
+  html+='<div class="cfg-swatches" id="cfgswbg-NEW">'+swatchesHtml('#374151','bg','NEW')+'</div>';
+  html+='<input class="cfg-hex" id="cfghexbg-NEW" value="#374151" maxlength="7" oninput="cfgHexInput(this,\'bg\',\'NEW\')" placeholder="#rrggbb">';
+  html+='</div>';
+  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Text color</div>';
+  html+='<div class="cfg-swatches" id="cfgswtx-NEW">'+swatchesHtml('#9ca3af','text','NEW')+'</div>';
+  html+='<input class="cfg-hex" id="cfghextx-NEW" value="#9ca3af" maxlength="7" oninput="cfgHexInput(this,\'text\',\'NEW\')" placeholder="#rrggbb">';
+  html+='</div></div>';
+  html+='<button class="btn bp ful" style="margin-top:8px" onclick="cfgAddNewValue()">Add option</button>';
+  html+='</div>';
+
+  body.innerHTML=html;
+}
+
+function cssId(val){return val.replace(/[^a-zA-Z0-9]/g,'_');}
+
+function swatchesHtml(selected,role,valKey){
+  return SWATCH_PALETTE.map(function(color){
+    var sel=color.toLowerCase()===selected.toLowerCase();
+    return '<span class="cfg-swatch'+(sel?' selected':'')+'" style="background:'+color+'" '+
+      'onclick="cfgSwatchClick(this,\''+color+'\',\''+role+'\',\''+esc(valKey)+'\')" title="'+color+'"></span>';
+  }).join('');
+}
+
+function cfgSwatchClick(el,color,role,valKey){
+  cfgApplyColor(color,role,valKey);
+  // Update swatch selection
+  var containerId='cfgsw'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
+  var container=document.getElementById(containerId);
+  if(container){
+    container.querySelectorAll('.cfg-swatch').forEach(function(s){s.classList.remove('selected');});
+    el.classList.add('selected');
+  }
+  // Update hex input
+  var hexId='cfghex'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
+  var hexInput=document.getElementById(hexId);
+  if(hexInput) hexInput.value=color;
+}
+
+function cfgHexInput(inputEl,role,valKey){
+  var val=inputEl.value.trim();
+  if(!/^#[0-9a-fA-F]{6}$/.test(val)) return; // only apply valid hex
+  cfgApplyColor(val,role,valKey);
+  // Update swatch selection
+  var containerId='cfgsw'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
+  var container=document.getElementById(containerId);
+  if(container){
+    container.querySelectorAll('.cfg-swatch').forEach(function(s){
+      s.classList.toggle('selected',s.style.background.toLowerCase()===val.toLowerCase());
+    });
+  }
+}
+
+function cfgApplyColor(color,role,valKey){
+  // Update pending changes
+  if(!cfgPendingChanges[valKey]) cfgPendingChanges[valKey]={};
+  cfgPendingChanges[valKey][role]=color;
+
+  // Get current colors (pending + config)
+  var current=cfgGetCurrentColors(valKey);
+  if(role==='bg') current.bg=color;
+  else current.text=color;
+
+  // Update preview chip
+  var prevEl=document.getElementById('cfgprev-'+cssId(valKey));
+  if(prevEl){
+    var border=current.bg==='#ffffff'||current.bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
+    prevEl.style.background=current.bg;
+    prevEl.style.color=current.text;
+    prevEl.style.border=border?'1px solid #ccc':'';
+  }
+
+  // Save to server
+  if(!cfgPendingChanges[valKey]) cfgPendingChanges[valKey]={};
+  cfgPendingChanges[valKey].bg=current.bg;
+  cfgPendingChanges[valKey].text=current.text;
+  cfgSaveDebounced(valKey,current.bg,current.text);
+}
+
+function cfgGetCurrentColors(valKey){
+  var pending=cfgPendingChanges[valKey]||{};
+  var cfg=jabaConfig[cfgActiveColumn]||{};
+  var entry=cfg[valKey]||{};
+  var fb=(CHIP_FALLBACKS[cfgActiveColumn]||{})[valKey]||['#374151','#9ca3af'];
+  return{
+    bg: pending.bg||entry.bg||fb[0],
+    text: pending.text||entry.text||fb[1]
+  };
+}
+
+var cfgSaveTimers={};
+function cfgSaveDebounced(valKey,bg,text){
+  clearTimeout(cfgSaveTimers[valKey]);
+  cfgSaveTimers[valKey]=setTimeout(function(){
+    google.script.run
+      .withSuccessHandler(function(res){
+        try{
+          var r=JSON.parse(res);
+          if(r.success){
+            // Update local config cache
+            if(!jabaConfig[cfgActiveColumn]) jabaConfig[cfgActiveColumn]={};
+            jabaConfig[cfgActiveColumn][valKey]={bg:bg,text:text};
+            // Re-render any visible chips for this value
+            refreshChipsForValue(cfgActiveColumn,valKey,bg,text);
+          }
+        }catch(e){}
+      })
+      .withFailureHandler(function(){})
+      .saveJabaConfigValue(cfgActiveColumn,valKey,bg,text);
+  },600);
+}
+
+function cfgDeleteValue(valKey){
+  if(!confirm('Delete "'+valKey+'" from '+cfgActiveColumn+'?\n\nThis cannot be undone.')) return;
+  var row=document.getElementById('cfgrow-'+cssId(valKey));
+  if(row){row.style.opacity='.3';row.style.pointerEvents='none';}
+  google.script.run
+    .withSuccessHandler(function(res){
+      try{
+        var r=JSON.parse(res);
+        if(r.success){
+          if(jabaConfig[cfgActiveColumn]) delete jabaConfig[cfgActiveColumn][valKey];
+          renderCfgBody(); // re-render without deleted value
+        }else if(r.error){alert('Delete failed: '+r.error);}
+      }catch(e){}
+    })
+    .withFailureHandler(function(e){alert('Delete failed: '+e.message);})
+    .deleteJabaConfigValue(cfgActiveColumn,valKey);
+}
+
+function cfgAddNewValue(){
+  var nameInput=document.getElementById('cfg-new-val-name');
+  var name=(nameInput?nameInput.value.trim():'');
+  if(!name){nameInput.style.borderColor='var(--danger)';setTimeout(function(){nameInput.style.borderColor='';},1500);return;}
+
+  var bgInput=document.getElementById('cfghexbg-NEW');
+  var txInput=document.getElementById('cfghextx-NEW');
+  var bg=bgInput?bgInput.value.trim():'#374151';
+  var text=txInput?txInput.value.trim():'#9ca3af';
+  if(!/^#[0-9a-fA-F]{6}$/.test(bg)) bg='#374151';
+  if(!/^#[0-9a-fA-F]{6}$/.test(text)) text='#9ca3af';
+
+  // Optimistic local update
+  if(!jabaConfig[cfgActiveColumn]) jabaConfig[cfgActiveColumn]={};
+  jabaConfig[cfgActiveColumn][name]={bg:bg,text:text};
+
+  google.script.run
+    .withSuccessHandler(function(res){
+      try{
+        var r=JSON.parse(res);
+        if(r.success) renderCfgBody();
+        else alert('Add failed: '+r.error);
+      }catch(e){}
+    })
+    .withFailureHandler(function(e){alert('Add failed: '+e.message);})
+    .saveJabaConfigValue(cfgActiveColumn,name,bg,text);
+}
+
+function cfgApplyToAllTabs(){
+  var btn=document.querySelector('#cfg-sidebar .cfg-footer .btn');
+  if(btn){btn.disabled=true;btn.innerText='Applying…';}
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(btn){btn.disabled=false;btn.innerText='↻ Apply to all tabs';}
+      try{var r=JSON.parse(res);if(r.success) alert('✅ Done — dropdown lists updated across all monthly tabs.');}catch(e){}
+    })
+    .withFailureHandler(function(e){
+      if(btn){btn.disabled=false;btn.innerText='↻ Apply to all tabs';}
+      alert('Error: '+e.message);
+    })
+    .applyConfigToNewMonthlyTabs();
+}
+
+/* Refresh visible chips after a color change */
+function refreshChipsForValue(cfgKey,value,bg,text){
+  var colIdx={'Match Level':COL_MATCH,'Status':COL_STATUS,'Platform':COL_PLATFORM,'Language Req.':COL_LANG}[cfgKey];
+  if(colIdx===undefined) return;
+  var sheetColIndex=colIdx+1; // 1-based
+  document.querySelectorAll('#scan-tbody tr').forEach(function(tr){
+    var sheetRow=parseInt(tr.getAttribute('data-sheet-row'))||0;
+    if(!sheetRow) return;
+    // +1 for row-number col
+    var tds=tr.querySelectorAll('td');
+    var tdIdx=colIdx+1; // 0-based td index: col0=row#, col1=colA...
+    var td=tds[tdIdx];
+    if(!td) return;
+    var chip=td.querySelector('.d-chip');
+    if(!chip) return;
+    var labelEl=chip.querySelector('.d-chip-label');
+    if(!labelEl||labelEl.innerText.trim()!==value) return;
+    var border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'border:none;';
+    chip.style.background=bg;
+    chip.style.color=text;
+    chip.style.border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'1px solid #ccc':'';
+    var arrow=chip.querySelector('.d-chip-arrow');
+    if(arrow) arrow.style.borderLeftColor=text+'30';
+  });
+}
 </script>
 </body>
 </html>
