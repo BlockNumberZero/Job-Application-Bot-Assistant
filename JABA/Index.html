@@ -17,7 +17,7 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
 
-    /* ── Topbar ── */
+    /* - Topbar - */
     .topbar{display:flex;align-items:center;justify-content:space-between;height:50px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
     .logo{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent);letter-spacing:1px;display:flex;align-items:center;gap:7px}
     .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
@@ -26,7 +26,7 @@
     .s-chip.ok{color:var(--green);border-color:#34d39930}
     .cdot{width:5px;height:5px;border-radius:50%;background:currentColor}
 
-    /* ── Tab nav ── */
+    /* - Tab nav - */
     .tabnav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:50px;z-index:99}
     .tabnav::-webkit-scrollbar{display:none}
     .tab{flex:1;min-width:75px;height:46px;border:none;background:transparent;color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;padding:0 6px}
@@ -34,7 +34,7 @@
     .bdg{background:var(--accent);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center;line-height:14px}
     .bdg.green{background:var(--green);color:#0f1117}
 
-    /* ── Pages ── */
+    /* - Pages - */
     .page{display:none;padding:14px 14px 40px;max-width:700px;margin:0 auto}
     .page.active{display:block}
     .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
@@ -42,19 +42,19 @@
     .slabel{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;display:flex;align-items:center;gap:8px}
     .slabel::after{content:'';flex:1;height:1px;background:var(--border)}
 
-    /* ── Stats ── */
+    /* - Stats - */
     .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
     .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 8px;text-align:center}
     .stat-n{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1;margin-bottom:3px}
     .stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
     .ca{color:var(--accent)}.cg{color:var(--green)}.cw{color:var(--warn)}.cd{color:var(--danger)}
 
-    /* ── Phase 2 banner ── */
+    /* - Phase 2 banner - */
     #p2-banner{display:none;align-items:center;gap:10px;background:#f59e0b0a;border:1px solid #f59e0b40;border-radius:var(--r);padding:10px 14px;margin-bottom:10px}
     .p2-spin{width:14px;height:14px;flex-shrink:0;border:2px solid #f59e0b40;border-top-color:var(--warn);border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── Job cards ── */
+    /* - Job cards - */
     .job-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:border-color .15s,opacity .3s,transform .3s}
     .job-card.removing{opacity:0;transform:translateX(30px)}
     .jc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px}
@@ -69,7 +69,7 @@
     .jc-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
     .q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 
-    /* ── Buttons ── */
+    /* - Buttons - */
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 14px;border-radius:6px;border:none;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
     .btn:active{transform:scale(.96)}.btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important}
     .bp{background:var(--accent);color:white}.bs{background:var(--green);color:#0f1117}
@@ -77,22 +77,22 @@
     .bdn{background:transparent;color:var(--danger);border:1px solid #f8717140}
     .sm{padding:5px 10px;font-size:11px}.ful{width:100%;justify-content:center}
 
-    /* ── Empty / loader ── */
+    /* - Empty / loader - */
     .empty{text-align:center;padding:40px 20px;color:var(--muted)}
     .empty-icon{font-size:36px;margin-bottom:10px}.empty-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}.empty-sub{font-size:12px}
     .loader{text-align:center;padding:24px;color:var(--muted);font-size:13px;font-style:italic}
     .lspin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:7px;vertical-align:middle}
 
-    /* ── Preloaded bar ── */
+    /* - Preloaded bar - */
     #preloaded-bar{display:none;align-items:center;gap:8px;background:#4f8ef70a;border:1px solid #4f8ef740;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--accent)}
 
-    /* ── DUPLICATE WARNING (Analyze tab) ── */
+    /* - DUPLICATE WARNING (Analyze tab) - */
     #dup-banner{display:none;align-items:flex-start;gap:8px;background:#f59e0b0a;border:1px solid #f59e0b50;border-radius:6px;padding:10px 13px;margin-bottom:10px;font-size:12px;line-height:1.5}
     #dup-banner .dup-icon{font-size:15px;flex-shrink:0;margin-top:1px}
     #dup-banner .dup-body{flex:1;color:var(--warn)}
     #dup-banner .dup-body strong{color:#fcd34d}
 
-    /* ── CV buttons ── */
+    /* - CV buttons - */
     .cv-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
     .cv-btn{padding:9px 6px;border-radius:6px;border:1px solid var(--border);background:var(--sur2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;text-align:center;line-height:1.4;transition:all .15s}
     .cv-btn:hover{border-color:var(--muted);color:var(--text)}.cv-btn.active{border-color:var(--accent);background:#4f8ef710;color:var(--accent)}
@@ -100,12 +100,12 @@
     textarea.jd:focus{outline:none;border-color:var(--accent)}textarea.jd::placeholder{color:var(--muted)}
     .a-btns{display:flex;gap:8px;margin-top:8px}
 
-    /* ── Analyze loader ── */
+    /* - Analyze loader - */
     #a-loader{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;text-align:center;margin:10px 0}
     .alspin{width:28px;height:28px;margin:0 auto 12px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite}
     .altext{font-size:13px;color:var(--muted);font-style:italic}.alsub{font-size:11px;color:var(--muted);margin-top:4px;opacity:.6}
 
-    /* ── SMM results ── */
+    /* - SMM results - */
     #smm-results{display:none}
     .score-card{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;transition:border-color .3s}
     .score-big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1}
@@ -115,7 +115,7 @@
     .ln-ok{background:#34d39910;color:var(--green);border-color:#34d39940}.ln-bad{background:#f8717110;color:var(--danger);border-color:#f8717140}
     .ln-oth{background:#f59e0b10;color:var(--warn);border-color:#f59e0b40}.ln-non{background:var(--sur2);color:var(--muted);border-color:var(--border)}
 
-    /* ── Chart ── */
+    /* - Chart - */
     #chart-toggle-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .imp-legend{display:flex;gap:10px;font-size:11px;color:var(--muted)}
     .chart-type-btns{display:flex;gap:4px}
@@ -128,14 +128,14 @@
     #leaflet-map{height:100%;width:100%}
     .map-ph{height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface);color:var(--muted);font-size:13px;font-style:italic}
 
-    /* ── Gap tips ── */
+    /* - Gap tips - */
     .gap-item{padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
     .gap-item:last-child{border-bottom:none}.gap-sk{font-weight:600;color:var(--text)}.gap-tip{color:var(--muted);margin-top:2px}
     .reg-btns{display:flex;gap:8px}
     .out-msg{display:none;padding:10px 14px;border-radius:6px;font-size:13px;margin-top:8px;border:1px solid transparent;line-height:1.5}
     .out-ok{background:#34d39915;color:var(--green);border-color:#34d39940}.out-err{background:#f8717115;color:var(--danger);border-color:#f8717140}
 
-    /* ── Skip modal ── */
+    /* - Skip modal - */
     #skip-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center;padding:20px}
     #skip-modal.open{display:flex}
     .modal-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:480px;animation:slideUp .2s ease}
@@ -146,7 +146,7 @@
     .reason-btn{padding:10px 14px;border-radius:6px;border:1px solid var(--border);background:var(--sur2);color:var(--text);font-family:var(--sans);font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
     .reason-btn:hover{border-color:var(--danger);background:#f8717108}
 
-    /* ── Leaflet popups ── */
+    /* - Leaflet popups - */
     .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
     .leaflet-popup-tip{background:var(--surface)}
     .leaflet-popup-content{font-family:var(--sans);font-size:12px;margin:8px 12px}
@@ -155,9 +155,9 @@
     .leaflet-control-attribution{background:rgba(15,17,23,.7) !important;color:var(--muted) !important;font-size:9px !important}
     .leaflet-control-attribution a{color:var(--muted) !important}
 
-    /* ════════════════════════════════════════════════════════
-       SCAN TAB — Monthly Applications Table
-       ════════════════════════════════════════════════════════ */
+    /* -
+       SCAN TAB - Monthly Applications Table
+       - */
     #page-scan{display:none;padding:0;max-width:100%;margin:0}
     #page-scan.active{display:flex;flex-direction:column;height:calc(100vh - 96px)}
 
@@ -203,8 +203,8 @@
     #scan-table th{background:var(--sur2);border-bottom:2px solid var(--border);border-right:1px solid var(--border);padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
     #scan-table th:hover{color:var(--text)}
     #scan-table th .sort-arrow{font-size:9px;margin-left:3px;opacity:.5}
-    #scan-table th.sorted-asc .sort-arrow::after{content:'▲';opacity:1}
-    #scan-table th.sorted-desc .sort-arrow::after{content:'▼';opacity:1}
+    #scan-table th.sorted-asc .sort-arrow::after{content:'-';opacity:1}
+    #scan-table th.sorted-desc .sort-arrow::after{content:'-';opacity:1}
     #scan-table th.sorted-asc,.sort-arrow::after,.sorted-desc .sort-arrow::after{opacity:1;color:var(--accent)}
     #scan-table td{border-bottom:1px solid var(--border);border-right:1px solid #1e2330;padding:5px 8px;vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
     #scan-table tr:hover td{background:#1e2330cc}
@@ -217,13 +217,62 @@
     select.cell-select:focus{background:var(--sur2);border-radius:3px;padding:2px 4px;box-shadow:0 0 0 1px var(--accent)}
     select.cell-select option{background:var(--surface);color:var(--text)}
 
-    /* Row color coding — match level column (col A) */
+    /* Row color coding - match level column (col A) */
     td.ml-m0{color:#6b7280}
     td.ml-m1{color:#f59e0b}
     td.ml-m2{color:#60a5fa}
     td.ml-m3{color:#a78bfa}
     td.ml-m4{color:var(--green)}
     td.ml-web3{color:#34d399}
+
+    /* -- Colored Dropdown Chips -- */
+    .d-chip{display:inline-flex;align-items:center;gap:0;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;overflow:hidden;max-width:100%;vertical-align:middle}
+    .d-chip-label{padding:3px 7px;flex:1;overflow:hidden;text-overflow:ellipsis}
+    .d-chip-arrow{padding:3px 5px;font-size:9px;opacity:.7;border-left:1px solid rgba(0,0,0,.12);flex-shrink:0;line-height:1.4}
+    .d-chip:hover .d-chip-arrow{opacity:1}
+
+    /* -- Chip dropdown (value picker) -- */
+    .chip-dropdown{position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px;max-width:220px;padding:6px 0;display:none}
+    .chip-dropdown.open{display:block}
+    .chip-dd-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .1s}
+    .chip-dd-option:hover{background:var(--sur2)}
+    .chip-dd-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+    .chip-dd-label{font-size:12px;color:var(--text);flex:1}
+    .chip-dd-edit{display:flex;align-items:center;gap:6px;padding:7px 10px;border-top:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--muted);transition:color .15s}
+    .chip-dd-edit:hover{color:var(--accent)}
+
+    /* -- Config Sidebar -- */
+    #cfg-sidebar{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:600;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,.4)}
+    #cfg-sidebar.open{right:0}
+    #cfg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:599;display:none}
+    #cfg-overlay.open{display:block}
+    .cfg-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cfg-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+    .cfg-close{width:28px;height:28px;border:none;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px}
+    .cfg-close:hover{background:var(--sur2);color:var(--text)}
+    .cfg-body{flex:1;overflow-y:auto;padding:12px 16px}
+    .cfg-body::-webkit-scrollbar{width:4px}
+    .cfg-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .cfg-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px}
+    .cfg-val-row{background:var(--sur2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .cfg-val-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .cfg-val-preview{padding:3px 10px;border-radius:4px;font-size:12px;font-weight:700;flex-shrink:0}
+    .cfg-val-name{font-size:12px;color:var(--text);flex:1;font-weight:600}
+    .cfg-val-del{width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+    .cfg-val-del:hover{background:#f8717118;color:var(--danger)}
+    .cfg-color-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .cfg-color-grp{display:flex;flex-direction:column;gap:5px}
+    .cfg-color-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .cfg-swatches{display:flex;flex-wrap:wrap;gap:4px}
+    .cfg-swatch{width:18px;height:18px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
+    .cfg-swatch:hover{transform:scale(1.15)}
+    .cfg-swatch.selected{border-color:white;transform:scale(1.1)}
+    .cfg-hex{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 7px;margin-top:3px;outline:none}
+    .cfg-hex:focus{border-color:var(--accent)}
+    .cfg-add-row{border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .cfg-add-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .cfg-new-name{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:12px;padding:5px 8px;outline:none;margin-bottom:8px}
+    .cfg-new-name:focus{border-color:var(--accent)}
 
     /* Status chips */
     .status-chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
@@ -265,57 +314,6 @@
     /* Stats page placeholder */
     .coming{text-align:center;padding:60px 20px;color:var(--muted)}
     .coming-icon{font-size:40px;margin-bottom:16px}.coming-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}.coming-desc{font-size:13px;max-width:280px;margin:0 auto}
-
-    /* ── Colored Dropdown Chips ── */
-    .d-chip{display:inline-flex;align-items:center;gap:0;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;overflow:hidden;max-width:100%;vertical-align:middle}
-    .d-chip-label{padding:3px 7px;flex:1;overflow:hidden;text-overflow:ellipsis}
-    .d-chip-arrow{padding:3px 5px;font-size:9px;opacity:.7;border-left:1px solid rgba(0,0,0,.12);flex-shrink:0;line-height:1.4}
-    .d-chip:hover .d-chip-arrow{opacity:1}
-
-    /* ── Dropdown value picker (floats below chip) ── */
-    .chip-dropdown{position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:160px;max-width:220px;padding:6px 0;display:none}
-    .chip-dropdown.open{display:block}
-    .chip-dd-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .1s}
-    .chip-dd-option:hover{background:var(--sur2)}
-    .chip-dd-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
-    .chip-dd-label{font-size:12px;color:var(--text);flex:1}
-    .chip-dd-edit{display:flex;align-items:center;gap:6px;padding:7px 10px;border-top:1px solid var(--border);cursor:pointer;font-size:11px;color:var(--muted);transition:color .15s}
-    .chip-dd-edit:hover{color:var(--accent)}
-
-    /* ── Config Sidebar ── */
-    #cfg-sidebar{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:600;display:flex;flex-direction:column;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,.4)}
-    #cfg-sidebar.open{right:0}
-    #cfg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:599;display:none}
-    #cfg-overlay.open{display:block}
-    .cfg-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .cfg-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
-    .cfg-close{width:28px;height:28px;border:none;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px}
-    .cfg-close:hover{background:var(--sur2);color:var(--text)}
-    .cfg-body{flex:1;overflow-y:auto;padding:12px 16px}
-    .cfg-body::-webkit-scrollbar{width:4px}
-    .cfg-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-    .cfg-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:8px}
-
-    /* Value rows in config sidebar */
-    .cfg-val-row{background:var(--sur2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
-    .cfg-val-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-    .cfg-val-preview{padding:3px 10px;border-radius:4px;font-size:12px;font-weight:700;flex-shrink:0}
-    .cfg-val-name{font-size:12px;color:var(--text);flex:1;font-weight:600}
-    .cfg-val-del{width:24px;height:24px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-    .cfg-val-del:hover{background:#f8717118;color:var(--danger)}
-    .cfg-color-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .cfg-color-grp{display:flex;flex-direction:column;gap:5px}
-    .cfg-color-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-    .cfg-swatches{display:flex;flex-wrap:wrap;gap:4px}
-    .cfg-swatch{width:18px;height:18px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0}
-    .cfg-swatch:hover{transform:scale(1.15)}
-    .cfg-swatch.selected{border-color:white;transform:scale(1.1)}
-    .cfg-hex{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 7px;margin-top:3px;outline:none}
-    .cfg-hex:focus{border-color:var(--accent)}
-    .cfg-add-row{border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
-    .cfg-add-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-    .cfg-new-name{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:12px;padding:5px 8px;outline:none;margin-bottom:8px}
-    .cfg-new-name:focus{border-color:var(--accent)}
   </style>
 </head>
 <body>
@@ -323,70 +321,70 @@
 <header class="topbar">
   <div class="logo"><div class="logo-dot"></div>JABA</div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div id="save-indicator">●</div>
+    <div id="save-indicator">-</div>
     <div class="s-chip ok"><div class="cdot"></div>Ready</div>
   </div>
 </header>
 
 <nav class="tabnav">
-  <button id="tab-queue"   class="tab active" onclick="showTab('queue',this)">📋 Queue <span id="q-bdg" class="bdg green" style="display:none">0</span></button>
-  <button id="tab-analyze" class="tab"        onclick="showTab('analyze',this)">🔍 Analyze</button>
-  <button id="tab-scan"    class="tab"        onclick="showTab('scan',this);initScanTab()">📊 Applications</button>
-  <button id="tab-stats"   class="tab"        onclick="showTab('stats',this)">📈 Stats</button>
+  <button id="tab-queue"   class="tab active" onclick="showTab('queue',this)">- Queue <span id="q-bdg" class="bdg green" style="display:none">0</span></button>
+  <button id="tab-analyze" class="tab"        onclick="showTab('analyze',this)">- Analyze</button>
+  <button id="tab-scan"    class="tab"        onclick="showTab('scan',this);initScanTab()">- Applications</button>
+  <button id="tab-stats"   class="tab"        onclick="showTab('stats',this)">- Stats</button>
 </nav>
 
-<!-- ══════════════════════════════════════
+<!-- -
      PAGE: QUEUE
-     ══════════════════════════════════════ -->
+     - -->
 <div id="page-queue" class="page active">
   <div id="p2-banner">
     <div class="p2-spin"></div>
-    <span id="p2-text" style="font-size:12px;color:var(--warn);font-weight:500;flex:1">Phase 2 running…</span>
+    <span id="p2-text" style="font-size:12px;color:var(--warn);font-weight:500;flex:1">Phase 2 running-</span>
     <span id="p2-time" style="font-size:10px;color:var(--muted);font-family:var(--mono)"></span>
   </div>
   <div class="stats-row">
-    <div class="stat"><div class="stat-n ca" id="s-applied">—</div><div class="stat-l">Applied</div></div>
-    <div class="stat"><div class="stat-n cw" id="s-inproc">—</div><div class="stat-l">In Review</div></div>
-    <div class="stat"><div class="stat-n cg" id="s-fit">—</div><div class="stat-l">Fit Jobs</div></div>
+    <div class="stat"><div class="stat-n ca" id="s-applied">-</div><div class="stat-l">Applied</div></div>
+    <div class="stat"><div class="stat-n cw" id="s-inproc">-</div><div class="stat-l">In Review</div></div>
+    <div class="stat"><div class="stat-n cg" id="s-fit">-</div><div class="stat-l">Fit Jobs</div></div>
   </div>
   <div class="q-header">
-    <div class="slabel" style="margin:0;flex:1">Fit jobs — ready to review</div>
-    <button class="btn bg sm" onclick="loadAllFitJobs()" style="margin-left:8px">↻ Refresh</button>
+    <div class="slabel" style="margin:0;flex:1">Fit jobs - ready to review</div>
+    <button class="btn bg sm" onclick="loadAllFitJobs()" style="margin-left:8px">- Refresh</button>
   </div>
-  <div id="job-cards"><div class="loader"><span class="lspin"></span>Loading fit jobs…</div></div>
+  <div id="job-cards"><div class="loader"><span class="lspin"></span>Loading fit jobs-</div></div>
 </div>
 
-<!-- ══════════════════════════════════════
+<!-- -
      PAGE: ANALYZE
-     ══════════════════════════════════════ -->
+     - -->
 <div id="page-analyze" class="page">
   <div id="preloaded-bar">
-    📌 <span id="preloaded-text">Loaded from cache</span>
-    <button class="btn bg sm" onclick="clearPreloaded()" style="margin-left:auto;padding:3px 8px;font-size:11px">✕</button>
+    - <span id="preloaded-text">Loaded from cache</span>
+    <button class="btn bg sm" onclick="clearPreloaded()" style="margin-left:auto;padding:3px 8px;font-size:11px">-</button>
   </div>
 
   <!-- DUPLICATE WARNING BANNER -->
   <div id="dup-banner">
-    <span class="dup-icon">⚠️</span>
+    <span class="dup-icon">-</span>
     <div class="dup-body" id="dup-body">Already applied</div>
   </div>
 
   <div class="slabel">CV Profile</div>
   <div class="cv-btns">
-    <button class="cv-btn" data-type="DE Web2 Marketing Manager" onclick="selectCvType('DE Web2 Marketing Manager')">🇩🇪 DE<br><span style="font-size:10px;opacity:.7">Web2</span></button>
-    <button class="cv-btn" data-type="EN Web2 Marketing Manager" onclick="selectCvType('EN Web2 Marketing Manager')">🇬🇧 EN<br><span style="font-size:10px;opacity:.7">Web2</span></button>
-    <button class="cv-btn" data-type="Web3 Marketing Manager"    onclick="selectCvType('Web3 Marketing Manager')">🔗 Web3<br><span style="font-size:10px;opacity:.7">Crypto</span></button>
+    <button class="cv-btn" data-type="DE Web2 Marketing Manager" onclick="selectCvType('DE Web2 Marketing Manager')">- DE<br><span style="font-size:10px;opacity:.7">Web2</span></button>
+    <button class="cv-btn" data-type="EN Web2 Marketing Manager" onclick="selectCvType('EN Web2 Marketing Manager')">- EN<br><span style="font-size:10px;opacity:.7">Web2</span></button>
+    <button class="cv-btn" data-type="Web3 Marketing Manager"    onclick="selectCvType('Web3 Marketing Manager')">- Web3<br><span style="font-size:10px;opacity:.7">Crypto</span></button>
   </div>
   <div class="slabel">Job Description</div>
-  <textarea id="jd-input" class="jd" placeholder="Paste a job description or URL here…&#10;&#10;Or go to Queue and click Analyze &amp; Register on a card."></textarea>
+  <textarea id="jd-input" class="jd" placeholder="Paste a job description or URL here-&#10;&#10;Or go to Queue and click Analyze &amp; Register on a card."></textarea>
   <div class="a-btns">
-    <button id="run-smm-btn" class="btn bp" style="flex:1" onclick="runSmmWithDupCheck()">🔍 Run Skills Analysis</button>
+    <button id="run-smm-btn" class="btn bp" style="flex:1" onclick="runSmmWithDupCheck()">- Run Skills Analysis</button>
     <button class="btn bg" onclick="resetAnalyze()">Clear</button>
   </div>
   <div id="a-loader">
     <div class="alspin"></div>
-    <div id="al-text" class="altext">Analyzing with Mistral…</div>
-    <div id="al-sub"  class="alsub">This takes 15–30 seconds ⏳</div>
+    <div id="al-text" class="altext">Analyzing with Mistral-</div>
+    <div id="al-sub"  class="alsub">This takes 15-30 seconds -</div>
   </div>
   <div id="smm-results">
     <div class="slabel" style="margin-top:14px">Skills Match Result</div>
@@ -399,39 +397,39 @@
       </div>
     </div>
     <div id="lang-note" style="display:none" class="lang-note">
-      <span id="lang-icon">✅</span><span id="lang-text"></span>
+      <span id="lang-icon">-</span><span id="lang-text"></span>
     </div>
     <div class="card">
       <div id="chart-toggle-bar">
         <div class="imp-legend">
-          <span style="color:#ea4335">● Crucial</span>
-          <span style="color:#f4b400">● Necessary</span>
-          <span style="color:#4285f4">● Optional</span>
+          <span style="color:#ea4335">- Crucial</span>
+          <span style="color:#f4b400">- Necessary</span>
+          <span style="color:#4285f4">- Optional</span>
         </div>
         <div class="chart-type-btns">
-          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">📊 Bar</button>
-          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">🕸️ Radar</button>
-          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">🗺️ Map</button>
+          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">- Bar</button>
+          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">- Radar</button>
+          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">- Map</button>
         </div>
       </div>
       <div id="radar-container" class="bar-mode"><canvas id="radarChart"></canvas></div>
       <div id="map-container"><div id="leaflet-map"></div></div>
     </div>
     <div class="card">
-      <div class="card-title">💡 Gap Tips</div>
+      <div class="card-title">- Gap Tips</div>
       <div id="gap-tips"></div>
     </div>
     <div class="reg-btns">
-      <button id="reg-btn" class="btn bs" style="flex:2" onclick="register()">✅ Generate &amp; Register</button>
-      <button class="btn bg" onclick="resetAnalyze()">🔄 Reset</button>
+      <button id="reg-btn" class="btn bs" style="flex:2" onclick="register()">- Generate &amp; Register</button>
+      <button class="btn bg" onclick="resetAnalyze()">- Reset</button>
     </div>
     <div id="a-output" class="out-msg"></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
+<!-- -
      PAGE: SCAN (Applications Table)
-     ══════════════════════════════════════ -->
+     - -->
 <div id="page-scan" class="page">
 
   <!-- Month navigator -->
@@ -448,7 +446,7 @@
     <select id="f-match" title="Match Level" onchange="applyFilters()">
       <option value="">All levels</option>
       <option>M0</option><option>M1</option><option>M2</option>
-      <option>M3</option><option>M4</option><option>🚀 Web3</option>
+      <option>M3</option><option>M4</option><option>- Web3</option>
     </select>
 
     <div class="filter-sep"></div>
@@ -482,21 +480,21 @@
 
     <div class="filter-sep"></div>
 
-    <input id="f-text" type="text" placeholder="Search company / position / notes…" style="min-width:180px" oninput="applyFilters()">
+    <input id="f-text" type="text" placeholder="Search company / position / notes-" style="min-width:180px" oninput="applyFilters()">
 
-    <button class="filter-clear" onclick="clearAllFilters()">✕ Clear</button>
+    <button class="filter-clear" onclick="clearAllFilters()">- Clear</button>
     <div class="filter-sep"></div>
-    <button id="toggle-binary-btn" onclick="toggleBinaryColumns()" title="Show/hide stage columns (Applied → Rejected)">Stages ▸</button>
+    <button id="toggle-binary-btn" onclick="toggleBinaryColumns()" title="Show/hide stage columns (Applied - Rejected)">Stages -</button>
     <span id="scan-result-count"></span>
   </div>
 
   <!-- Loader / empty / table -->
   <div id="scan-loader" style="display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:60px 20px;color:var(--muted);text-align:center">
     <div class="scan-lspin"></div>
-    <div style="font-size:13px;font-style:italic">Loading applications…</div>
+    <div style="font-size:13px;font-style:italic">Loading applications-</div>
   </div>
   <div id="scan-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:60px 20px;color:var(--muted);text-align:center">
-    <div class="empty-icon">📊</div>
+    <div class="empty-icon">-</div>
     <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">No applications found</div>
     <div style="font-size:12px">Try adjusting your filters or select a different month.</div>
   </div>
@@ -508,11 +506,11 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
+<!-- -
      PAGE: STATS
-     ══════════════════════════════════════ -->
+     - -->
 <div id="page-stats" class="page">
-  <div class="coming"><div class="coming-icon">📈</div><div class="coming-title">Stats — Coming Next</div><div class="coming-desc">Application funnel, match level distribution, and Tavily credit usage.</div></div>
+  <div class="coming"><div class="coming-icon">-</div><div class="coming-title">Stats - Coming Next</div><div class="coming-desc">Application funnel, match level distribution, and Tavily credit usage.</div></div>
 </div>
 
 <!-- SKIP MODAL -->
@@ -521,49 +519,40 @@
     <div class="modal-title">Skip this job?</div>
     <div id="modal-sub" class="modal-subtitle">Select a reason:</div>
     <div class="reason-btns">
-      <button class="reason-btn" onclick="confirmSkip('Not my target role')">🎯 Not my target role</button>
-      <button class="reason-btn" onclick="confirmSkip('Company doesn\'t interest me')">🏢 Company doesn't interest me</button>
-      <button class="reason-btn" onclick="confirmSkip('Location doesn\'t fit')">📍 Location doesn't fit</button>
-      <button class="reason-btn" onclick="confirmSkip('Already applied elsewhere')">✅ Already applied elsewhere</button>
-      <button class="reason-btn" onclick="confirmSkip('Requirements too high')">📋 Requirements too high</button>
+      <button class="reason-btn" onclick="confirmSkip('Not my target role')">- Not my target role</button>
+      <button class="reason-btn" onclick="confirmSkip('Company doesn\'t interest me')">- Company doesn't interest me</button>
+      <button class="reason-btn" onclick="confirmSkip('Location doesn\'t fit')">- Location doesn't fit</button>
+      <button class="reason-btn" onclick="confirmSkip('Already applied elsewhere')">- Already applied elsewhere</button>
+      <button class="reason-btn" onclick="confirmSkip('Requirements too high')">- Requirements too high</button>
     </div>
-    <button class="btn bg ful" onclick="closeSkipModal()">Cancel — keep this job</button>
+    <button class="btn bg ful" onclick="closeSkipModal()">Cancel - keep this job</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     CONFIG SIDEBAR + CHIP DROPDOWN
-     ══════════════════════════════════════ -->
+<!-- Config Sidebar -->
 <div id="cfg-overlay" onclick="closeCfgSidebar()"></div>
 <div id="cfg-sidebar">
   <div class="cfg-header">
     <div class="cfg-title" id="cfg-title">Edit options</div>
-    <button class="cfg-close" onclick="closeCfgSidebar()">✕</button>
+    <button class="cfg-close" onclick="closeCfgSidebar()">x</button>
   </div>
   <div class="cfg-body" id="cfg-body">
-    <div class="loader"><span class="lspin"></span>Loading…</div>
+    <div class="loader"><span class="lspin"></span>Loading...</div>
   </div>
   <div class="cfg-footer">
-    <button class="btn bp" style="flex:1" onclick="cfgApplyToAllTabs()">↻ Apply to all tabs</button>
+    <button class="btn bp" style="flex:1" onclick="cfgApplyToAllTabs()">Apply to all tabs</button>
   </div>
 </div>
-
-<!-- Floating chip value-picker dropdown -->
+<!-- Chip value-picker dropdown -->
 <div id="chip-dropdown" class="chip-dropdown"></div>
 
 <script>
-/* ══════════════════════════════════════════════════
+/* --------------------------------------------------
    SHARED STATE
-   ══════════════════════════════════════════════════ */
+   - */
 var allFitJobs=[],currentFitJob=null,currentSmmData=null,currentCvType=null;
 var currentChartType='bar',skipTargetRow=null,p2Timer=null,p2Running=false;
 var radarChart=null,leafletMap=null,leafletMarker=null;
-
-/* Config state */
-var jabaConfig={};          // full config loaded from JABA_Config sheet
-var cfgActiveColumn='';     // which column is open in config sidebar
-var cfgPendingChanges={};   // unsaved changes: { "val": { bg, text } }
-var chipDropdownTarget=null;// { tabName, colIndex, sheetRow, el } for active chip dropdown
 
 /* Scan tab state */
 var scanAllMonths=[];       // all month names, newest first
@@ -581,12 +570,18 @@ var saveTimer=null;
 /* Column index constants (0-based, matching monthly tab) */
 var COL_MATCH=0,COL_COMPANY=1,COL_POSITION=2,COL_PLATFORM=3,COL_LOCATION=4,
     COL_STATUS=5,COL_DATE=6,COL_LANG=7,COL_NOTES=8;
-/* Cols 9-17 are binary stage cols (J=Applied…R=Rejected, 0-based) */
+/* Cols 9-17 are binary stage cols (J=Applied-R=Rejected, 0-based) */
 var COL_STATUS_PATH=18,COL_EMAIL_REJ=19;
 
-/* Binary stage columns: col index → label */
-var BINARY_COLS={9:'📩 Applied',10:'0️⃣ HR',11:'1️⃣ 1st',12:'2️⃣ 2nd',
-                 13:'3️⃣ 3rd',14:'4️⃣ 4th',15:'🎉 Offer',16:'⚪ Ignored',17:'🛑 Rejected'};
+/* Binary stage columns: col index -> label */
+var BINARY_COLS={9:'Applied',10:'HR',11:'1st',12:'2nd',
+                 13:'3rd',14:'4th',15:'Offer',16:'Ignored',17:'Rejected'};
+
+/* Config state */
+var jabaConfig={};
+var cfgActiveColumn='';
+var cfgPendingChanges={};
+var chipDropdownTarget=null;
 
 /* Dropdown option sets */
 var STATUS_OPTS=['Applied','HR Interview','1st Interview','2nd Interview',
@@ -595,17 +590,17 @@ var PLATFORM_OPTS=['Adzuna','Indeed','Arbeitnow','LinkedIn','Stepstone',
                    'Own website','Remotive','Jobicy','Working Nomads',
                    'Cryptojobslist','Cryptocurrencyjobs','Web3career',
                    'Arbeitsagentur','WeWorkRemotely','EuroJobs'];
-var MATCH_OPTS=['M0','M1','M2','M3','M4','🚀 Web3'];
+var MATCH_OPTS=['M0','M1','M2','M3','M4','- Web3'];
 var LANG_OPTS=['C2 required','C1 required','Other'];
 
-/* ══════════════════════════════════════════════════
+/* -
    INIT
-   ══════════════════════════════════════════════════ */
+   - */
 (function init(){startP2Poll();loadAllFitJobs();loadQueueStats();})();
 
-/* ══════════════════════════════════════════════════
+/* -
    TAB NAVIGATION
-   ══════════════════════════════════════════════════ */
+   - */
 function showTab(name,btn){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
@@ -613,9 +608,9 @@ function showTab(name,btn){
   if(btn)btn.classList.add('active');else document.getElementById('tab-'+name).classList.add('active');
 }
 
-/* ══════════════════════════════════════════════════
+/* -
    PHASE 2 BANNER
-   ══════════════════════════════════════════════════ */
+   - */
 function startP2Poll(){checkP2Status();}
 function checkP2Status(){
   google.script.run
@@ -627,8 +622,8 @@ function renderP2Banner(status){
   var banner=document.getElementById('p2-banner'),wasRunning=p2Running;
   if(status&&status.running){
     p2Running=true;banner.style.display='flex';
-    var eta=status.etaMinutes?' · ~'+status.etaMinutes+' min':'';
-    document.getElementById('p2-text').innerText='⚙️ Phase 2 running — '+(status.pending||'?')+' job(s) scoring'+eta;
+    var eta=status.etaMinutes?' - ~'+status.etaMinutes+' min':'';
+    document.getElementById('p2-text').innerText='- Phase 2 running - '+(status.pending||'?')+' job(s) scoring'+eta;
     document.getElementById('p2-time').innerText=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   }else{
     banner.style.display='none';
@@ -637,9 +632,9 @@ function renderP2Banner(status){
   }
 }
 
-/* ══════════════════════════════════════════════════
+/* -
    QUEUE TAB
-   ══════════════════════════════════════════════════ */
+   - */
 function loadQueueStats(){
   google.script.run
     .withSuccessHandler(function(result){
@@ -652,7 +647,7 @@ function loadQueueStats(){
     }).withFailureHandler(function(){}).getQueueStats();
 }
 function loadAllFitJobs(){
-  document.getElementById('job-cards').innerHTML='<div class="loader"><span class="lspin"></span>Loading fit jobs…</div>';
+  document.getElementById('job-cards').innerHTML='<div class="loader"><span class="lspin"></span>Loading fit jobs-</div>';
   google.script.run
     .withSuccessHandler(function(result){
       try{var data=JSON.parse(result);
@@ -664,20 +659,20 @@ function loadAllFitJobs(){
 }
 function renderCards(){
   var c=document.getElementById('job-cards');
-  if(allFitJobs.length===0){c.innerHTML='<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">No fit jobs right now</div><div class="empty-sub">Jobs marked as "fit" in Job_Search_Cache will appear here.</div></div>';return;}
+  if(allFitJobs.length===0){c.innerHTML='<div class="empty"><div class="empty-icon">-</div><div class="empty-title">No fit jobs right now</div><div class="empty-sub">Jobs marked as "fit" in Job_Search_Cache will appear here.</div></div>';return;}
   c.innerHTML=allFitJobs.map(cardHtml).join('');
 }
 function cardHtml(job){
   var lc=job.levelNum>=4?'lm4':job.levelNum>=3?'lm3':'lm2';
-  var cv=job.cvType==='DE Web2 Marketing Manager'?'🇩🇪 DE':job.cvType==='Web3 Marketing Manager'?'🔗 Web3':'🇬🇧 EN';
+  var cv=job.cvType==='DE Web2 Marketing Manager'?'- DE':job.cvType==='Web3 Marketing Manager'?'- Web3':'- EN';
   return '<div class="job-card" id="card-'+job.rowIndex+'">'+
     '<div class="jc-top"><div><div class="jc-title">'+esc(job.title)+'</div><div class="jc-co">'+esc(job.company)+'</div></div>'+
     '<span class="lvl '+lc+'">'+esc(job.matchLevel)+'</span></div>'+
     '<div class="jc-meta"><span class="chip">'+job.score+'/40</span><span class="chip">'+cv+'</span><span class="chip">'+esc(job.source||'JobSearch')+'</span></div>'+
     '<div class="jc-actions">'+
-    '<button class="btn bp sm" style="flex:2" onclick="analyzeJob('+job.rowIndex+')">🔍 Analyze &amp; Register →</button>'+
-    '<button class="btn bg sm" onclick="openJob(\''+esc(job.url)+'\')">↗ Open</button>'+
-    '<button class="btn bdn sm" onclick="showSkipModal('+job.rowIndex+')">✕ Skip</button>'+
+    '<button class="btn bp sm" style="flex:2" onclick="analyzeJob('+job.rowIndex+')">- Analyze &amp; Register -</button>'+
+    '<button class="btn bg sm" onclick="openJob(\''+esc(job.url)+'\')">- Open</button>'+
+    '<button class="btn bdn sm" onclick="showSkipModal('+job.rowIndex+')">- Skip</button>'+
     '</div></div>';
 }
 function analyzeJob(rowIndex){
@@ -685,7 +680,7 @@ function analyzeJob(rowIndex){
   currentFitJob=job;
   document.getElementById('jd-input').value=job.jdText||'';
   selectCvType(job.cvType||'EN Web2 Marketing Manager');
-  document.getElementById('preloaded-text').innerText=job.company+' — '+job.title+' ('+job.matchLevel+': '+job.score+'/40)';
+  document.getElementById('preloaded-text').innerText=job.company+' - '+job.title+' ('+job.matchLevel+': '+job.score+'/40)';
   document.getElementById('preloaded-bar').style.display='flex';
   document.getElementById('smm-results').style.display='none';
   document.getElementById('a-output').style.display='none';
@@ -695,13 +690,13 @@ function analyzeJob(rowIndex){
   showTab('analyze',document.getElementById('tab-analyze'));
 }
 function openJob(url){if(url)window.open(url,'_blank');}
-function queueError(msg){document.getElementById('job-cards').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load jobs</div><div class="empty-sub">'+esc(msg)+'</div></div>';}
+function queueError(msg){document.getElementById('job-cards').innerHTML='<div class="empty"><div class="empty-icon">-</div><div class="empty-title">Could not load jobs</div><div class="empty-sub">'+esc(msg)+'</div></div>';}
 function updateBadge(count){var b=document.getElementById('q-bdg');b.innerText=count;b.style.display=count>0?'inline':'none';}
 
 function showSkipModal(rowIndex){
   skipTargetRow=rowIndex;
   var job=allFitJobs.find(function(j){return j.rowIndex===rowIndex;});
-  document.getElementById('modal-sub').innerText=job?'"'+job.company+' — '+job.title+'"':'Select a reason:';
+  document.getElementById('modal-sub').innerText=job?'"'+job.company+' - '+job.title+'"':'Select a reason:';
   document.getElementById('skip-modal').classList.add('open');
 }
 function closeSkipModal(){document.getElementById('skip-modal').classList.remove('open');skipTargetRow=null;}
@@ -714,15 +709,15 @@ function confirmSkip(reason){
   google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){console.error(e.message);}).skipFitJob(rowIndex,reason);
 }
 
-/* ══════════════════════════════════════════════════
-   ANALYZE TAB — DUPLICATE CHECK
-   ══════════════════════════════════════════════════ */
+/* -
+   ANALYZE TAB - DUPLICATE CHECK
+   - */
 function hideDupBanner(){document.getElementById('dup-banner').style.display='none';}
 function showDupBanner(tabName,company,position){
   var el=document.getElementById('dup-banner');
   document.getElementById('dup-body').innerHTML=
-    '<strong>Already applied in '+esc(tabName)+'</strong> — '+esc(company)+' · '+esc(position)+
-    '<br><span style="font-size:11px;opacity:.75">SMM is still active — you can re-analyse or skip.</span>';
+    '<strong>Already applied in '+esc(tabName)+'</strong> - '+esc(company)+' - '+esc(position)+
+    '<br><span style="font-size:11px;opacity:.75">SMM is still active - you can re-analyse or skip.</span>';
   el.style.display='flex';
 }
 
@@ -733,7 +728,7 @@ function runSmmWithDupCheck(){
 
   /* Only check when we have reliable company + position names (fit job loaded) */
   if(currentFitJob&&currentFitJob.company&&currentFitJob.title){
-    setBusy(true,'Checking for duplicates…','');
+    setBusy(true,'Checking for duplicates-','');
     google.script.run
       .withSuccessHandler(function(resultStr){
         try{
@@ -756,9 +751,9 @@ function runSmmWithDupCheck(){
   }
 }
 
-/* ══════════════════════════════════════════════════
-   ANALYZE TAB — SMM
-   ══════════════════════════════════════════════════ */
+/* -
+   ANALYZE TAB - SMM
+   - */
 function selectCvType(type){currentCvType=type;document.querySelectorAll('.cv-btn').forEach(function(b){b.classList.toggle('active',b.dataset.type===type);});}
 function clearPreloaded(){
   currentFitJob=null;currentSmmData=null;currentCvType=null;
@@ -772,7 +767,7 @@ function clearPreloaded(){
 function runSmm(){
   var jd=document.getElementById('jd-input').value.trim();
   if(!jd)return;
-  setBusy(true,'Analyzing with Mistral…','15–30 seconds ⏳');
+  setBusy(true,'Analyzing with Mistral-','15-30 seconds -');
   document.getElementById('smm-results').style.display='none';document.getElementById('a-output').style.display='none';
   google.script.run
     .withSuccessHandler(function(result){
@@ -787,12 +782,12 @@ function renderSmm(data){
   document.getElementById('score-big').innerText=total;document.getElementById('score-big').style.color=color;
   document.getElementById('score-lv').innerText=level;document.getElementById('score-lv').style.color=color;
   document.getElementById('score-card').style.borderColor=color+'60';
-  document.getElementById('score-cv').innerText=currentCvType?'📄 '+currentCvType:'';
+  document.getElementById('score-cv').innerText=currentCvType?'- '+currentCvType:'';
   renderLang(data.language_note);
   var gaps=(data.skills||[]).filter(function(s){return s.gap_tip&&(s.score||0)<4;});
   document.getElementById('gap-tips').innerHTML=gaps.length>0
     ?gaps.map(function(s){return '<div class="gap-item"><div class="gap-sk">'+esc(s.name)+' ('+(s.score||0)+'/5)</div><div class="gap-tip">'+esc(s.gap_tip)+'</div></div>';}).join('')
-    :'<div style="font-size:12px;color:var(--muted);padding:8px 0">No major gaps — strong match! ✅</div>';
+    :'<div style="font-size:12px;color:var(--muted);padding:8px 0">No major gaps - strong match! -</div>';
   setChartType('bar');
   document.getElementById('smm-results').style.display='block';
   document.getElementById('smm-results').scrollIntoView({behavior:'smooth',block:'start'});
@@ -800,19 +795,19 @@ function renderSmm(data){
 function renderLang(ln){
   var el=document.getElementById('lang-note');if(!ln||!ln.text){el.style.display='none';return;}
   var cls={met:'ln-ok',unmet:'ln-bad',other:'ln-oth',none:'ln-non'}[ln.status]||'ln-non';
-  var icon=ln.status==='unmet'?'⚠️':ln.status==='other'?'ℹ️':'✅';
+  var icon=ln.status==='unmet'?'-':ln.status==='other'?'-':'-';
   el.className='lang-note '+cls;el.style.display='flex';
   document.getElementById('lang-icon').innerText=icon;document.getElementById('lang-text').innerText=ln.text;
 }
 function register(){
   var jd=document.getElementById('jd-input').value.trim();
   if(!jd||!currentSmmData||!currentCvType){showAMsg('Please run Skills Analysis first.','error');return;}
-  setBusy(true,'Generating cover letter & registering…','20–40 seconds 📝');
+  setBusy(true,'Generating cover letter & registering-','20-40 seconds -');
   document.getElementById('a-output').style.display='none';
   google.script.run
     .withSuccessHandler(function(res){
       setBusy(false);if(res&&res.indexOf('Error:')===0){showAMsg(res,'error');return;}
-      showAMsg(res||'✅ Registered!','ok');
+      showAMsg(res||'- Registered!','ok');
       setTimeout(function(){currentFitJob=null;currentSmmData=null;resetAnalyze();showTab('queue',document.getElementById('tab-queue'));loadAllFitJobs();loadQueueStats();},2200);
     }).withFailureHandler(function(err){setBusy(false);showAMsg('Error: '+err.message,'error');})
     .mainJobProcessor(jd,currentCvType,JSON.stringify(currentSmmData));
@@ -856,27 +851,27 @@ function renderChartOnly(data){
       c.classList.add('bar-mode');
       radarChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:scores,backgroundColor:ic.map(function(x){return x+'cc';}),borderColor:ic,borderWidth:2,borderRadius:4,borderSkipped:false}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{min:0,max:5,ticks:{stepSize:1,font:{size:11},color:'#9aa0a6'},grid:{color:'#2a2f3d'}},y:{ticks:{font:{size:12},color:'var(--text,#e8eaf0)'},grid:{display:false}}},
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.raw+'/5  ·  '+(s?s.importance:'');}}}},layout:{padding:{right:8}}}});
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.raw+'/5  -  '+(s?s.importance:'');}}}},layout:{padding:{right:8}}}});
     }else{
       c.classList.remove('bar-mode');
       radarChart=new Chart(ctx,{type:'radar',data:{labels:labels,datasets:[{label:'Match Score',data:scores,borderColor:color,backgroundColor:color+'2e',borderWidth:2.5,pointBackgroundColor:ic,pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:7,pointHoverRadius:9}]},
         options:{responsive:true,maintainAspectRatio:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:9},color:'#9aa0a6',backdropColor:'transparent'},grid:{color:'#2a2f3d'},angleLines:{color:'#2a2f3d'},
           pointLabels:{font:{size:11,weight:'600'},color:var_text(),padding:8,callback:function(label){if(label.length<=16)return label;var words=label.split(' '),lines=[],cur='';words.forEach(function(w){if((cur+' '+w).trim().length>16){if(cur)lines.push(cur.trim());cur=w;}else{cur=(cur+' '+w).trim();}});if(cur)lines.push(cur.trim());return lines;}}}},
-        layout:{padding:{top:30,left:70,right:70,bottom:30}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.parsed.r+'/5  ·  '+(s?s.importance:'');}}}}}});
+        layout:{padding:{top:30,left:70,right:70,bottom:30}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var s=skills[ctx.dataIndex];return ' '+ctx.parsed.r+'/5  -  '+(s?s.importance:'');}}}}}});
     }
   },80);
 }
 function var_text(){return '#e8eaf0';}
 function renderGeoMap(){
   var mapDiv=document.getElementById('leaflet-map');if(!mapDiv)return;
-  mapDiv.innerHTML='<div class="map-ph">📍 Locating job…</div>';
+  mapDiv.innerHTML='<div class="map-ph">- Locating job-</div>';
   var loc=currentSmmData&&currentSmmData.job_location;
-  if(!loc||(!loc.city&&!loc.country)){mapDiv.innerHTML='<div class="map-ph">📍 Location not found in JD</div>';return;}
-  if(loc.city&&loc.city.toLowerCase()==='remote'){mapDiv.innerHTML='<div class="map-ph" style="color:var(--green)">🌐 Remote — no physical location</div>';return;}
+  if(!loc||(!loc.city&&!loc.country)){mapDiv.innerHTML='<div class="map-ph">- Location not found in JD</div>';return;}
+  if(loc.city&&loc.city.toLowerCase()==='remote'){mapDiv.innerHTML='<div class="map-ph" style="color:var(--green)">- Remote - no physical location</div>';return;}
   google.script.run
     .withSuccessHandler(function(resultStr){
       try{var geo=JSON.parse(resultStr);
-        if(!geo.lat||!geo.lng){mapDiv.innerHTML='<div class="map-ph">📍 Could not locate: '+esc((loc.city||'')+(loc.country?', '+loc.country:''))+'</div>';return;}
+        if(!geo.lat||!geo.lng){mapDiv.innerHTML='<div class="map-ph">- Could not locate: '+esc((loc.city||'')+(loc.country?', '+loc.country:''))+'</div>';return;}
         initAndRenderMap(geo,loc);
       }catch(e){mapDiv.innerHTML='<div class="map-ph cd">Map error</div>';}
     }).withFailureHandler(function(){mapDiv.innerHTML='<div class="map-ph cd">Geocoding failed</div>';})
@@ -888,34 +883,27 @@ function initAndRenderMap(geo,loc){
   leafletMap=null;leafletMarker=null;
   var mapDiv=document.getElementById('leaflet-map');
   leafletMap=L.map(mapDiv).setView([geo.lat,geo.lng],11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a>',maxZoom:18}).addTo(leafletMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'- <a href="https://www.openstreetmap.org/copyright">OSM</a>',maxZoom:18}).addTo(leafletMap);
   var icon=L.divIcon({html:'<div style="background:#4f8ef7;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 0 3px rgba(79,142,247,0.3)"></div>',className:'',iconSize:[14,14],iconAnchor:[7,7]});
   leafletMarker=L.marker([geo.lat,geo.lng],{icon:icon}).addTo(leafletMap).bindPopup('<strong>'+esc(loc.city||'')+'</strong>'+(loc.country?'<br>'+esc(loc.country):'')).openPopup();
   setTimeout(function(){if(leafletMap)leafletMap.invalidateSize();},300);
 }
 function setBusy(busy,msg,sub){
   document.getElementById('a-loader').style.display=busy?'block':'none';
-  if(busy){document.getElementById('al-text').innerText=msg||'Working…';document.getElementById('al-sub').innerText=sub||'';}
+  if(busy){document.getElementById('al-text').innerText=msg||'Working-';document.getElementById('al-sub').innerText=sub||'';}
   document.getElementById('run-smm-btn').disabled=busy;document.getElementById('reg-btn').disabled=busy;
 }
 function showAMsg(text,type){var out=document.getElementById('a-output');out.innerText=text;out.className='out-msg '+(type==='ok'||type==='success'?'out-ok':'out-err');out.style.display='block';}
 function scoreColor(s){if(s>=36)return '#34d399';if(s>=30)return '#4f8ef7';if(s>=21)return '#f59e0b';return '#f87171';}
 
-/* ══════════════════════════════════════════════════
-   SCAN TAB — MONTHLY APPLICATIONS TABLE
-   ══════════════════════════════════════════════════ */
+/* -
+   SCAN TAB - MONTHLY APPLICATIONS TABLE
+   - */
 
 function initScanTab(){
   if(scanInitialized&&scanAllMonths.length>0)return;
   scanInitialized=true;
   showScanLoader();
-  // Load config + month names in parallel
-  google.script.run
-    .withSuccessHandler(function(result){
-      try{jabaConfig=JSON.parse(result);}catch(e){jabaConfig={};}
-    })
-    .withFailureHandler(function(){jabaConfig={};})
-    .getJabaConfig();
   google.script.run
     .withSuccessHandler(function(result){
       try{
@@ -977,7 +965,7 @@ function loadMonth(tabName){
     .getMonthlySheetData(tabName);
 }
 
-/* ── Table header ── */
+/* - Table header - */
 function buildTableHeader(){
   var thead=document.getElementById('scan-thead');
   var tr=document.createElement('tr');
@@ -993,7 +981,7 @@ function buildTableHeader(){
     var label=scanHeaders[i]||'Col '+(i+1);
 
     if(i>=9&&i<=17){
-      /* Binary stage columns — hidden by default */
+      /* Binary stage columns - hidden by default */
       th.className='bin-col hidden-col';
       th.innerText=Object.values(BINARY_COLS)[i-9]||label;
     }else{
@@ -1009,7 +997,7 @@ function buildTableHeader(){
   thead.appendChild(tr);
 }
 
-/* ── Filters ── */
+/* - Filters - */
 function applyFilters(){
   var fMatch   =document.getElementById('f-match').value;
   var fPlatform=document.getElementById('f-platform').value;
@@ -1047,7 +1035,7 @@ function clearAllFilters(){
   renderTableBody();
 }
 
-/* ── Sort ── */
+/* - Sort - */
 function sortBy(col){
   if(scanSortCol===col){
     scanSortDir*=-1;
@@ -1077,7 +1065,7 @@ function doSort(){
   });
 }
 
-/* ── Render body ── */
+/* - Render body - */
 function renderTableBody(){
   if(scanFiltered.length===0){
     if(scanRawRows.length===0){showScanEmpty();return;}
@@ -1114,37 +1102,37 @@ function renderTableBody(){
       var tdClass=hidden?'hidden-col':'';
 
       if(c>=9&&c<=17){
-        /* Binary stage cols — toggle dot */
+        /* Binary stage cols - toggle dot */
         var isOn=(val==='1'||val===1||val===true||val==='true');
         html+='<td class="bin-col'+(hidden?' hidden-col':'')+'">';
         html+='<span class="bin-dot'+(isOn?' on':'')+'" data-col="'+(c+1)+'" data-row="'+sheetRow+'" onclick="toggleBinaryCell(this,\''+scanActiveMonth+'\','+(c+1)+','+sheetRow+')" title="Click to toggle" style="cursor:pointer"></span>';
         html+='</td>';
       }else if(c===COL_MATCH){
-        /* Match level — colored chip */
-        html+='<td>'+renderChipCell(val,'Match Level',scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Match level -- colored chip */
+        html+='<td>'+renderChipCell(val,'Match Level',scanActiveMonth,c+1,sheetRow,false)+'</td>';
       }else if(c===COL_STATUS){
-        /* Status — colored chip */
-        html+='<td>'+renderChipCell(val,'Status',scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Status -- colored chip */
+        html+='<td>'+renderChipCell(val,'Status',scanActiveMonth,c+1,sheetRow,false)+'</td>';
       }else if(c===COL_PLATFORM){
-        /* Platform — colored chip */
-        html+='<td>'+renderChipCell(val,'Platform',scanActiveMonth,c+1,sheetRow)+'</td>';
+        /* Platform -- colored chip */
+        html+='<td>'+renderChipCell(val,'Platform',scanActiveMonth,c+1,sheetRow,false)+'</td>';
       }else if(c===COL_LANG){
-        /* Language req — colored chip (allow empty) */
+        /* Language req -- colored chip (allow empty) */
         html+='<td>'+renderChipCell(val,'Language Req.',scanActiveMonth,c+1,sheetRow,true)+'</td>';
       }else if(c===COL_STATUS_PATH){
-        /* Status path — read-only emoji */
+        /* Status path - read-only emoji */
         html+='<td style="font-size:13px;letter-spacing:1px">'+esc(val)+'</td>';
       }else if(c===COL_EMAIL_REJ){
-        /* Email Rejection — editable text */
+        /* Email Rejection - editable text */
         html+='<td>'+renderInputCell(val,scanActiveMonth,c+1,sheetRow)+'</td>';
       }else if(c===COL_DATE){
-        /* Application date — editable text */
+        /* Application date - editable text */
         html+='<td style="font-family:var(--mono);font-size:11px">'+renderInputCell(val,scanActiveMonth,c+1,sheetRow)+'</td>';
       }else if(c===COL_NOTES){
-        /* Notes — wider editable */
+        /* Notes - wider editable */
         html+='<td style="max-width:260px">'+renderInputCell(val,scanActiveMonth,c+1,sheetRow)+'</td>';
       }else{
-        /* Company, Position, Location — editable text */
+        /* Company, Position, Location - editable text */
         html+='<td>'+renderInputCell(val,scanActiveMonth,c+1,sheetRow)+'</td>';
       }
     }
@@ -1154,7 +1142,7 @@ function renderTableBody(){
   tbody.innerHTML=html;
 }
 
-/* ── Cell renderers ── */
+/* - Cell renderers - */
 function renderSelectCell(val,opts,tabName,colIndex,sheetRow,allowEmpty){
   var options='';
   if(allowEmpty) options+='<option value=""></option>';
@@ -1170,7 +1158,7 @@ function renderInputCell(val,tabName,colIndex,sheetRow){
     'onkeydown="if(event.key===\'Enter\'){this.blur();}">';
 }
 
-/* ── Binary cell toggle ── */
+/* - Binary cell toggle - */
 function toggleBinaryCell(dotEl,tabName,colIndex,sheetRow){
   var isOn=dotEl.classList.contains('on');
   var newVal=isOn?0:1;
@@ -1178,7 +1166,7 @@ function toggleBinaryCell(dotEl,tabName,colIndex,sheetRow){
   saveCell(tabName,colIndex,sheetRow,String(newVal));
 }
 
-/* ── Save cell to sheet ── */
+/* - Save cell to sheet - */
 function saveCell(tabName,colIndex,sheetRow,value){
   /* Update in-memory data too */
   var rawRowIndex=sheetRow-2;
@@ -1231,16 +1219,16 @@ function refreshStatusPath(tabName,sheetRow){
     .getMonthlySheetData(tabName);
 }
 
-/* ── Save indicator ── */
+/* - Save indicator - */
 function showSaveIndicator(state){
   var el=document.getElementById('save-indicator');
   el.className='';
-  if(state==='saving'){el.className='saving';el.innerText='● Saving…';}
-  else if(state==='saved'){el.className='saved';el.innerText='✓ Saved';setTimeout(function(){el.style.display='none';},2000);}
-  else{el.className='error';el.innerText='✕ Error';setTimeout(function(){el.style.display='none';},3000);}
+  if(state==='saving'){el.className='saving';el.innerText='- Saving-';}
+  else if(state==='saved'){el.className='saved';el.innerText='- Saved';setTimeout(function(){el.style.display='none';},2000);}
+  else{el.className='error';el.innerText='- Error';setTimeout(function(){el.style.display='none';},3000);}
 }
 
-/* ── Toggle binary columns ── */
+/* - Toggle binary columns - */
 function toggleBinaryColumns(){
   scanBinaryVisible=!scanBinaryVisible;
   document.getElementById('toggle-binary-btn').classList.toggle('active',scanBinaryVisible);
@@ -1249,7 +1237,7 @@ function toggleBinaryColumns(){
   });
 }
 
-/* ── Scan state helpers ── */
+/* - Scan state helpers - */
 function showScanLoader(){
   document.getElementById('scan-loader').style.display='flex';
   document.getElementById('scan-empty').style.display='none';
@@ -1261,7 +1249,7 @@ function showScanEmpty(){
   document.getElementById('scan-table-wrap').style.display='none';
 }
 
-/* ── Match level CSS class ── */
+/* - Match level CSS class - */
 function matchLevelClass(val){
   var v=(val||'').toString().trim();
   if(v==='M0') return 'ml-m0';
@@ -1273,27 +1261,24 @@ function matchLevelClass(val){
   return '';
 }
 
-/* ══════════════════════════════════════════════════
+/* --------------------------------------------------
    SHARED HELPERS
-   ══════════════════════════════════════════════════ */
+   -------------------------------------------------- */
 function esc(str){return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-/* ══════════════════════════════════════════════════
+/* --------------------------------------------------
    COLORED CHIP SYSTEM
-   ══════════════════════════════════════════════════ */
-
-/* Config column name → JABA_Config key */
-var COL_TO_CFG={'Match Level':'Match Level','Status':'Status','Platform':'Platform','Language Req.':'Language Req.'};
+   -------------------------------------------------- */
 
 /* Fallback colors when JABA_Config has no entry for a value */
 var CHIP_FALLBACKS={
-  'Match Level':{'M0':['#374151','#9ca3af'],'M1':['#78350f','#fcd34d'],'M2':['#1e3a5f','#60a5fa'],'M3':['#2e1065','#a78bfa'],'M4':['#064e3b','#34d399'],'🚀 Web3':['#064e3b','#34d399']},
+  'Match Level':{'M0':['#374151','#9ca3af'],'M1':['#78350f','#fcd34d'],'M2':['#1e3a5f','#60a5fa'],'M3':['#2e1065','#a78bfa'],'M4':['#064e3b','#34d399'],'Web3':['#064e3b','#34d399']},
   'Status':{'Applied':['#064e3b','#34d399'],'HR Interview':['#1e3a5f','#4f8ef7'],'1st Interview':['#2e1065','#a78bfa'],'2nd Interview':['#2e1065','#a78bfa'],'3rd Interview':['#2e1065','#a78bfa'],'4th Interview':['#2e1065','#a78bfa'],'Offer':['#713f12','#fbbf24'],'Ignored':['#1f2937','#6b7280'],'Rejected':['#450a0a','#f87171']},
   'Platform':{'LinkedIn':['#1d4ed8','#ffffff'],'Indeed':['#2563eb','#ffffff'],'Stepstone':['#dc2626','#ffffff'],'Arbeitsagentur':['#374151','#9ca3af'],'Arbeitnow':['#ffffff','#00abd3'],'Kimeta':['#ffffff','#b8ce52'],'Studysmaster':['#ffffff','#0039ff'],'Workwise':['#ffffff','#000000'],'Remotive':['#7c3aed','#ffffff'],'Jobicy':['#0f766e','#ffffff'],'Working Nomads':['#0369a1','#ffffff'],'Adzuna':['#0d9488','#ffffff'],'Own website':['#374151','#9ca3af']},
   'Language Req.':{'C2 required':['#450a0a','#f87171'],'C1 required':['#064e3b','#34d399'],'Other':['#1e3a5f','#60a5fa']}
 };
 
-/* Swatch palette for color picker */
+/* Swatch palette for color picker (ASCII-safe hex only) */
 var SWATCH_PALETTE=[
   '#ffffff','#f8fafc','#f1f5f9','#e2e8f0','#94a3b8','#64748b','#475569','#334155','#1e293b','#0f172a',
   '#fef2f2','#fecaca','#f87171','#ef4444','#dc2626','#b91c1c','#7f1d1d','#450a0a',
@@ -1307,7 +1292,7 @@ var SWATCH_PALETTE=[
   '#fdf4ff','#f0abfc','#e879f9','#d946ef','#c026d3','#a21caf','#701a75',
   '#000000','#111827','#1f2937','#374151','#4b5563','#6b7280','#9ca3af','#d1d5db',
   '#0c4a6e','#0369a1','#0284c7','#0ea5e9','#38bdf8','#7dd3fc',
-  '#134e4a','#0f766e','#0d9488','#14b8a6','#2dd4bf','#5eead4',
+  '#134e4a','#0f766e','#0d9488','#14b8a6','#2dd4bf','#5eead4'
 ];
 
 function getChipColors(cfgKey,value){
@@ -1315,6 +1300,8 @@ function getChipColors(cfgKey,value){
   if(cfg&&cfg[value])return{bg:cfg[value].bg,text:cfg[value].text};
   var fb=CHIP_FALLBACKS[cfgKey];
   if(fb&&fb[value])return{bg:fb[value][0],text:fb[value][1]};
+  /* fuzzy match for Web3 variants */
+  if(cfgKey==='Match Level'&&value&&value.indexOf('Web3')!==-1)return{bg:'#064e3b',text:'#34d399'};
   return{bg:'#374151',text:'#9ca3af'};
 }
 
@@ -1324,48 +1311,48 @@ function renderChipCell(val,cfgKey,tabName,colIndex,sheetRow,allowEmpty){
   if(!val&&allowEmpty){
     return '<span class="d-chip" style="background:#1e2330;color:#6b7280;border:1px dashed #2a2f3d;" '+
       'onclick="openChipDropdown(event,\''+safeTab+'\','+colIndex+','+sheetRow+',\''+cfgKey+'\',this)">'+
-      '<span class="d-chip-label" style="font-style:italic;font-weight:400">—</span>'+
-      '<span class="d-chip-arrow">▾</span></span>';
+      '<span class="d-chip-label" style="font-style:italic;font-weight:400">--</span>'+
+      '<span class="d-chip-arrow">v</span></span>';
   }
   if(!val)val='';
   var colors=getChipColors(cfgKey,val);
-  var border=colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff'?'border:1px solid #d1d5db;':'';
+  var border=(colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff')?'border:1px solid #d1d5db;':'';
   return '<span class="d-chip" style="background:'+colors.bg+';color:'+colors.text+';'+border+'" '+
     'onclick="openChipDropdown(event,\''+safeTab+'\','+colIndex+','+sheetRow+',\''+cfgKey+'\',this)">'+
     '<span class="d-chip-label">'+safeVal+'</span>'+
-    '<span class="d-chip-arrow" style="border-left-color:'+colors.text+'30">▾</span></span>';
+    '<span class="d-chip-arrow" style="border-left-color:'+colors.text+'30">v</span></span>';
 }
 
-/* ── Chip dropdown (value picker) ── */
+/* -- Chip dropdown (value picker) -- */
 function openChipDropdown(e,tabName,colIndex,sheetRow,cfgKey,chipEl){
   e.stopPropagation();
   closeChipDropdown();
   chipDropdownTarget={tabName:tabName,colIndex:colIndex,sheetRow:sheetRow,cfgKey:cfgKey,chipEl:chipEl};
-
   var dd=document.getElementById('chip-dropdown');
   var opts=getDropdownOptions(cfgKey);
   var html='';
-
   opts.forEach(function(opt){
     var colors=getChipColors(cfgKey,opt);
-    var border=colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
+    var border=(colors.bg==='#ffffff'||colors.bg.toLowerCase()==='#fff')?'border:1px solid #ccc;':'';
     html+='<div class="chip-dd-option" onclick="selectChipValue(\''+esc(opt)+'\')">'+
       '<span class="chip-dd-swatch" style="background:'+colors.bg+';'+border+'"></span>'+
       '<span class="chip-dd-label">'+esc(opt)+'</span></div>';
   });
-
   html+='<div class="chip-dd-edit" onclick="openCfgSidebar(\''+cfgKey+'\')">'+
-    '<span>⚙️</span><span>Edit options →</span></div>';
-
+    '<span>[cfg]</span><span>Edit options -&gt;</span></div>';
   dd.innerHTML=html;
-
-  // Position below the chip
   var rect=chipEl.getBoundingClientRect();
+  var spaceBelow=window.innerHeight-rect.bottom;
+  var spaceAbove=rect.top;
   dd.style.left=Math.min(rect.left,window.innerWidth-230)+'px';
-  dd.style.top=(rect.bottom+4)+'px';
+  if(spaceBelow>=180||spaceBelow>=spaceAbove){
+    dd.style.top=(rect.bottom+4)+'px';
+    dd.style.bottom='';
+  }else{
+    dd.style.bottom=(window.innerHeight-rect.top+4)+'px';
+    dd.style.top='';
+  }
   dd.classList.add('open');
-
-  // Close on outside click
   setTimeout(function(){
     document.addEventListener('click',closeChipDropdown,{once:true});
   },10);
@@ -1381,23 +1368,19 @@ function selectChipValue(value){
   if(!chipDropdownTarget)return;
   var t=chipDropdownTarget;
   closeChipDropdown();
-
-  // Update in-memory data
   var rawRowIndex=t.sheetRow-2;
   if(rawRowIndex>=0&&rawRowIndex<scanRawRows.length){
     scanRawRows[rawRowIndex][t.colIndex-1]=value;
   }
-
-  // Re-render the chip in place
   if(t.chipEl&&t.chipEl.parentNode){
-    t.chipEl.parentNode.innerHTML=renderChipCell(value,t.cfgKey,t.tabName,t.colIndex,t.sheetRow,t.cfgKey==='Language Req.');
+    t.chipEl.parentNode.innerHTML=renderChipCell(value,t.cfgKey,t.tabName,t.colIndex,t.sheetRow,(t.cfgKey==='Language Req.'));
   }
-
-  // Save to sheet
   showSaveIndicator('saving');
   google.script.run
     .withSuccessHandler(function(res){
-      try{var r=JSON.parse(res);if(r.error){showSaveIndicator('error');return;}
+      try{
+        var r=JSON.parse(res);
+        if(r.error){showSaveIndicator('error');return;}
         showSaveIndicator('saved');
         if(t.colIndex===6){setTimeout(function(){refreshStatusPath(t.tabName,t.sheetRow);},800);}
       }catch(e){showSaveIndicator('error');}
@@ -1408,18 +1391,22 @@ function selectChipValue(value){
 
 function getDropdownOptions(cfgKey){
   var cfg=jabaConfig[cfgKey];
-  if(cfg&&Object.keys(cfg).length>0) return Object.keys(cfg);
-  // Fallbacks
-  var fb={'Match Level':MATCH_OPTS,'Status':STATUS_OPTS,'Platform':PLATFORM_OPTS,'Language Req.':LANG_OPTS};
+  if(cfg&&Object.keys(cfg).length>0)return Object.keys(cfg);
+  var fb={
+    'Match Level':['M0','M1','M2','M3','M4','Web3'],
+    'Status':['Applied','HR Interview','1st Interview','2nd Interview','3rd Interview','4th Interview','Offer','Ignored','Rejected'],
+    'Platform':['Adzuna','Indeed','Arbeitnow','LinkedIn','Stepstone','Own website','Remotive','Jobicy','Working Nomads','Cryptojobslist','Cryptocurrencyjobs','Web3career','Arbeitsagentur','WeWorkRemotely','EuroJobs'],
+    'Language Req.':['C2 required','C1 required','Other']
+  };
   return fb[cfgKey]||[];
 }
 
-/* ── Config Sidebar ── */
+/* -- Config Sidebar -- */
 function openCfgSidebar(cfgKey){
   closeChipDropdown();
   cfgActiveColumn=cfgKey;
   cfgPendingChanges={};
-  document.getElementById('cfg-title').innerText='Edit options — '+cfgKey;
+  document.getElementById('cfg-title').innerText='Edit options -- '+cfgKey;
   renderCfgBody();
   document.getElementById('cfg-sidebar').classList.add('open');
   document.getElementById('cfg-overlay').classList.add('open');
@@ -1429,59 +1416,6 @@ function closeCfgSidebar(){
   document.getElementById('cfg-sidebar').classList.remove('open');
   document.getElementById('cfg-overlay').classList.remove('open');
   cfgPendingChanges={};
-}
-
-function renderCfgBody(){
-  var body=document.getElementById('cfg-body');
-  var cfg=cfgKey=>jabaConfig[cfgActiveColumn]||{};
-  var values=getDropdownOptions(cfgActiveColumn);
-  var html='';
-
-  values.forEach(function(val){
-    var colors=getChipColors(cfgActiveColumn,val);
-    var bg=colors.bg,tx=colors.text;
-    var border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
-    html+='<div class="cfg-val-row" id="cfgrow-'+cssId(val)+'">';
-    html+='<div class="cfg-val-top">';
-    html+='<span class="cfg-val-preview" id="cfgprev-'+cssId(val)+'" style="background:'+bg+';color:'+tx+';'+border+'">'+esc(val)+'</span>';
-    html+='<span class="cfg-val-name">'+esc(val)+'</span>';
-    html+='<button class="cfg-val-del" title="Delete" onclick="cfgDeleteValue(\''+esc(val)+'\')">✕</button>';
-    html+='</div>';
-    html+='<div class="cfg-color-row">';
-    // Background
-    html+='<div class="cfg-color-grp">';
-    html+='<div class="cfg-color-lbl">Background</div>';
-    html+='<div class="cfg-swatches" id="cfgswbg-'+cssId(val)+'">'+swatchesHtml(bg,'bg',val)+'</div>';
-    html+='<input class="cfg-hex" id="cfghexbg-'+cssId(val)+'" value="'+esc(bg)+'" maxlength="7" '+
-      'oninput="cfgHexInput(this,\'bg\',\''+esc(val)+'\')" placeholder="#rrggbb">';
-    html+='</div>';
-    // Text color
-    html+='<div class="cfg-color-grp">';
-    html+='<div class="cfg-color-lbl">Text color</div>';
-    html+='<div class="cfg-swatches" id="cfgswtx-'+cssId(val)+'">'+swatchesHtml(tx,'text',val)+'</div>';
-    html+='<input class="cfg-hex" id="cfghextx-'+cssId(val)+'" value="'+esc(tx)+'" maxlength="7" '+
-      'oninput="cfgHexInput(this,\'text\',\''+esc(val)+'\')" placeholder="#rrggbb">';
-    html+='</div>';
-    html+='</div></div>';
-  });
-
-  // Add new value section
-  html+='<div class="cfg-add-row">';
-  html+='<div class="cfg-add-label">+ Add new option</div>';
-  html+='<input class="cfg-new-name" id="cfg-new-val-name" placeholder="Value name…">';
-  html+='<div class="cfg-color-row">';
-  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Background</div>';
-  html+='<div class="cfg-swatches" id="cfgswbg-NEW">'+swatchesHtml('#374151','bg','NEW')+'</div>';
-  html+='<input class="cfg-hex" id="cfghexbg-NEW" value="#374151" maxlength="7" oninput="cfgHexInput(this,\'bg\',\'NEW\')" placeholder="#rrggbb">';
-  html+='</div>';
-  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Text color</div>';
-  html+='<div class="cfg-swatches" id="cfgswtx-NEW">'+swatchesHtml('#9ca3af','text','NEW')+'</div>';
-  html+='<input class="cfg-hex" id="cfghextx-NEW" value="#9ca3af" maxlength="7" oninput="cfgHexInput(this,\'text\',\'NEW\')" placeholder="#rrggbb">';
-  html+='</div></div>';
-  html+='<button class="btn bp ful" style="margin-top:8px" onclick="cfgAddNewValue()">Add option</button>';
-  html+='</div>';
-
-  body.innerHTML=html;
 }
 
 function cssId(val){return val.replace(/[^a-zA-Z0-9]/g,'_');}
@@ -1494,26 +1428,69 @@ function swatchesHtml(selected,role,valKey){
   }).join('');
 }
 
+function renderCfgBody(){
+  var body=document.getElementById('cfg-body');
+  var values=getDropdownOptions(cfgActiveColumn);
+  var html='';
+  values.forEach(function(val){
+    var colors=getChipColors(cfgActiveColumn,val);
+    var bg=colors.bg,tx=colors.text;
+    var border=(bg==='#ffffff'||bg.toLowerCase()==='#fff')?'border:1px solid #ccc;':'';
+    html+='<div class="cfg-val-row" id="cfgrow-'+cssId(val)+'">';
+    html+='<div class="cfg-val-top">';
+    html+='<span class="cfg-val-preview" id="cfgprev-'+cssId(val)+'" style="background:'+bg+';color:'+tx+';'+border+'">'+esc(val)+'</span>';
+    html+='<span class="cfg-val-name">'+esc(val)+'</span>';
+    html+='<button class="cfg-val-del" title="Delete" onclick="cfgDeleteValue(\''+esc(val)+'\')">x</button>';
+    html+='</div>';
+    html+='<div class="cfg-color-row">';
+    html+='<div class="cfg-color-grp">';
+    html+='<div class="cfg-color-lbl">Background</div>';
+    html+='<div class="cfg-swatches" id="cfgswbg-'+cssId(val)+'">'+swatchesHtml(bg,'bg',val)+'</div>';
+    html+='<input class="cfg-hex" id="cfghexbg-'+cssId(val)+'" value="'+esc(bg)+'" maxlength="7" '+
+      'oninput="cfgHexInput(this,\'bg\',\''+esc(val)+'\')" placeholder="#rrggbb">';
+    html+='</div>';
+    html+='<div class="cfg-color-grp">';
+    html+='<div class="cfg-color-lbl">Text color</div>';
+    html+='<div class="cfg-swatches" id="cfgswtx-'+cssId(val)+'">'+swatchesHtml(tx,'text',val)+'</div>';
+    html+='<input class="cfg-hex" id="cfghextx-'+cssId(val)+'" value="'+esc(tx)+'" maxlength="7" '+
+      'oninput="cfgHexInput(this,\'text\',\''+esc(val)+'\')" placeholder="#rrggbb">';
+    html+='</div>';
+    html+='</div></div>';
+  });
+  html+='<div class="cfg-add-row">';
+  html+='<div class="cfg-add-label">+ Add new option</div>';
+  html+='<input class="cfg-new-name" id="cfg-new-val-name" placeholder="Value name...">';
+  html+='<div class="cfg-color-row">';
+  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Background</div>';
+  html+='<div class="cfg-swatches" id="cfgswbg-NEW">'+swatchesHtml('#374151','bg','NEW')+'</div>';
+  html+='<input class="cfg-hex" id="cfghexbg-NEW" value="#374151" maxlength="7" oninput="cfgHexInput(this,\'bg\',\'NEW\')" placeholder="#rrggbb">';
+  html+='</div>';
+  html+='<div class="cfg-color-grp"><div class="cfg-color-lbl">Text color</div>';
+  html+='<div class="cfg-swatches" id="cfgswtx-NEW">'+swatchesHtml('#9ca3af','text','NEW')+'</div>';
+  html+='<input class="cfg-hex" id="cfghextx-NEW" value="#9ca3af" maxlength="7" oninput="cfgHexInput(this,\'text\',\'NEW\')" placeholder="#rrggbb">';
+  html+='</div></div>';
+  html+='<button class="btn bp ful" style="margin-top:8px;width:100%" onclick="cfgAddNewValue()">Add option</button>';
+  html+='</div>';
+  body.innerHTML=html;
+}
+
 function cfgSwatchClick(el,color,role,valKey){
   cfgApplyColor(color,role,valKey);
-  // Update swatch selection
   var containerId='cfgsw'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
   var container=document.getElementById(containerId);
   if(container){
     container.querySelectorAll('.cfg-swatch').forEach(function(s){s.classList.remove('selected');});
     el.classList.add('selected');
   }
-  // Update hex input
   var hexId='cfghex'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
   var hexInput=document.getElementById(hexId);
-  if(hexInput) hexInput.value=color;
+  if(hexInput)hexInput.value=color;
 }
 
 function cfgHexInput(inputEl,role,valKey){
   var val=inputEl.value.trim();
-  if(!/^#[0-9a-fA-F]{6}$/.test(val)) return; // only apply valid hex
+  if(!/^#[0-9a-fA-F]{6}$/.test(val))return;
   cfgApplyColor(val,role,valKey);
-  // Update swatch selection
   var containerId='cfgsw'+(role==='bg'?'bg':'tx')+'-'+cssId(valKey);
   var container=document.getElementById(containerId);
   if(container){
@@ -1523,41 +1500,31 @@ function cfgHexInput(inputEl,role,valKey){
   }
 }
 
-function cfgApplyColor(color,role,valKey){
-  // Update pending changes
-  if(!cfgPendingChanges[valKey]) cfgPendingChanges[valKey]={};
-  cfgPendingChanges[valKey][role]=color;
-
-  // Get current colors (pending + config)
-  var current=cfgGetCurrentColors(valKey);
-  if(role==='bg') current.bg=color;
-  else current.text=color;
-
-  // Update preview chip
-  var prevEl=document.getElementById('cfgprev-'+cssId(valKey));
-  if(prevEl){
-    var border=current.bg==='#ffffff'||current.bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'';
-    prevEl.style.background=current.bg;
-    prevEl.style.color=current.text;
-    prevEl.style.border=border?'1px solid #ccc':'';
-  }
-
-  // Save to server
-  if(!cfgPendingChanges[valKey]) cfgPendingChanges[valKey]={};
-  cfgPendingChanges[valKey].bg=current.bg;
-  cfgPendingChanges[valKey].text=current.text;
-  cfgSaveDebounced(valKey,current.bg,current.text);
-}
-
 function cfgGetCurrentColors(valKey){
   var pending=cfgPendingChanges[valKey]||{};
   var cfg=jabaConfig[cfgActiveColumn]||{};
   var entry=cfg[valKey]||{};
   var fb=(CHIP_FALLBACKS[cfgActiveColumn]||{})[valKey]||['#374151','#9ca3af'];
   return{
-    bg: pending.bg||entry.bg||fb[0],
-    text: pending.text||entry.text||fb[1]
+    bg:pending.bg||entry.bg||fb[0],
+    text:pending.text||entry.text||fb[1]
   };
+}
+
+function cfgApplyColor(color,role,valKey){
+  if(!cfgPendingChanges[valKey])cfgPendingChanges[valKey]={};
+  var current=cfgGetCurrentColors(valKey);
+  if(role==='bg')current.bg=color;
+  else current.text=color;
+  cfgPendingChanges[valKey].bg=current.bg;
+  cfgPendingChanges[valKey].text=current.text;
+  var prevEl=document.getElementById('cfgprev-'+cssId(valKey));
+  if(prevEl){
+    prevEl.style.background=current.bg;
+    prevEl.style.color=current.text;
+    prevEl.style.border=(current.bg==='#ffffff'||current.bg.toLowerCase()==='#fff')?'1px solid #ccc':'';
+  }
+  cfgSaveDebounced(valKey,current.bg,current.text);
 }
 
 var cfgSaveTimers={};
@@ -1569,10 +1536,8 @@ function cfgSaveDebounced(valKey,bg,text){
         try{
           var r=JSON.parse(res);
           if(r.success){
-            // Update local config cache
-            if(!jabaConfig[cfgActiveColumn]) jabaConfig[cfgActiveColumn]={};
+            if(!jabaConfig[cfgActiveColumn])jabaConfig[cfgActiveColumn]={};
             jabaConfig[cfgActiveColumn][valKey]={bg:bg,text:text};
-            // Re-render any visible chips for this value
             refreshChipsForValue(cfgActiveColumn,valKey,bg,text);
           }
         }catch(e){}
@@ -1583,7 +1548,7 @@ function cfgSaveDebounced(valKey,bg,text){
 }
 
 function cfgDeleteValue(valKey){
-  if(!confirm('Delete "'+valKey+'" from '+cfgActiveColumn+'?\n\nThis cannot be undone.')) return;
+  if(!confirm('Delete "'+valKey+'" from '+cfgActiveColumn+'?'))return;
   var row=document.getElementById('cfgrow-'+cssId(valKey));
   if(row){row.style.opacity='.3';row.style.pointerEvents='none';}
   google.script.run
@@ -1591,8 +1556,8 @@ function cfgDeleteValue(valKey){
       try{
         var r=JSON.parse(res);
         if(r.success){
-          if(jabaConfig[cfgActiveColumn]) delete jabaConfig[cfgActiveColumn][valKey];
-          renderCfgBody(); // re-render without deleted value
+          if(jabaConfig[cfgActiveColumn])delete jabaConfig[cfgActiveColumn][valKey];
+          renderCfgBody();
         }else if(r.error){alert('Delete failed: '+r.error);}
       }catch(e){}
     })
@@ -1603,26 +1568,18 @@ function cfgDeleteValue(valKey){
 function cfgAddNewValue(){
   var nameInput=document.getElementById('cfg-new-val-name');
   var name=(nameInput?nameInput.value.trim():'');
-  if(!name){nameInput.style.borderColor='var(--danger)';setTimeout(function(){nameInput.style.borderColor='';},1500);return;}
-
+  if(!name){if(nameInput)nameInput.style.borderColor='var(--danger)';setTimeout(function(){if(nameInput)nameInput.style.borderColor='';},1500);return;}
   var bgInput=document.getElementById('cfghexbg-NEW');
   var txInput=document.getElementById('cfghextx-NEW');
   var bg=bgInput?bgInput.value.trim():'#374151';
   var text=txInput?txInput.value.trim():'#9ca3af';
-  if(!/^#[0-9a-fA-F]{6}$/.test(bg)) bg='#374151';
-  if(!/^#[0-9a-fA-F]{6}$/.test(text)) text='#9ca3af';
-
-  // Optimistic local update
-  if(!jabaConfig[cfgActiveColumn]) jabaConfig[cfgActiveColumn]={};
+  if(!/^#[0-9a-fA-F]{6}$/.test(bg))bg='#374151';
+  if(!/^#[0-9a-fA-F]{6}$/.test(text))text='#9ca3af';
+  if(!jabaConfig[cfgActiveColumn])jabaConfig[cfgActiveColumn]={};
   jabaConfig[cfgActiveColumn][name]={bg:bg,text:text};
-
   google.script.run
     .withSuccessHandler(function(res){
-      try{
-        var r=JSON.parse(res);
-        if(r.success) renderCfgBody();
-        else alert('Add failed: '+r.error);
-      }catch(e){}
+      try{var r=JSON.parse(res);if(r.success)renderCfgBody();else alert('Add failed: '+r.error);}catch(e){}
     })
     .withFailureHandler(function(e){alert('Add failed: '+e.message);})
     .saveJabaConfigValue(cfgActiveColumn,name,bg,text);
@@ -1630,44 +1587,40 @@ function cfgAddNewValue(){
 
 function cfgApplyToAllTabs(){
   var btn=document.querySelector('#cfg-sidebar .cfg-footer .btn');
-  if(btn){btn.disabled=true;btn.innerText='Applying…';}
+  if(btn){btn.disabled=true;btn.innerText='Applying...';}
   google.script.run
     .withSuccessHandler(function(res){
-      if(btn){btn.disabled=false;btn.innerText='↻ Apply to all tabs';}
-      try{var r=JSON.parse(res);if(r.success) alert('✅ Done — dropdown lists updated across all monthly tabs.');}catch(e){}
+      if(btn){btn.disabled=false;btn.innerText='Apply to all tabs';}
+      try{var r=JSON.parse(res);if(r.success)alert('Done -- dropdown lists updated across all monthly tabs.');}catch(e){}
     })
     .withFailureHandler(function(e){
-      if(btn){btn.disabled=false;btn.innerText='↻ Apply to all tabs';}
+      if(btn){btn.disabled=false;btn.innerText='Apply to all tabs';}
       alert('Error: '+e.message);
     })
     .applyConfigToNewMonthlyTabs();
 }
 
-/* Refresh visible chips after a color change */
 function refreshChipsForValue(cfgKey,value,bg,text){
-  var colIdx={'Match Level':COL_MATCH,'Status':COL_STATUS,'Platform':COL_PLATFORM,'Language Req.':COL_LANG}[cfgKey];
-  if(colIdx===undefined) return;
-  var sheetColIndex=colIdx+1; // 1-based
+  var colMap={'Match Level':COL_MATCH,'Status':COL_STATUS,'Platform':COL_PLATFORM,'Language Req.':COL_LANG};
+  var colIdx=colMap[cfgKey];
+  if(colIdx===undefined)return;
   document.querySelectorAll('#scan-tbody tr').forEach(function(tr){
-    var sheetRow=parseInt(tr.getAttribute('data-sheet-row'))||0;
-    if(!sheetRow) return;
-    // +1 for row-number col
     var tds=tr.querySelectorAll('td');
-    var tdIdx=colIdx+1; // 0-based td index: col0=row#, col1=colA...
+    var tdIdx=colIdx+1;
     var td=tds[tdIdx];
-    if(!td) return;
+    if(!td)return;
     var chip=td.querySelector('.d-chip');
-    if(!chip) return;
+    if(!chip)return;
     var labelEl=chip.querySelector('.d-chip-label');
-    if(!labelEl||labelEl.innerText.trim()!==value) return;
-    var border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'border:1px solid #ccc;':'border:none;';
+    if(!labelEl||labelEl.innerText.trim()!==value)return;
     chip.style.background=bg;
     chip.style.color=text;
-    chip.style.border=bg==='#ffffff'||bg.toLowerCase()==='#fff'?'1px solid #ccc':'';
+    chip.style.border=(bg==='#ffffff'||bg.toLowerCase()==='#fff')?'1px solid #ccc':'';
     var arrow=chip.querySelector('.d-chip-arrow');
-    if(arrow) arrow.style.borderLeftColor=text+'30';
+    if(arrow)arrow.style.borderLeftColor=text+'30';
   });
 }
 </script>
+</body>
 </body>
 </html>

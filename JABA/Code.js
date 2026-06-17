@@ -4,7 +4,7 @@ CONFIGURATION
 const CONFIG = {
   MISTRAL_MODEL: "mistral-medium-latest",
   TIMEZONE: "Europe/Berlin",
-  MY_NAME: "Rey Chancahuaña",
+  MY_NAME: "Rey Chancahua-a",
   ALLOWED_PLATFORMS: [
   "LinkedIn", "Cryptojobslist", "Indeed", "Cryptocurrencyjobs",
   "Web3career", "Stepstone", "Arbeitsagentur", "Remotive",
@@ -51,7 +51,7 @@ function repairAndParseSmm(raw) {
   // Try direct parse first
   try { return JSON.parse(content); } catch(e) {}
 
-  // Truncated at end — find last complete skill object
+  // Truncated at end - find last complete skill object
   if (!content.endsWith('}')) {
     const lastClose = content.lastIndexOf('},');
     if (lastClose > 0) {
@@ -64,7 +64,7 @@ function repairAndParseSmm(raw) {
     }
   }
 
-  // Mid-object corruption — try to extract valid skills array
+  // Mid-object corruption - try to extract valid skills array
   const skillsMatch = content.match(/"skills"\s*:\s*(\[[\s\S]*?\])/);
   if (skillsMatch) {
     try {
@@ -124,7 +124,7 @@ function onEdit(e) {
 
   if ((col === 5 || col === 6 || (col >= 10 && col <= 18)) && row > 1) {
     if (col === 6) {
-      // ── Phase 2: flag Interview_Reached in SMM_Raw_Data ──
+      // - Phase 2: flag Interview_Reached in SMM_Raw_Data -
       const interviewStatuses = ["HR Interview", "1st Interview"];
       if (interviewStatuses.includes(newValue)) {
         const company = sheet.getRange(row, 2).getValue().toString().trim();
@@ -137,7 +137,7 @@ function onEdit(e) {
         updateRowStatusLogic(sheet, row, newValue);
         if (newValue === "Rejected") {
           const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd.MM.yyyy");
-          sheet.getRange(row, 20).setValue(`${dateStr} 🙅🏽‍♂️`);
+          sheet.getRange(row, 20).setValue(`${dateStr} -`);
         } else {
           sheet.getRange(row, 20).clearContent();
         }
@@ -148,25 +148,25 @@ function onEdit(e) {
 }
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('🤖 AI Recruitment')
+  SpreadsheetApp.getUi().createMenu('- AI Recruitment')
     .addItem('Open AI Sidebar',                         'showSidebar')
     .addSeparator()
     .addItem('Scan Gmail for Applications',             'processGmailApplications')
     .addItem('Scan Gmail for Rejections',               'processRejectionEmails')
     .addSeparator()
-    .addItem('📧 Process Indeed Job Alerts',            'processIndeedAlertEmails_Phase1')
-    .addItem('📧 Process BA Job Alerts',                'processArbeitsagenturAlertEmails_Phase1')
+    .addItem('- Process Indeed Job Alerts',            'processIndeedAlertEmails_Phase1')
+    .addItem('- Process BA Job Alerts',                'processArbeitsagenturAlertEmails_Phase1')
     .addSeparator()
-    .addItem('🔄 Refresh Dashboard Data',               'refreshAllData')
-    .addItem('🧠 Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
+    .addItem('- Refresh Dashboard Data',               'refreshAllData')
+    .addItem('- Refresh SMM Categories (min. 20 apps)', 'batchRefreshMasterCategories')
     .addSeparator()
-    .addItem('🔍 Run Daily Job Search (Phase 1)',       'runJobSearchPhase1')
+    .addItem('- Run Daily Job Search (Phase 1)',       'runJobSearchPhase1')
     .addSeparator()
-    .addItem('🗑️ Clear Job Search Cache (run once)',   'clearAllJobCache')
-    .addItem('🔔 Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
+    .addItem('- Clear Job Search Cache (run once)',   'clearAllJobCache')
+    .addItem('- Setup Daily Notification (15:00)',     'createDailyNotificationTrigger')
     .addSeparator()
-    .addItem('🔍 Audit Cache Quality',                  'auditCacheQuality')
-    .addItem('🎨 Format Job Cache Colors',              'applyJobCacheFormatting')
+    .addItem('- Audit Cache Quality',                  'auditCacheQuality')
+    .addItem('- Format Job Cache Colors',              'applyJobCacheFormatting')
     .addToUi();
 
   checkCombinedOpenNotifications();
@@ -200,12 +200,12 @@ function checkCombinedOpenNotifications() {
       });
       if (unread.length > 0) {
         const lines = unread.map(function(j) {
-          return (j.source === 'BA' ? '🏛' : '🔔') + ' ' +
-                 j.company + ' — ' + j.title +
+          return (j.source === 'BA' ? '-' : '-') + ' ' +
+                 j.company + ' - ' + j.title +
                  ' (' + j.level + ': ' + j.score + '/40)';
         }).join('\n');
         messages.push(
-          '🚨 ' + unread.length + ' new M2+ Alert Job' + (unread.length > 1 ? 's' : '') +
+          '- ' + unread.length + ' new M2+ Alert Job' + (unread.length > 1 ? 's' : '') +
           ':\n' + lines +
           '\n\nSee Alert_Results tab for links.'
         );
@@ -222,7 +222,7 @@ function checkCombinedOpenNotifications() {
     const props = PropertiesService.getScriptProperties();
     const text  = props.getProperty('PENDING_NOTIFICATION_TEXT');
     if (text) {
-      messages.push(text + '\n\nOpen Job_Search_Cache → mark "fit" → register via sidebar.');
+      messages.push(text + '\n\nOpen Job_Search_Cache - mark "fit" - register via sidebar.');
       props.deleteProperty('PENDING_NOTIFICATION_TEXT');
     }
   } catch(e) {
@@ -230,8 +230,8 @@ function checkCombinedOpenNotifications() {
   }
   if (messages.length === 0) return;
   SpreadsheetApp.getUi().alert(
-    '📋 JABA Updates',
-    messages.join('\n\n──────\n\n'),
+    '- JABA Updates',
+    messages.join('\n\n-\n\n'),
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -260,7 +260,7 @@ function showSidebar() {
 
 
 /* ============================================================
-   NEW: SKILLS MATCH MAKER (SMM) — Step 1
+   NEW: SKILLS MATCH MAKER (SMM) - Step 1
    Called from sidebar when user clicks a DE/EN/Web3 SMM button.
    Returns a JSON string with 8 skills, scores, and match level.
    ============================================================ */
@@ -285,7 +285,7 @@ function analyzeSkillsMatch(jdInput, cvType, runStart, timeBudgetMs) {
 
 // Guard: JD too short for meaningful SMM analysis
 if (cleanedJD.length < 300) {
-  Logger.log(`SMM skipped — JD too short: ${cleanedJD.length} chars`);
+  Logger.log(`SMM skipped - JD too short: ${cleanedJD.length} chars`);
   return JSON.stringify({ error: 'JD too short for SMM analysis (< 300 chars). Try fetching the full job page.' });
 }
         // Check cache before calling Mistral
@@ -293,7 +293,7 @@ if (cleanedJD.length < 300) {
     const scriptCache = CacheService.getScriptCache();
     const cached      = scriptCache.get(cacheKey);
     if (cached) {
-      Logger.log(`SMM cache hit — skipping Mistral call`);
+      Logger.log(`SMM cache hit - skipping Mistral call`);
       return cached;
     }
     const cleanedCV    = templateText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 3000);
@@ -315,43 +315,43 @@ ${categoryContext}
 
 TASK:
 1. Identify the TOP 8 most important skills from the JD, ranked strictly by the JD's own emphasis (most repeated / most described first).
-   2. For each skill score the CV from 0 to 5 using ONLY these exact criteria — no interpretation allowed:
+   2. For each skill score the CV from 0 to 5 using ONLY these exact criteria - no interpretation allowed:
    - 0: The exact skill or a direct synonym does NOT appear anywhere in the CV.
    - 1: The skill word appears once with no context (e.g. listed in a tools section only).
    - 2: The skill is described in 1 sentence but with no measurable outcome.
    - 3: The skill is described with a specific project or campaign as context.
-   - 4: The skill is described with a specific project AND at least one number (%, €, users, etc.).
+   - 4: The skill is described with a specific project AND at least one number (%, -, users, etc.).
    - 5: The skill is described with a specific project AND two or more quantified outcomes.
    RULE: When unsure between two scores, always choose the LOWER one. This is mandatory, not optional.
    RULE: Score 0 means the skill is explicitly absent from the CV. Give 0 even if a tangentially related skill exists. "Sort of implied" = 0. Never promote 0 to 1 through reasoning or inference.
-   RULE: To justify score 1, the exact skill keyword or a direct synonym must appear explicitly in the CV — not a related concept, not an adjacent skill, not implied by a project description.
-   RULE: To justify score 2 over 1, there must be a complete sentence about the skill — not a noun in a list, not a tool name in a skills section.
+   RULE: To justify score 1, the exact skill keyword or a direct synonym must appear explicitly in the CV - not a related concept, not an adjacent skill, not implied by a project description.
+   RULE: To justify score 2 over 1, there must be a complete sentence about the skill - not a noun in a list, not a tool name in a skills section.
    RULE: To justify score 3 over 2, a specific named project, campaign, or employer context must be mentioned alongside the skill in the same sentence or paragraph.
-   RULE: To justify score 4 over 3, at least one concrete number (%, €, users, months, team size) must appear in direct connection with the skill evidence.
+   RULE: To justify score 4 over 3, at least one concrete number (%, -, users, months, team size) must appear in direct connection with the skill evidence.
    RULE: To justify score 5 over 4, two or more distinct quantified outcomes must appear.
    Applying these rules strictly prevents score inflation. Be conservative, not generous.
-   FUNCTIONAL EQUIVALENCE — EXCEPTION TO THE SCORE-0 RULE:
+   FUNCTIONAL EQUIVALENCE - EXCEPTION TO THE SCORE-0 RULE:
    Apply ONLY when the exact skill and all direct synonyms are completely absent from the CV.
 
-   A. TOOL EQUIVALENCE: Tools within the same group below are interchangeable. If the JD requires a tool absent from the CV but the CV contains a different tool from the same group, do NOT score 0. Apply: 1 equivalent tool in CV → score minimum 1. 2 or more equivalents in CV → score minimum 2. Then also apply depth rules (3–5) normally to the best-described equivalent tool, and use the HIGHER of the count-based or depth-based result.
-   GROUPS: [BI & Visualisation: Power BI · Looker Studio · Google Data Studio · Tableau · Qlik] [CRM: Salesforce · HubSpot CRM · Pipedrive · Zoho CRM · Microsoft Dynamics] [Marketing Automation: Marketo · Pardot · HubSpot Marketing · Salesforce Marketing Cloud · ActiveCampaign · Klaviyo · Brevo] [Email Marketing: Mailchimp · Klaviyo · Brevo · HubSpot · Campaign Monitor] [Paid Advertising: Google Ads · Meta Ads Manager · LinkedIn Ads · TikTok Ads · Microsoft Ads] [SEO Tools: SEMrush · Ahrefs · Moz · Google Search Console] [Social Tools: Hootsuite · Buffer · Sprout Social · Later]
+   A. TOOL EQUIVALENCE: Tools within the same group below are interchangeable. If the JD requires a tool absent from the CV but the CV contains a different tool from the same group, do NOT score 0. Apply: 1 equivalent tool in CV - score minimum 1. 2 or more equivalents in CV - score minimum 2. Then also apply depth rules (3-5) normally to the best-described equivalent tool, and use the HIGHER of the count-based or depth-based result.
+   GROUPS: [BI & Visualisation: Power BI - Looker Studio - Google Data Studio - Tableau - Qlik] [CRM: Salesforce - HubSpot CRM - Pipedrive - Zoho CRM - Microsoft Dynamics] [Marketing Automation: Marketo - Pardot - HubSpot Marketing - Salesforce Marketing Cloud - ActiveCampaign - Klaviyo - Brevo] [Email Marketing: Mailchimp - Klaviyo - Brevo - HubSpot - Campaign Monitor] [Paid Advertising: Google Ads - Meta Ads Manager - LinkedIn Ads - TikTok Ads - Microsoft Ads] [SEO Tools: SEMrush - Ahrefs - Moz - Google Search Console] [Social Tools: Hootsuite - Buffer - Sprout Social - Later]
 
-   B. SKILL ADJACENCY: The pairs below share enough core outcomes that outcome evidence of one justifies a score of 1 for the other. This rule converts 0 → 1 ONLY — never higher. Require specific named outcomes in the CV (not just job titles) before applying.
-   Copywriting ↔ Content Writing or Social Media Content: only if CV shows CTA writing, conversion copy, ad copy, or persuasive writing outcomes.
-   Paid Search ↔ Performance Marketing or Paid Social: only if CV shows ROAS, CPC, conversion rate, or campaign budget outcomes.
-   Community Management ↔ Social Media Management: only if CV shows community growth metrics or engagement rate outcomes.
-   Email Marketing ↔ CRM or Marketing Automation: only if CV shows open rate, CTR, subscriber count, or campaign automation outcomes.
-   Data Analysis/Reporting ↔ BI Tools or Web Analytics: only if CV shows data-driven decisions, performance dashboards, or reporting outcomes.
-3. Language requirements — do NOT include any language as one of the 8 skills.
+   B. SKILL ADJACENCY: The pairs below share enough core outcomes that outcome evidence of one justifies a score of 1 for the other. This rule converts 0 - 1 ONLY - never higher. Require specific named outcomes in the CV (not just job titles) before applying.
+   Copywriting - Content Writing or Social Media Content: only if CV shows CTA writing, conversion copy, ad copy, or persuasive writing outcomes.
+   Paid Search - Performance Marketing or Paid Social: only if CV shows ROAS, CPC, conversion rate, or campaign budget outcomes.
+   Community Management - Social Media Management: only if CV shows community growth metrics or engagement rate outcomes.
+   Email Marketing - CRM or Marketing Automation: only if CV shows open rate, CTR, subscriber count, or campaign automation outcomes.
+   Data Analysis/Reporting - BI Tools or Web Analytics: only if CV shows data-driven decisions, performance dashboards, or reporting outcomes.
+3. Language requirements - do NOT include any language as one of the 8 skills.
    Instead, analyse the JD and populate language_note with exactly one of:
    - German C2 / Muttersprache / native speaker / verhandlungssicher / muttersprachlich:
-     { "text": "German C2 (native) required — candidate holds C1, requirement not met.", "status": "unmet" }
-   - German B1 / B2 / C1 / fließend / sehr gute Deutschkenntnisse / gute Deutschkenntnisse / fluent German:
-     { "text": "German C1 required — requirement met.", "status": "met" }
+     { "text": "German C2 (native) required - candidate holds C1, requirement not met.", "status": "unmet" }
+   - German B1 / B2 / C1 / flie-end / sehr gute Deutschkenntnisse / gute Deutschkenntnisse / fluent German:
+     { "text": "German C1 required - requirement met.", "status": "met" }
    - English required (any phrasing, any level):
-     { "text": "English required — requirement met.", "status": "met" }
+     { "text": "English required - requirement met.", "status": "met" }
    - Third language required (Spanish, French, Dutch, Italian, Polish, etc.):
-     { "text": "[Language] [level if stated] required — verify this requirement manually.", "status": "other" }
+     { "text": "[Language] [level if stated] required - verify this requirement manually.", "status": "other" }
    - No language requirement anywhere in the JD:
      { "text": "No specific language requirement stated.", "status": "none" }
    Priority if multiple apply: "unmet" > "other" > "met" > "none".
@@ -359,21 +359,21 @@ TASK:
 5. Evidence: copy max 10 words verbatim from the CV, or write exactly "Not found in CV".
 6. Gap tip: max 10 words, start with a verb (e.g. "Add", "Quantify", "Include").
 7. Job location: extract the city and country where this role is physically based.
-    - Remote only, no office mentioned → { "city": "Remote", "country": null }
-    - City unclear but country stated  → { "city": null, "country": "Germany" }
-    - Completely unknown               → { "city": null, "country": null }
+    - Remote only, no office mentioned - { "city": "Remote", "country": null }
+    - City unclear but country stated  - { "city": null, "country": "Germany" }
+    - Completely unknown               - { "city": null, "country": null }
    
    SCORING RULES:
-- Scores are based ONLY on what is written in the CV — not on assumptions about the candidate.
+- Scores are based ONLY on what is written in the CV - not on assumptions about the candidate.
 - Do NOT give partial credit for related skills. Score the specific skill requested.
 - The sum of all 8 scores is the total_score (max 40).
 
 MATCH LEVEL (based on total_score):
-- M0: 0–10
-- M1: 11–20
-- M2: 21–29
-- M3: 30–35
-- M4: 36–40
+- M0: 0-10
+- M1: 11-20
+- M2: 21-29
+- M3: 30-35
+- M4: 36-40
 
 RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation):
 {
@@ -390,7 +390,7 @@ RESPOND WITH ONLY THIS JSON OBJECT (no markdown, no code fences, no explanation)
   "total_score": 0,
   "match_level": "M0",
   "language_note": {
-       "text": "German C2 (native) required — candidate holds C1, requirement not met.",
+       "text": "German C2 (native) required - candidate holds C1, requirement not met.",
        "status": "unmet"
      },
      "job_location": {
@@ -429,16 +429,16 @@ for (let attempt = 1; attempt <= 3; attempt++) {
   if (responseCode === 200) break;
   if (responseCode === 429 || responseCode === 503) {
     const wait = RETRY_DELAYS[attempt - 1];
-    // ── Time-budget guard (automated runs only) ──────────────────────────
+    // - Time-budget guard (automated runs only) -
     if (runStart && timeBudgetMs) {
       const remaining = timeBudgetMs - (Date.now() - runStart);
       if (remaining < wait + 45000) { // need wait + 45s safety buffer
-        Logger.log(`⏱ SMM 429 — only ${Math.round(remaining/1000)}s left in budget, aborting retry → Groq`);
+        Logger.log(`- SMM 429 - only ${Math.round(remaining/1000)}s left in budget, aborting retry - Groq`);
         break; // fall through to Groq fallback below
       }
     }
-    // ────────────────────────────────────────────────────────────────────
-    Logger.log(`Mistral SMM ${responseCode} (attempt ${attempt}) — waiting ${wait/1000}s`);
+    // -
+    Logger.log(`Mistral SMM ${responseCode} (attempt ${attempt}) - waiting ${wait/1000}s`);
     Utilities.sleep(wait);
   } else {
     throw new Error(`Mistral API error ${responseCode}: ${response.getContentText().substring(0, 200)}`);
@@ -447,7 +447,7 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 
 // If Mistral is still failing after 3 attempts, try Groq as fallback
 if (responseCode !== 200) {
-  Logger.log(`Mistral SMM failed after 3 attempts (code ${responseCode}) — trying Groq fallback`);
+  Logger.log(`Mistral SMM failed after 3 attempts (code ${responseCode}) - trying Groq fallback`);
   const groqRaw = callGroqApi(
     "You are a precise recruitment skills analyst. Always respond with valid JSON only. No markdown, no code blocks, no explanation whatsoever.",
     prompt,
@@ -471,7 +471,7 @@ if (responseCode !== 200) {
     else if (parsed.total_score <= 35) parsed.match_level = "M3";
     else                               parsed.match_level = "M4";
   }
-  Logger.log(`Groq fallback SMM — Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
+  Logger.log(`Groq fallback SMM - Score: ${parsed.total_score}/40 | Level: ${parsed.match_level}`);
   return JSON.stringify(parsed);
 }
 
@@ -496,7 +496,7 @@ const parsed = repairAndParseSmm(content);
       else                               parsed.match_level = "M4";
     }
 
-    // ── Location fallback: if JD had no location, search by company name ──
+    // - Location fallback: if JD had no location, search by company name -
     // companyName is extracted from jdInput only when it was passed as a URL;
     // for plain JD text we don't have a reliable company name here, so
     // location_source stays "jd" and the sidebar/processor enriches it later.
@@ -504,7 +504,7 @@ const parsed = repairAndParseSmm(content);
       (parsed.job_location.city || parsed.job_location.country));
     parsed.location_source = hasJdLocation ? 'jd' : 'unknown';
 
-    Logger.log(`SMM Analysis complete — ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level} | Location: ${hasJdLocation ? JSON.stringify(parsed.job_location) : 'none (will enrich later)'}`);
+    Logger.log(`SMM Analysis complete - ${cvType} | Score: ${parsed.total_score}/40 | Level: ${parsed.match_level} | Location: ${hasJdLocation ? JSON.stringify(parsed.job_location) : 'none (will enrich later)'}`);
     const resultStr = JSON.stringify(parsed);
 scriptCache.put(cacheKey, resultStr, 43200); // cache for 12 hours
 return resultStr;
@@ -517,7 +517,7 @@ return resultStr;
 
 function clearSmmCache() {
   // GAS ScriptCache does not support listing or bulk-clearing all keys.
-  // Cache entries expire automatically after 12 hours — no manual clear needed.
+  // Cache entries expire automatically after 12 hours - no manual clear needed.
   Logger.log('SMM cache expires automatically after 12h. No action required.');
 }
 
@@ -527,7 +527,7 @@ function getPhase2Status() {
     const raw   = props.getProperty('PHASE2_STATUS');
     if (!raw) return { running: false };
     const status = JSON.parse(raw);
-    // Auto-expire after 12 min — protects against crashes without cleanup
+    // Auto-expire after 12 min - protects against crashes without cleanup
     if (status.startedAt && (Date.now() - status.startedAt) > 720000) {
       props.deleteProperty('PHASE2_STATUS');
       return { running: false };
@@ -543,7 +543,7 @@ function getPhase2Status() {
 }
 
 /* ============================================================
-   NEW: SMM_Raw_Data sheet — create or retrieve
+   NEW: SMM_Raw_Data sheet - create or retrieve
    ============================================================ */
 function getOrCreateSmmRawDataSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -554,7 +554,7 @@ function getOrCreateSmmRawDataSheet() {
       "UID", "Date", "Company", "Position", "CV_Type",
       "Skill_Rank", "Skill_Name", "Match_Score", "JD_Importance",
       "CV_Evidence", "Gap_Tip", "Interview_Reached", "Master_Category",
-      "Prompt_Version"             // ← new
+      "Prompt_Version"             // - new
     ];
     sheet.getRange(1, 1, 1, headers.length)
          .setValues([headers])
@@ -569,7 +569,7 @@ function getOrCreateSmmRawDataSheet() {
 }
 
 /* ============================================================
-   INDEED ALERT PROCESSOR — keyword filter config
+   INDEED ALERT PROCESSOR - keyword filter config
    ============================================================ */
 const RELEVANT_KEYWORDS = [
   // English
@@ -577,15 +577,15 @@ const RELEVANT_KEYWORDS = [
   'community', 'automation', 'digital', 'campaign', 'brand', 'branding', 'seo', 'sea',
   'performance', 'email marketing', 'influencer', 'analytics', 'communications',
   'copywriter', 'storytelling', 'acquisition', 'retention', 'engagement', 'e-commerce',
-  // ← new English additions
+  // - new English additions
   'lifecycle', 'martech', 'growth marketer', 'demand generation', 'demand gen',
   'b2b marketing', 'b2c marketing', 'marketing operations', 'marketing automation',
   'digital marketing manager', 'online marketing',
   // German
   'wachstum', 'inhalt', 'gemeinschaft', 'automatisierung', 'kampagne', 'marke',
-  'leistung', 'kommunikation', 'öffentlichkeitsarbeit', 'digitalmarketing',
-  'onlinemarketing', 'online-marketing', 'markenführung', 'reichweite',
-  // ← new German additions
+  'leistung', 'kommunikation', '-ffentlichkeitsarbeit', 'digitalmarketing',
+  'onlinemarketing', 'online-marketing', 'markenf-hrung', 'reichweite',
+  // - new German additions
   'wachstumsmarketing', 'kundenbindung', 'lifecycle-marketing'
 ];
 
@@ -595,18 +595,18 @@ const SKIP_KEYWORDS = [
   'accountant', 'nurse', 'driver', 'warehouse', 'key account', 'key-account',
   'recruiter', 'finance controller', 'electrician', 'plumber', 'mechanic',
   'chef', 'cook', 'cleaner', 'internship', 'intern ', 'fellowship', 'security guard',
-  // ← new
+  // - new
   'customer success',
   // German
   'vertrieb', 'verkauf', 'ingenieur', 'softwareentwickler', 'entwickler',
   'rechtsanwalt', 'buchhalter', 'steuerberater', 'krankenschwester', 'pfleger',
-  'fahrer', 'lagerarbeiter', 'lagermitarbeiter', 'schlüsselkunde', 'key account',
+  'fahrer', 'lagerarbeiter', 'lagermitarbeiter', 'schl-sselkunde', 'key account',
   'personalvermittler', 'werkstudent', 'werkstudentin', 'praktikum', 'praktikant',
   'praktikantin', 'pflichtpraktikum', 'elektriker', 'klempner', 'mechaniker',
   'koch', 'reinigungskraft'
 ];
 
-// Domains where fetching always fails — skip immediately
+// Domains where fetching always fails - skip immediately
 const BLOCKED_FETCH_DOMAINS = [
   'linkedin.com','indeed.com','glassdoor.com','monster.com','jobware.de'
 ];
@@ -674,14 +674,14 @@ function tavilySearch(company, jobTitle) {
     }
     const data    = JSON.parse(res.getContentText());
     const results = data.results || [];
-    Logger.log(`Tavily Search: ${results.length} results for "${company} — ${jobTitle}"`);
+    Logger.log(`Tavily Search: ${results.length} results for "${company} - ${jobTitle}"`);
 
     for (const r of results) {
       const text = tavilyExtract(r.url);
       if (text && text.length > 300) return text;
       Utilities.sleep(500);
     }
-    return null; // no partial fallback — partial JDs are useless for SMM
+    return null; // no partial fallback - partial JDs are useless for SMM
   } catch (e) {
     Logger.log(`Tavily Search exception: ${e.message}`);
     return null;
@@ -742,7 +742,7 @@ function tavilySearchValidated(company, jobTitle) {
   }
 }
 
-/* ── Helpers ─────────────────────────────────────────────── */
+/* - Helpers - */
 
 function getOrCreateLabel(name) {
   let label = GmailApp.getUserLabelByName(name);
@@ -771,18 +771,18 @@ function detectCvTypeFromText(text) {
 }
 
 function stripHtmlToText(html) {
-  // ── Adzuna-specific structural noise removal ──────────────────────────────
+  // - Adzuna-specific structural noise removal -
   // Remove the country-selector modal (always at the top of Adzuna pages)
   html = html.replace(/<[^>]*id=["'][^"']*country[^"']*["'][^>]*>[\s\S]*?<\/(?:div|section|form)>/gi, ' ');
-  // Remove the "Ähnliche Jobs" / "Similar Jobs" carousel section at the bottom
+  // Remove the "-hnliche Jobs" / "Similar Jobs" carousel section at the bottom
   // This section starts with a heading containing "hnliche Jobs" and runs to end of main content
-  html = html.replace(/<[^>]*>[\s]*[ÄA]hnliche Jobs[\s\S]*$/i, ' ');
+  html = html.replace(/<[^>]*>[\s]*[-A]hnliche Jobs[\s\S]*$/i, ' ');
   html = html.replace(/<[^>]*>[\s]*Similar Jobs[\s\S]*$/i, ' ');
-  // Remove "Jetzt ähnliche Jobs per E-Mail erhalten" block and everything after it
-  html = html.replace(/Jetzt\s+[äa]hnliche\s+Jobs[\s\S]*$/i, ' ');
+  // Remove "Jetzt -hnliche Jobs per E-Mail erhalten" block and everything after it
+  html = html.replace(/Jetzt\s+[-a]hnliche\s+Jobs[\s\S]*$/i, ' ');
   // Remove "Job-E-Mail bestellen" subscription block
   html = html.replace(/Job-E-Mail\s+bestellen[\s\S]*$/i, ' ');
-  // ── Standard structural removal ───────────────────────────────────────────
+  // - Standard structural removal -
   return html
     // Remove entire semantic sections that are never JD content
     .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
@@ -827,7 +827,7 @@ Return ONLY a JSON array of job title and company. No URLs. Empty array if none 
 
 /**
  * Extracts ALL job listings from an Indeed alert email HTML body.
- * Uses href jk= pattern — reliable regardless of email length or batch size.
+ * Uses href jk= pattern - reliable regardless of email length or batch size.
  * Replaces Groq-based extractJobsFromAlertEmail.
  */
 function extractJobListingsFromHtml(htmlBody) {
@@ -852,7 +852,7 @@ function extractJobListingsFromHtml(htmlBody) {
     if (seen.has(jk)) continue;
     if (!rawTitle || rawTitle.length < 4) continue;
     // Skip action/navigation links
-    if (/^(bewerb|apply|view|mehr|weiter|vollständig|see |anzeigen|abmeld|unsubscrib|alle jobs|job alert)/i
+    if (/^(bewerb|apply|view|mehr|weiter|vollst-ndig|see |anzeigen|abmeld|unsubscrib|alle jobs|job alert)/i
         .test(rawTitle)) continue;
     if (/^https?:|^\d+$/.test(rawTitle)) continue;
 
@@ -886,7 +886,7 @@ function extractCompanyFromHtmlContext(contextHtml) {
     .filter(s => s.length > 2 && s.length < 80)
     .filter(s => !/^https?:\/\//.test(s))
     .filter(s => !/^\d/.test(s))
-    .filter(s => !/^(Vollzeit|Teilzeit|Minijob|Remote|Hybrid|Vor Ort|Homeoffice|Berlin|Hamburg|München|Frankfurt|Köln|Stuttgart|Düsseldorf|Dresden|Leipzig|Deutschland|Germany|Anzeige|Gesponsert|vor \d|seit \d|\+\d)/i
+    .filter(s => !/^(Vollzeit|Teilzeit|Minijob|Remote|Hybrid|Vor Ort|Homeoffice|Berlin|Hamburg|M-nchen|Frankfurt|K-ln|Stuttgart|D-sseldorf|Dresden|Leipzig|Deutschland|Germany|Anzeige|Gesponsert|vor \d|seit \d|\+\d)/i
                  .test(s));
   return chunks[0] || null;
 }
@@ -905,9 +905,9 @@ function buildAlertLabel(smmResult) {
     return group.every(s => (s.score || 0) >= 1) ? emoji : '0';
   }
 
-  const c = indicator('Crucial',   '🟢');
-  const n = indicator('Necessary', '🟡');
-  const o = indicator('Optional',  '🔵');
+  const c = indicator('Crucial',   '-');
+  const n = indicator('Necessary', '-');
+  const o = indicator('Optional',  '-');
 
   return `${base} ${c}${n}${o}`;
 }
@@ -916,7 +916,7 @@ function buildAlertLabel(smmResult) {
 /* ============================================================
    DEPRECATED: processIndeedAlertEmails
    Replaced by processIndeedAlertEmails_Phase1 + runPhase2.
-   Kept as dead code reference only — do not run or trigger.
+   Kept as dead code reference only - do not run or trigger.
    ============================================================ */
 function _DEPRECATED_processIndeedAlertEmails() {
   const props    = PropertiesService.getScriptProperties();
@@ -932,14 +932,14 @@ function _DEPRECATED_processIndeedAlertEmails() {
     : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
   const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
   const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
-  Logger.log(`Indeed alert scan — searching since: ${sinceFormatted}`);
+  Logger.log(`Indeed alert scan - searching since: ${sinceFormatted}`);
 
   // Gmail labels
   // Score labels are built dynamically by buildAlertLabel()
   // Only static labels needed upfront:
-  const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
+  const labelInternship = getOrCreateLabel('JABA Alert/- Internship');
 
-  // Search for Indeed job alert emails only — exclude application/rejection threads
+  // Search for Indeed job alert emails only - exclude application/rejection threads
   const query = [
     'from:indeed.com',
     `after:${sinceFormatted}`,
@@ -969,7 +969,7 @@ function _DEPRECATED_processIndeedAlertEmails() {
 
   for (const thread of threads) {
     if (jobsProcessed >= MAX_JOBS_PER_RUN) {
-      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached — run again for remaining emails.`);
+      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached - run again for remaining emails.`);
       break;
     }
 
@@ -979,7 +979,7 @@ function _DEPRECATED_processIndeedAlertEmails() {
     const subject   = message.getSubject();
     Logger.log(`\nEmail: "${subject}"`);
 
-    // Pre-filter by subject line — avoids Groq call for obviously irrelevant emails
+    // Pre-filter by subject line - avoids Groq call for obviously irrelevant emails
     if (!isRelevantJobTitle(subject)) {
   Logger.log(`Subject pre-filtered: "${subject}"`);
   const isInternship = /werkstudent|praktikum|pflichtpraktikum|internship/i.test(subject);
@@ -1005,13 +1005,13 @@ Logger.log(`Jobs in email: ${allJobs.length} | After keyword filter: ${relevantJ
       if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
       // Time budget check
       if (Date.now() - runStart > ALERT_TIME_BUDGET_MS - 60000) {
-        Logger.log(`⏱ Alert scan: time budget nearly exhausted — stopping gracefully`);
+        Logger.log(`- Alert scan: time budget nearly exhausted - stopping gracefully`);
         break;
       }
 
-      Logger.log(`→ "${job.title}" at "${job.company}"`);
+      Logger.log(`- "${job.title}" at "${job.company}"`);
 
-// ── JD Fetch: company page → web search → skip (no email body fallback) ──
+// - JD Fetch: company page - web search - skip (no email body fallback) -
 let jdText   = null;
 let jdSource = 'unknown';
 
@@ -1028,7 +1028,7 @@ if (t1 && looksLikeJobContent(t1) &&
   Logger.log(`  Tier 1 result discarded (relevance or truncation check failed)`);
 }
 
-// Tier 2: Targeted web search — quoted company name for precision
+// Tier 2: Targeted web search - quoted company name for precision
 if (!jdText) {
   Logger.log(`  Tier 2: searching web for "${job.company}" + "${job.title}"`);
   const t2 = tavilySearchValidated(job.company, job.title);
@@ -1038,9 +1038,9 @@ if (!jdText) {
   }
 }
 
-// No JD found — skip cleanly, no SMM, no fake score
+// No JD found - skip cleanly, no SMM, no fake score
 if (!jdText) {
-  Logger.log(`  ⚠ No valid complete JD found — skipping (no fake score)`);
+  Logger.log(`  - No valid complete JD found - skipping (no fake score)`);
   totalSkipped++;
   threadResults.push({
     title:   job.title,
@@ -1062,7 +1062,7 @@ if (!jdText) {
         smmResult    = JSON.parse(smmRaw);
         if (smmResult.error) throw new Error(smmResult.error);
       } catch(e) {
-        Logger.log(`  ✗ SMM error: ${e.message}`);
+        Logger.log(`  - SMM error: ${e.message}`);
         totalSkipped++;
         threadResults.push({ title: job.title, company: job.company, skipped: true });
         jobsProcessed++;
@@ -1084,18 +1084,18 @@ if (!jdText) {
       Logger.log(`  Score: ${score}/40 | ${matchLevel} | Crucial: ${crucialSkills.length} | Pass: ${allCrucialPass} | Qualifies: ${qualifies}`);
 
       if (zeroCrucial) {
-        // Edge case: zero Crucial skills → manual review
+        // Edge case: zero Crucial skills - manual review
         totalLow++;
         threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: false, reason: 'no-crucial' });
-        summaryLines.push(`⚠ MANUAL REVIEW (no Crucial skills): ${job.company} — ${job.title} — ${score}/40`);
+        summaryLines.push(`- MANUAL REVIEW (no Crucial skills): ${job.company} - ${job.title} - ${score}/40`);
       } else if (qualifies) {
         totalReviewed++;
         threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: true });
-        summaryLines.push(`✅ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+        summaryLines.push(`- ${job.company} - ${job.title} - ${score}/40 (${matchLevel})`);
       } else {
         totalLow++;
         threadResults.push({ title: job.title, company: job.company, smmResult: smmResult, score, matchLevel, qualifies: false, reason: 'below-threshold' });
-        summaryLines.push(`⬇ ${job.company} — ${job.title} — ${score}/40 (${matchLevel}) — below threshold`);
+        summaryLines.push(`- ${job.company} - ${job.title} - ${score}/40 (${matchLevel}) - below threshold`);
       }
 
       jobsProcessed++;
@@ -1114,9 +1114,9 @@ if (analyzed.length > 0) {
   const scoreLabel = buildAlertLabel(best.smmResult);
   thread.addLabel(getOrCreateLabel(scoreLabel));
 } else if (noJd.length > 0 && analyzed.length === 0) {
-  thread.addLabel(getOrCreateLabel('JABA Alert/⏭ No JD Found'));
+  thread.addLabel(getOrCreateLabel('JABA Alert/- No JD Found'));
 } else if (otherSkip.length > 0 && analyzed.length === 0) {
-  thread.addLabel(getOrCreateLabel('JABA Alert/⏭ Skipped'));
+  thread.addLabel(getOrCreateLabel('JABA Alert/- Skipped'));
 }
 
 thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
@@ -1127,11 +1127,11 @@ thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
   props.setProperty('LAST_ALERT_SCAN', new Date().toISOString());
 
   const summary = [
-    '📧 Indeed Alert Scan Complete',
-    '─────────────────────────────',
-    `✅ Qualifying jobs: ${totalReviewed}`,
-    `⬇  Below threshold: ${totalLow}`,
-    `⚠  Skipped (fetch failed): ${totalSkipped}`,
+    '- Indeed Alert Scan Complete',
+    '-',
+    `- Qualifying jobs: ${totalReviewed}`,
+    `-  Below threshold: ${totalLow}`,
+    `-  Skipped (fetch failed): ${totalSkipped}`,
     '',
     ...summaryLines,
     '',
@@ -1164,10 +1164,10 @@ function processIndeedAlertEmails_Phase1() {
     : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
   const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
   const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
-  Logger.log(`Indeed Phase 1 — since: ${sinceFormatted}`);
+  Logger.log(`Indeed Phase 1 - since: ${sinceFormatted}`);
 
-  const labelInternship = getOrCreateLabel('JABA Alert/🎓 Internship');
-  const labelQueued     = getOrCreateLabel('JABA Alert/⏳ Queued');
+  const labelInternship = getOrCreateLabel('JABA Alert/- Internship');
+  const labelQueued     = getOrCreateLabel('JABA Alert/- Queued');
 
   const query = [
     'from:indeed.com',
@@ -1198,13 +1198,13 @@ function processIndeedAlertEmails_Phase1() {
   let totalCached  = 0;
   let totalApplied = 0;
 
-  // Load applied jobs once — avoids per-job sheet reads and prevents
+  // Load applied jobs once - avoids per-job sheet reads and prevents
   // queuing a job that's already been registered in a monthly tab.
   const appliedSetIndeed = buildAppliedJobsSet();
 
   for (const thread of threads) {
     if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
-      Logger.log('⏱ Indeed Phase 1 time budget — stopping');
+      Logger.log('- Indeed Phase 1 time budget - stopping');
       break;
     }
 
@@ -1232,13 +1232,13 @@ function processIndeedAlertEmails_Phase1() {
 
     for (const job of relevantJobs) {
       if (isJobInCache(job.company, job.title)) {
-        Logger.log(`    [cache] "${job.title}" @ ${job.company} — skip`);
+        Logger.log(`    [cache] "${job.title}" @ ${job.company} - skip`);
         totalCached++;
         continue;
       }
 
       if (jdFetches >= MAX_JD_FETCHES) {
-        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached — thread not fully processed`);
+        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached - thread not fully processed`);
         threadFullyProcessed = false;
         break;
       }
@@ -1248,7 +1248,7 @@ function processIndeedAlertEmails_Phase1() {
         break;
       }
 
-      Logger.log(`  → "${job.title}" at "${job.company}"`);
+      Logger.log(`  - "${job.title}" at "${job.company}"`);
       jdFetches++;
 
       let jdText    = null;
@@ -1265,7 +1265,7 @@ function processIndeedAlertEmails_Phase1() {
         Logger.log(`    Tier 1 discarded (relevance or completeness failed)`);
       }
 
-      // Tier 2: Tavily web search — now returns {text, url}
+      // Tier 2: Tavily web search - now returns {text, url}
       if (!jdText) {
         Logger.log(`    Tier 2: web search`);
         const t2 = tavilySearchValidated(job.company, job.title);
@@ -1280,7 +1280,7 @@ function processIndeedAlertEmails_Phase1() {
       }
 
       if (!jdText) {
-        Logger.log(`    ✗ No valid JD — writing skipped to Alert_Results`);
+        Logger.log(`    - No valid JD - writing skipped to Alert_Results`);
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'Indeed', job.company, job.title,
                             job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
@@ -1290,11 +1290,11 @@ function processIndeedAlertEmails_Phase1() {
         continue;
       }
 
-      // ── Already applied check (post-JD-fetch, consistent with job search) ──
+      // - Already applied check (post-JD-fetch, consistent with job search) -
       const indeedApplyKey = job.company.toLowerCase().trim() + '||' +
                              normalizeJobTitle(job.title).toLowerCase().trim();
       if (appliedSetIndeed.has(indeedApplyKey)) {
-        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} — skipping`);
+        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} - skipping`);
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'Indeed', job.company, job.title,
                             job.url, fetchedUrl, 0, 'already_applied',
@@ -1305,13 +1305,13 @@ function processIndeedAlertEmails_Phase1() {
         Utilities.sleep(300);
         continue;
       }
-      // ─────────────────────────────────────────────────────────────────────
+      // -
 
-      // Write to Pending_SMM — Phase 2 handles SMM scoring
+      // Write to Pending_SMM - Phase 2 handles SMM scoring
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
         '', '',                           // City, Country (not in email)
-        jdText.substring(0, 10000),       // Description — pre-fetched and validated
+        jdText.substring(0, 10000),       // Description - pre-fetched and validated
         'TRUE',                           // DescriptionFull
         scoreJobTitleQuality(job.title),  // QualityScore
         job.id || '',                     // ID
@@ -1319,12 +1319,12 @@ function processIndeedAlertEmails_Phase1() {
         'Indeed',                         // Source
         threadId,                         // Thread_ID
         'TRUE',                           // JD_Fetched
-        fetchedUrl                        // Source_URL — actual JD source (may differ from job.url)
+        fetchedUrl                        // Source_URL - actual JD source (may differ from job.url)
       ]);
       addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'Indeed', '');
       totalQueued++;
       threadQueued++;
-      Logger.log(`    ✓ Queued for SMM`);
+      Logger.log(`    - Queued for SMM`);
 
       Utilities.sleep(1000);
     }
@@ -1335,7 +1335,7 @@ function processIndeedAlertEmails_Phase1() {
       thread.addLabel(getOrCreateLabel('JABA Alert/Processed'));
       if (threadQueued > 0) thread.addLabel(labelQueued);
     } else {
-      Logger.log(`  Thread not fully processed — will retry on next trigger run`);
+      Logger.log(`  Thread not fully processed - will retry on next trigger run`);
     }
 
     Utilities.sleep(300);
@@ -1348,23 +1348,23 @@ function processIndeedAlertEmails_Phase1() {
   if (totalQueued > 0) {
     deletePhase2Triggers();
     ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
-    Logger.log(`Phase 2 trigger created — runs in ${PHASE2_DELAY_MS / 60000} min`);
+    Logger.log(`Phase 2 trigger created - runs in ${PHASE2_DELAY_MS / 60000} min`);
   }
 
   const summary = [
-    '📧 Indeed Alert Phase 1 Complete',
-    '─────────────────────────────',
-    `✅ Queued for SMM: ${totalQueued}`,
-    `⚠  Skipped (no valid JD): ${totalSkipped}`,
-    `⏭  Already cached: ${totalCached}`,
-    `✅ Already applied (skipped): ${totalApplied}`,
+    '- Indeed Alert Phase 1 Complete',
+    '-',
+    `- Queued for SMM: ${totalQueued}`,
+    `-  Skipped (no valid JD): ${totalSkipped}`,
+    `-  Already cached: ${totalCached}`,
+    `- Already applied (skipped): ${totalApplied}`,
     totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
   ].filter(Boolean).join('\n');
 
   if (ui) ui.alert(summary);
 }
 
-// Debug helper — resets the alert scan window to 7 days ago
+// Debug helper - resets the alert scan window to 7 days ago
 function resetAlertScanTimestamp() {
   PropertiesService.getScriptProperties().deleteProperty('LAST_ALERT_SCAN');
   Logger.log('Alert scan timestamp cleared. Next run will scan last 7 days.');
@@ -1392,7 +1392,7 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
       s.gap_tip         || "",
       false,                     // Interview_Reached
       s.master_category || "",    // Master_Category
-      PROMPT_VERSIONS.SMM          // ← new column 14
+      PROMPT_VERSIONS.SMM          // - new column 14
     ]);
 
     if (rows.length > 0) {
@@ -1402,13 +1402,13 @@ function writeSmmRawData(uid, dateStr, company, position, cvType, smmData) {
     }
   } catch (e) {
     Logger.log(`Error in writeSmmRawData: ${e.toString()}`);
-    // Non-fatal: do not throw — main registration should still succeed
+    // Non-fatal: do not throw - main registration should still succeed
   }
 }
 /* ============================================================
    Phase 2: flag Interview_Reached = TRUE in SMM_Raw_Data
    Triggered by onEdit when status changes to HR/1st Interview.
-   Matches by Company name — no UID column needed in monthly sheet.
+   Matches by Company name - no UID column needed in monthly sheet.
    ============================================================ */
 function flagSmmInterviewReached(company, appDate) {
   try {
@@ -1455,7 +1455,7 @@ function getExistingMasterCategories() {
 
 
 /* ============================================================
-   Groq API caller — reusable helper
+   Groq API caller - reusable helper
    model: e.g. "llama-3.1-8b-instant" or "llama-3.3-70b-versatile"
    ============================================================ */
 function callGroqApi(systemPrompt, userPrompt, model, maxTokens) {
@@ -1484,7 +1484,7 @@ function callGroqApi(systemPrompt, userPrompt, model, maxTokens) {
       const res  = UrlFetchApp.fetch(url, options);
       const code = res.getResponseCode();
       if (code === 429) {
-        Logger.log(`Groq 429 (attempt ${attempt}) — waiting ${attempt * 4}s`);
+        Logger.log(`Groq 429 (attempt ${attempt}) - waiting ${attempt * 4}s`);
         Utilities.sleep(attempt * 4000);
         continue;
       }
@@ -1511,7 +1511,7 @@ function callGroqApi(systemPrompt, userPrompt, model, maxTokens) {
 function batchRefreshMasterCategories() {
   const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
 
-  // Guard: require at least 20 SMM applications (160 rows = 20 × 8 skills)
+  // Guard: require at least 20 SMM applications (160 rows = 20 - 8 skills)
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("SMM_Raw_Data");
   if (!sheet || sheet.getLastRow() < 161) {
@@ -1523,7 +1523,7 @@ function batchRefreshMasterCategories() {
   const data    = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
 
   // Collect all unique skill + importance + current category combos
-  const skillMap = {}; // key: skill_name|importance → {rows: [...rowIndices], currentCategory}
+  const skillMap = {}; // key: skill_name|importance - {rows: [...rowIndices], currentCategory}
   data.forEach((row, i) => {
     const skillName  = row[6]  ? row[6].toString().trim()  : "";
     const importance = row[8]  ? row[8].toString().trim()  : "";
@@ -1539,7 +1539,7 @@ function batchRefreshMasterCategories() {
 
   Logger.log(`Batch refresh: ${uniqueSkills.length} unique skills, ${existingCategories.length} existing categories`);
 
-  // Build prompt — send all unique skills in one call for efficiency
+  // Build prompt - send all unique skills in one call for efficiency
   const skillList = uniqueSkills.map((s, i) =>
     `${i + 1}. Skill: "${s.skillName}" | Importance: "${s.importance}" | Current category: "${s.currentCategory}"`
   ).join('\n');
@@ -1552,7 +1552,7 @@ EXISTING CATEGORIES (use these first, create new ones only when truly necessary)
 ${existingCategories.join(', ')}
 
 CONSTRAINT: Maximum 20 unique categories per JD_Importance level (Crucial / Necessary / Optional).
-Merge semantically similar categories (e.g. "CRM Tools" and "CRM Platforms" → "CRM & Automation").
+Merge semantically similar categories (e.g. "CRM Tools" and "CRM Platforms" - "CRM & Automation").
 
 SKILLS TO CATEGORISE:
 ${skillList}
@@ -1575,7 +1575,7 @@ Respond ONLY with a JSON array. One object per skill, same order as input:
     return;
   }
 
-  // Write updated categories back — only column 13
+  // Write updated categories back - only column 13
   let updated = 0;
   assignments.forEach(a => {
     const idx  = a.index - 1; // back to 0-based
@@ -1589,11 +1589,11 @@ Respond ONLY with a JSON array. One object per skill, same order as input:
 
   SpreadsheetApp.flush();
   Logger.log(`Batch refresh complete: ${updated} rows updated.`);
-  ui.alert(`✅ Done. ${updated} rows updated across ${assignments.length} unique skills.`);
+  ui.alert(`- Done. ${updated} rows updated across ${assignments.length} unique skills.`);
 }
 
 /*
-CORE PROCESSOR — Step 2 (Generate & Register)
+CORE PROCESSOR - Step 2 (Generate & Register)
 Now accepts optional smmDataJson from the sidebar (pre-calculated SMM result).
 When smmDataJson is provided, match level comes from SMM score (accurate).
 When not provided (fallback), Mistral estimates it as before.
@@ -1603,7 +1603,7 @@ function mainJobProcessor(jdInput, cvType, smmDataJson) {
     const sheet = getOrCreateMonthlyTab();
     const isDe  = cvType.includes("DE");
 
-    // ── Parse pre-calculated SMM data (if provided by sidebar) ──
+    // - Parse pre-calculated SMM data (if provided by sidebar) -
     let smmData       = null;
     let smmMatchLevel = null;
     if (smmDataJson) {
@@ -1615,7 +1615,7 @@ function mainJobProcessor(jdInput, cvType, smmDataJson) {
       }
     }
 
-    // ── Load CV template ──
+    // - Load CV template -
     let templateDocId;
     if (cvType === "DE Web2 Marketing Manager") {
       templateDocId = getTemplateDE();
@@ -1630,24 +1630,24 @@ function mainJobProcessor(jdInput, cvType, smmDataJson) {
 
     const cleanedJD = jdInput.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, 6000);
 
-    const signOff = isDe ? "Mit freundlichen Grüßen" : "Best regards";
+    const signOff = isDe ? "Mit freundlichen Gr-en" : "Best regards";
     const availabilityText = isDe
-  ? "Ich bin bereit umzuziehen (falls erforderlich) und stehe kurzfristig mit einer Kündigungsfrist von zwei Wochen zur Verfügung."
+  ? "Ich bin bereit umzuziehen (falls erforderlich) und stehe kurzfristig mit einer K-ndigungsfrist von zwei Wochen zur Verf-gung."
   : "I am fully open to relocation if required and am available to start within a two-week notice period.";
 
-    // ── Mistral prompt — Step 2 focuses ONLY on cover letter + metadata ──
+    // - Mistral prompt - Step 2 focuses ONLY on cover letter + metadata -
     // MATCH is still in the output format so parsing stays consistent,
     // but we override it with the SMM value when available.
     const prompt = `You are an expert career coach. Output format MUST be exactly: MATCH | COMPANY | POSITION | PLATFORM | CITY | SMART_LOC | SALARY | LETTER
 
 RULES FOR OUTPUT FIELDS:
-- MATCH: one of: 🚀 Web3, M4, M3, M2, M1, M0
+- MATCH: one of: - Web3, M4, M3, M2, M1, M0
 - COMPANY: company name only
 - POSITION: job title only
 - PLATFORM: one of [LinkedIn, Cryptojobslist, Indeed, Cryptocurrencyjobs, Web3career, Stepstone] or "Own website"
 - CITY: city name only
 - SMART_LOC: "Remote", "Hybrid", or "On-site"
-- SALARY: If salary range found in JD, return it as-is. If not found but city is known, estimate a realistic market rate for the role and city (e.g. "~€40,000–50,000"). If unknown, return empty.
+- SALARY: If salary range found in JD, return it as-is. If not found but city is known, estimate a realistic market rate for the role and city (e.g. "~-40,000-50,000"). If unknown, return empty.
 - LETTER: the full cover letter text (plain text only, zero markdown, zero asterisks)
 
 CURRENT YEAR: 2026.
@@ -1681,25 +1681,25 @@ COVER LETTER RULES:
     letterText = letterText.replace(/\*\*(.*?)\*\*/g, '$1');
     letterText = letterText.replace(/\*(.*?)\*/g, '$1');
 
-    const closingRegex = /([\n\s]*(Mit freundlichen Grüßen|Best regards)[,]?[\s\S]*)$/i;
+    const closingRegex = /([\n\s]*(Mit freundlichen Gr-en|Best regards)[,]?[\s\S]*)$/i;
     letterText = letterText.replace(closingRegex, '').trim();
 
-    const availabilityDE = /Ich bin bereit umzuziehen[\s\S]*?Verfügung\.?/gi;
+    const availabilityDE = /Ich bin bereit umzuziehen[\s\S]*?Verf-gung\.?/gi;
     const availabilityEN = /I am fully open to relocation[\s\S]*?notice period\.?/gi;
-    const startDE = /Mein Startdatum[\s\S]*?möglich\.?/gi;
+    const startDE = /Mein Startdatum[\s\S]*?m-glich\.?/gi;
     const startEN = /I (can|am able to) start[\s\S]*?notice[\s\S]*?\./gi;
     letterText = letterText.replace(availabilityDE, '').trim();
     letterText = letterText.replace(availabilityEN, '').trim();
     letterText = letterText.replace(startDE, '').trim();
     letterText = letterText.replace(startEN, '').trim();
 
-    letterText = letterText.replace(/\s*—\s*/g, ', ');  // em-dash → comma
-    letterText = letterText.replace(/\s*–\s*/g, ', ');  // en-dash → comma
-    letterText = letterText.replace(/ - /g, ', ');       // connector hyphen → comma (compound words untouched)
+    letterText = letterText.replace(/\s*-\s*/g, ', ');  // em-dash - comma
+    letterText = letterText.replace(/\s*-\s*/g, ', ');  // en-dash - comma
+    letterText = letterText.replace(/ - /g, ', ');       // connector hyphen - comma (compound words untouched)
     letterText = letterText.replace(/\n{3,}/g, '\n\n');
     letterText = `${letterText}\n\n${availabilityText}\n\n${signOff}\n\n${CONFIG.MY_NAME}`;
 
-    // ── Platform detection (unchanged) ──
+    // - Platform detection (unchanged) -
     let detectedPlatform = plat || "Own website";
     if (jdInput.startsWith("http") && jdInput.includes(".")) {
       try {
@@ -1725,7 +1725,7 @@ COVER LETTER RULES:
     const companyName = co ? co.trim() : "Unknown";
     const position    = pos ? pos.trim() : "Unknown";
 
-    // ── Location resolution ───────────────────────────────────────────────
+    // - Location resolution -
     // Priority 1: location from JD (via SMM job_location field)
     // Priority 2: location from company name lookup (Germany only for sheet)
     // Priority 3: Mistral's CITY field from the pipe-delimited output
@@ -1738,16 +1738,16 @@ COVER LETTER RULES:
       const jl = smmData.job_location;
       if (jl && (jl.city || jl.country)) {
         if (smmData.location_source === 'jd') {
-          // JD location is authoritative — always use it
+          // JD location is authoritative - always use it
           resolvedCity = jl.city || resolvedCity;
           Logger.log(`Location from JD: "${resolvedCity}"`);
         } else if (smmData.location_source === 'company_lookup') {
-          // Company lookup — only use for sheet if German location
+          // Company lookup - only use for sheet if German location
           if (jl.city && isGermanLocation(jl.city)) {
             resolvedCity = jl.city;
             Logger.log(`Location from company lookup (German): "${resolvedCity}"`);
           } else if (jl.city) {
-            Logger.log(`Location from company lookup (non-German, map only): "${jl.city}" — not written to sheet`);
+            Logger.log(`Location from company lookup (non-German, map only): "${jl.city}" - not written to sheet`);
             // resolvedCity stays as Mistral's city guess (may be empty)
           }
         }
@@ -1759,23 +1759,23 @@ COVER LETTER RULES:
     let cleanedSalary = "";
     if (salary) {
       salary = salary.trim();
-      const salaryMatch = salary.match(/([\$£€¥]?\s?(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,]\d{2})?)/);
+      const salaryMatch = salary.match(/([\$-]?\s?(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,]\d{2})?)/);
       if (salaryMatch && salaryMatch[1]) {
         cleanedSalary = salaryMatch[1];
       } else {
-  // Only keep if it contains at least one digit — discard pure text hallucinations
+  // Only keep if it contains at least one digit - discard pure text hallucinations
   cleanedSalary = /\d/.test(salary) ? salary : '';
   Logger.log(`Potential unparsable salary: "${salary}" for ${companyName}`);
 }
     }
 
-    // ── Determine final match level ──
+    // - Determine final match level -
     // Priority: SMM-calculated level > Mistral's guess
     let finalMatch;
     if (smmMatchLevel) {
       // When Web3 CV + high match, use the Web3 emoji indicator
       if (cvType === "Web3 Marketing Manager" && (smmMatchLevel === "M3" || smmMatchLevel === "M4")) {
-        finalMatch = "🚀 Web3";
+        finalMatch = "- Web3";
       } else {
         finalMatch = smmMatchLevel;
       }
@@ -1796,11 +1796,11 @@ COVER LETTER RULES:
     }
     const finalNotes = notes.join(" | ");
 
-    // ── German language requirement (column H) ────────────────────────────
+    // - German language requirement (column H) -
     // Maps SMM language_note to a short label for analysis of C2 rejections.
-    // EN requirements are intentionally ignored — Rey holds C2 English.
+    // EN requirements are intentionally ignored - Rey holds C2 English.
     // Blank = no German requirement stated, or only English required.
-    // ── Derive column H language requirement from SMM language_note ──
+    // - Derive column H language requirement from SMM language_note -
     let langReq = '';
     if (smmData && smmData.language_note) {
       const ln = smmData.language_note;
@@ -1811,7 +1811,7 @@ COVER LETTER RULES:
       } else if (ln.status === 'other') {
         langReq = 'Other';
       }
-      // status === 'met' for English, or status === 'none' → stays blank intentionally
+      // status === 'met' for English, or status === 'none' - stays blank intentionally
     }
 
     const rowData   = [[finalMatch, companyName, position, detectedPlatform, location, "Applied", dateStr, langReq, finalNotes]];
@@ -1819,21 +1819,21 @@ COVER LETTER RULES:
     sheet.getRange(targetRow, 1, 1, 9).setValues(rowData);
     updateRowStatusLogic(sheet, targetRow, "Applied");
 
-    const statusPathFormula = `=JOIN(""; IF(J${targetRow}>0;"📩";""); IF(K${targetRow}>0;"0️⃣";""); IF(L${targetRow}>0;"1️⃣";""); IF(M${targetRow}>0;"2️⃣";""); IF(N${targetRow}>0;"3️⃣";""); IF(O${targetRow}>0;"4️⃣";""); IF(P${targetRow}>0;"🎉";""); IF(Q${targetRow}>0;"⚪";""); IF(R${targetRow}>0;"🛑";""))`;
+    const statusPathFormula = `=JOIN(""; IF(J${targetRow}>0;"-";""); IF(K${targetRow}>0;"0-";""); IF(L${targetRow}>0;"1-";""); IF(M${targetRow}>0;"2-";""); IF(N${targetRow}>0;"3-";""); IF(O${targetRow}>0;"4-";""); IF(P${targetRow}>0;"-";""); IF(Q${targetRow}>0;"-";""); IF(R${targetRow}>0;"-";""))`;
     sheet.getRange(targetRow, 19).setFormula(statusPathFormula);
 
-    // ── Generate cover letter PDF ──
+    // - Generate cover letter PDF -
     const prefix       = isDe ? "Anschreiben Rey" : "Cover letter Rey";
     const tempDocTitle = `${prefix} - ${companyName}`;
     savePdfGhostFree(letterText, companyName, isDe, tempDocTitle);
 
-    // ── Write SMM skills to SMM_Raw_Data (if SMM was run) ──
+    // - Write SMM skills to SMM_Raw_Data (if SMM was run) -
     if (smmData && smmData.skills && smmData.skills.length > 0) {
       const uid = Utilities.getUuid();
       writeSmmRawData(uid, dateStr, companyName, position, cvType, smmData);
     }
 
-    // ── Refresh dashboard data ──
+    // - Refresh dashboard data -
     SpreadsheetApp.flush();
     Utilities.sleep(1500);
     updateSankeyData();
@@ -1844,8 +1844,8 @@ COVER LETTER RULES:
     try { markCacheRowStatus(companyName, position, 'registered'); } catch(e) {
       Logger.log(`markCacheRowStatus non-fatal: ${e.message}`);
     }
-    const scoreNote = smmData ? ` (SMM ${smmData.total_score}/40 · ${finalMatch})` : "";
-    return `✅ Success: ${companyName} registered${scoreNote}!`;
+    const scoreNote = smmData ? ` (SMM ${smmData.total_score}/40 - ${finalMatch})` : "";
+    return `- Success: ${companyName} registered${scoreNote}!`;
 
   } catch (e) {
     Logger.log(`Error in mainJobProcessor: ${e.toString()}\nStack: ${e.stack}`);
@@ -1932,13 +1932,13 @@ function processGmailApplications() {
       const appDate = Utilities.formatDate(message.getDate(), timezone, "dd.MM.yyyy");
 
       let salary      = "";
-      const salaryMatch = body.match(/([\$£€¥]\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|\d{1,3}(?:[.,]\d{3})+\s?(?:EUR|USD|GBP|€|\$|£))/i);
+      const salaryMatch = body.match(/([\$-]\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|\d{1,3}(?:[.,]\d{3})+\s?(?:EUR|USD|GBP|-|\$|-))/i);
       if (salaryMatch) salary = salaryMatch[0].trim();
 
       let noteParts = [];
       if (smartLoc) noteParts.push(`Work: ${smartLoc}`);
       if (salary)   noteParts.push(`Salary: ${salary}`);
-      const notes = noteParts.length > 0 ? `🤖 ${noteParts.join(" | ")}` : "🤖";
+      const notes = noteParts.length > 0 ? `- ${noteParts.join(" | ")}` : "-";
 
       const targetRow = findNextEmptyRow(sheet);
       sheet.getRange(targetRow, 1, 1, 9).setValues([[
@@ -1946,7 +1946,7 @@ function processGmailApplications() {
       ]]);
       updateRowStatusLogic(sheet, targetRow, "Applied");
 
-      const statusPathFormula = `=JOIN(""; IF(J${targetRow}>0;"📩";""); IF(K${targetRow}>0;"0️⃣";""); IF(L${targetRow}>0;"1️⃣";""); IF(M${targetRow}>0;"2️⃣";""); IF(N${targetRow}>0;"3️⃣";""); IF(O${targetRow}>0;"4️⃣";""); IF(P${targetRow}>0;"🎉";""); IF(Q${targetRow}>0;"⚪";""); IF(R${targetRow}>0;"🛑";""))`;
+      const statusPathFormula = `=JOIN(""; IF(J${targetRow}>0;"-";""); IF(K${targetRow}>0;"0-";""); IF(L${targetRow}>0;"1-";""); IF(M${targetRow}>0;"2-";""); IF(N${targetRow}>0;"3-";""); IF(O${targetRow}>0;"4-";""); IF(P${targetRow}>0;"-";""); IF(Q${targetRow}>0;"-";""); IF(R${targetRow}>0;"-";""))`;
       sheet.getRange(targetRow, 19).setFormula(statusPathFormula);
 
       existingJobs.push(`${companyName}-${normalizeJobTitle(jobTitle)}`);
@@ -1970,7 +1970,7 @@ function processGmailApplications() {
 
   } catch (e) {
     Logger.log(`Error in processGmailApplications: ${e.toString()}\nStack: ${e.stack}`);
-    SpreadsheetApp.getUi().alert("Fehler beim Verarbeiten der Gmail-Bewerbungen. Bitte Logs prüfen.");
+    SpreadsheetApp.getUi().alert("Fehler beim Verarbeiten der Gmail-Bewerbungen. Bitte Logs pr-fen.");
   }
 }
 
@@ -2065,7 +2065,7 @@ function callMistralResilient(prompt) {
         const json  = JSON.parse(responseBody);
         let content = json.choices[0].message.content.trim();
         if (content.includes("|")) {
-          const matchIndex = content.search(/🚀|M[0-4]/);
+          const matchIndex = content.search(/-|M[0-4]/);
           if (matchIndex !== -1) {
             content = content.substring(matchIndex).trim();
             const currentPipes  = content.split('|').length - 1;
@@ -2106,7 +2106,7 @@ function getOrCreateMonthlyTab() {
   const existing = ss.getSheetByName(month);
   if (existing) return existing;
 
-  // ── Find the most recent monthly tab by parsing tab names as dates ──────────
+  // - Find the most recent monthly tab by parsing tab names as dates -
   const MONTH_NAMES = {
     jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
     jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
@@ -2128,14 +2128,14 @@ function getOrCreateMonthlyTab() {
     }
   });
 
-  // ── Create a fresh new sheet ─────────────────────────────────────────────────
+  // - Create a fresh new sheet -
   const sheet = ss.insertSheet(month);
   SpreadsheetApp.flush();
 
   if (templateSheet) {
-    // ── Read header row values and formatting from the template ──────────────
+    // - Read header row values and formatting from the template -
     // We only copy row 1 (headers) and the dropdown validations from row 2.
-    // We do NOT use copyTo() — it fails in web app context.
+    // We do NOT use copyTo() - it fails in web app context.
 
     const templateHeaderRange = templateSheet.getRange(1, 1, 1, 20);
 
@@ -2163,7 +2163,7 @@ function getOrCreateMonthlyTab() {
     const fontFamilies = templateHeaderRange.getFontFamilies();
     sheet.getRange(1, 1, 1, 20).setFontFamilies(fontFamilies);
 
-    // Copy column widths for A–T (columns 1–20)
+    // Copy column widths for A-T (columns 1-20)
     for (let col = 1; col <= 20; col++) {
       const width = templateSheet.getColumnWidth(col);
       sheet.setColumnWidth(col, width);
@@ -2173,7 +2173,7 @@ function getOrCreateMonthlyTab() {
     const frozenRows = templateSheet.getFrozenRows();
     if (frozenRows > 0) sheet.setFrozenRows(frozenRows);
 
-    // ── Re-apply dropdown validations from template row 2 ───────────────────
+    // - Re-apply dropdown validations from template row 2 -
     const colsWithDropdowns = [1,2,3,4,5,6,7,9,10,11,12,13,14,15,16,17,18,20];
     colsWithDropdowns.forEach(function(col) {
       const validation = templateSheet.getRange(2, col).getDataValidation();
@@ -2181,18 +2181,18 @@ function getOrCreateMonthlyTab() {
       sheet.getRange(2, col, 1000, 1).setDataValidation(validation);
     });
 
-    // ── Column H: Language Requirement dropdown ───────────────────────────
+    // - Column H: Language Requirement dropdown -
     // Applied fresh here because the template predates this column.
-    // Uses requireValueInList (same style as cols A, D, F) — no inline arrow.
+    // Uses requireValueInList (same style as cols A, D, F) - no inline arrow.
     const langReqValidation = SpreadsheetApp.newDataValidation()
       .requireValueInList(['C2 required', 'C1 required', 'Other'], true)
       .setAllowInvalid(true)
       .build();
     sheet.getRange(2, 8, 1000, 1).setDataValidation(langReqValidation);
-    // ─────────────────────────────────────────────────────────────────────
+    // -
 
   } else {
-    // ── Fallback: no monthly tab found — build from scratch ─────────────────
+    // - Fallback: no monthly tab found - build from scratch -
     const headers = [
       "Match Level", "Companies", "Position", "Application Platform", "Location",
       "Status", "Application Date", "Language Req.", "Notes",
@@ -2208,17 +2208,17 @@ function getOrCreateMonthlyTab() {
     sheet.setFrozenRows(1);
     for (let i = 1; i <= headers.length; i++) sheet.autoResizeColumn(i);
 
-    // ── Column H: Language Requirement dropdown ───────────────────────────
+    // - Column H: Language Requirement dropdown -
     const langReqValidation = SpreadsheetApp.newDataValidation()
       .requireValueInList(['C2 required', 'C1 required', 'Other'], true)
       .setAllowInvalid(true)
       .build();
     sheet.getRange(2, 8, 1000, 1).setDataValidation(langReqValidation);
-    // ─────────────────────────────────────────────────────────────────────
+    // -
   }
 
-  // ── Apply =JOIN formula to column S (rows 2 onward) ─────────────────────────
-  const emojiFormula = '=JOIN(""; IF(J2>0;"📩";""); IF(K2>0;"0️⃣";""); IF(L2>0;"1️⃣";""); IF(M2>0;"2️⃣";""); IF(N2>0;"3️⃣";""); IF(O2>0;"4️⃣";""); IF(P2>0;"🎉";""); IF(Q2>0;"⚪";""); IF(R2>0;"🛑";""))';
+  // - Apply =JOIN formula to column S (rows 2 onward) -
+  const emojiFormula = '=JOIN(""; IF(J2>0;"-";""); IF(K2>0;"0-";""); IF(L2>0;"1-";""); IF(M2>0;"2-";""); IF(N2>0;"3-";""); IF(O2>0;"4-";""); IF(P2>0;"-";""); IF(Q2>0;"-";""); IF(R2>0;"-";""))';
   sheet.getRange("S2:S").setFormula(emojiFormula);
 
   SpreadsheetApp.flush();
@@ -2227,7 +2227,7 @@ function getOrCreateMonthlyTab() {
 
 
 /**
- * Copies data validations from templateSheet row 2 (columns A–T, excluding S)
+ * Copies data validations from templateSheet row 2 (columns A-T, excluding S)
  * and applies them to all data rows in the new sheet.
  * This is needed because clearDataValidations() removes the dropdown rules
  * that were brought over by copyTo().
@@ -2239,7 +2239,7 @@ function _copyValidationsFromTemplate(templateSheet, newSheet, lastRow) {
   colsToRestore.forEach(function(col) {
     const templateCell = templateSheet.getRange(2, col);
     const validation   = templateCell.getDataValidation();
-    if (!validation) return; // no dropdown on this column — skip
+    if (!validation) return; // no dropdown on this column - skip
 
     // Apply to the full data range in the new sheet
     newSheet.getRange(2, col, lastRow - 1, 1).setDataValidation(validation);
@@ -2282,7 +2282,7 @@ function isLikelyJobEmail(sender, subject) {
     'lieferando', 'deliveroo', 'uber', 'mjam'
   ];
   const nonJobSubjects = [
-    'newsletter', 'angebot', '% rabatt', 'sale', 'discount', 'Kontoprüfcode',
+    'newsletter', 'angebot', '% rabatt', 'sale', 'discount', 'Kontopr-fcode',
     'bestellung', 'order confirmation', 'rechnung', 'invoice',
     'digest', 'quora', 'sparangebot', 'nur heute', 'flash sale',
     'deine lieferung', 'your delivery', 'tracking', 'versandbestatigung',
@@ -2302,60 +2302,60 @@ function isLikelyJobEmail(sender, subject) {
 function classifyRejectionByRules(subject, body) {
   const combined = (subject + ' ' + body).toLowerCase().substring(0, 3000);
 
-  // Hard rejection signals — any one of these = confirmed rejection
+  // Hard rejection signals - any one of these = confirmed rejection
   const rejectionPhrases = [
-    // ── German formal (Sie/Ihnen) — original phrases ──────────────────────
-    'leider müssen wir ihnen mitteilen',
-    'leider können wir ihre bewerbung',
-    'leider können wir ihnen',
-    'leider müssen wir ihnen',
+    // - German formal (Sie/Ihnen) - original phrases -
+    'leider m-ssen wir ihnen mitteilen',
+    'leider k-nnen wir ihre bewerbung',
+    'leider k-nnen wir ihnen',
+    'leider m-ssen wir ihnen',
     'nicht weiterverfolgen',
     'anderweitig besetzt',
-    'haben uns für andere kandidaten',
-    'haben uns für andere bewerber',
-    'entschieden wir uns für',
+    'haben uns f-r andere kandidaten',
+    'haben uns f-r andere bewerber',
+    'entschieden wir uns f-r',
     'kein passendes profil',
     'entspricht nicht dem gesuchten profil',
     'nicht dem anforderungsprofil',
     'bedauern wir ihnen mitteilen',
     'bedauern, ihnen mitteilen',
-    'absage für ihre bewerbung',
+    'absage f-r ihre bewerbung',
     'ihre bewerbung war leider nicht erfolgreich',
-    'bewerbung nicht berücksichtigen',
+    'bewerbung nicht ber-cksichtigen',
     'im auswahlverfahren nicht',
     'an dieser stelle beenden',
     'bewerbungsprozess beenden',
-    'leider keine möglichkeit',
-    'nach reiflicher überlegung',
-    'nach sorgfältiger prüfung',
-    'nach eingehender prüfung',
+    'leider keine m-glichkeit',
+    'nach reiflicher -berlegung',
+    'nach sorgf-ltiger pr-fung',
+    'nach eingehender pr-fung',
     'anderen kandidaten den vorzug',
     'anderen bewerbern den vorzug',
 
-    // ── German informal (du/dir/deine) — added variants ───────────────────
-    'leider müssen wir dir mitteilen',
-    'leider können wir deine bewerbung',
-    'leider können wir dir',
+    // - German informal (du/dir/deine) - added variants -
+    'leider m-ssen wir dir mitteilen',
+    'leider k-nnen wir deine bewerbung',
+    'leider k-nnen wir dir',
     'bedauern wir dir mitteilen',
     'bedauern, dir mitteilen',
-    'absage für deine bewerbung',
+    'absage f-r deine bewerbung',
     'deine bewerbung war leider nicht erfolgreich',
 
-    // ── German — new patterns missing entirely ────────────────────────────
+    // - German - new patterns missing entirely -
     'inzwischen besetzt',                        // "position filled in the meantime"
-    'nicht berücksichtigt werden konnte',        // very common soft rejection
-    'nicht berücksichtigt werden konnten',
+    'nicht ber-cksichtigt werden konnte',        // very common soft rejection
+    'nicht ber-cksichtigt werden konnten',
     'nicht in die engere auswahl',               // not shortlisted
     'leider nicht in die engere auswahl',
-    'uns leider nicht für dich entschieden',
-    'uns leider nicht für sie entschieden',
-    'müssen wir dir leider absagen',
-    'müssen wir ihnen leider absagen',
-    'leider absagen müssen',
+    'uns leider nicht f-r dich entschieden',
+    'uns leider nicht f-r sie entschieden',
+    'm-ssen wir dir leider absagen',
+    'm-ssen wir ihnen leider absagen',
+    'leider absagen m-ssen',
     'haben wir uns gegen deine bewerbung',
     'haben wir uns gegen ihre bewerbung',
 
-    // ── English — original phrases ────────────────────────────────────────
+    // - English - original phrases -
     'not moving forward with your application',
     'not moving forward with your candidacy',
     'will not be moving forward',
@@ -2372,7 +2372,7 @@ function classifyRejectionByRules(subject, body) {
     'unfortunately, we\'re unable to',
     'regret to inform you',
 
-    // ── English — new patterns missing entirely ───────────────────────────
+    // - English - new patterns missing entirely -
     'we have decided not to move forward',
     'we have decided to pursue other',
     'will not be proceeding with your',
@@ -2387,13 +2387,13 @@ function classifyRejectionByRules(subject, body) {
     'decided not to proceed with your',
   ];
 
-  // Hard non-rejection signals — any one of these = definitely not rejection
+  // Hard non-rejection signals - any one of these = definitely not rejection
   const nonRejectionPhrases = [
-    'einladung zum vorstellungsgespräch',
-    'einladung zum gespräch',
-    'wir möchten sie zu einem gespräch einladen',
-    'wir möchten dich zu einem gespräch einladen',
-    'bewerbungsgespräch vereinbaren',
+    'einladung zum vorstellungsgespr-ch',
+    'einladung zum gespr-ch',
+    'wir m-chten sie zu einem gespr-ch einladen',
+    'wir m-chten dich zu einem gespr-ch einladen',
+    'bewerbungsgespr-ch vereinbaren',
     'we would like to invite you',
     "we'd like to schedule",
     'interview invitation',
@@ -2407,12 +2407,12 @@ function classifyRejectionByRules(subject, body) {
     'wir haben deine bewerbung erhalten',
     'your application has been received',
     'bewerbungseingang',
-    'eingangsbestätigung',
-    'bestätige deine identität',
+    'eingangsbest-tigung',
+    'best-tige deine identit-t',
     'verifizierungscode',
     'code:',                     // identity verification codes
-    'wir prüfen ihre unterlagen',
-    'wir prüfen deine unterlagen',
+    'wir pr-fen ihre unterlagen',
+    'wir pr-fen deine unterlagen',
     'werden uns bei ihnen melden',
     'werden uns bei dir melden',
     'we will be in touch',
@@ -2444,8 +2444,8 @@ function classifyRejectionEmail(sender, subject, body) {
   }
 
   if (ruleResult === 'rejection') {
-    // Rules confirmed rejection — still need company name, use AI for extraction only
-    Logger.log(`  Rules: REJECTION confirmed — extracting company name`);
+    // Rules confirmed rejection - still need company name, use AI for extraction only
+    Logger.log(`  Rules: REJECTION confirmed - extracting company name`);
     const prompt = `This email is a job application rejection. Extract only the company name that sent it.
 From: ${sender}
 Subject: ${subject}
@@ -2467,7 +2467,7 @@ Respond ONLY with JSON: {"companyName": "Company Name"} or {"companyName": null}
   }
 
   // Uncertain: use AI with better model for full classification
-  Logger.log(`  Rules: uncertain — calling llama-3.3-70b`);
+  Logger.log(`  Rules: uncertain - calling llama-3.3-70b`);
   const prompt = `Classify this job application email.
 From: ${sender}
 Subject: ${subject}
@@ -2511,7 +2511,7 @@ function findBestCompanyMatch(geminiName, pendingCompanies) {
   function normalize(name) {
     return name
       .toLowerCase()
-      .replace(/['`'']/g, '')                    // ← (removes apostrophes)
+      .replace(/['`'']/g, '')                    // - (removes apostrophes)
       .replace(/\s+(gmbh\s*&\s*co\.?\s*kg|gmbh|ag|se|kg|ohg|ug|ltd|inc|corp|llc|sas|bv|nv|ab)\.?/gi, '')
       .replace(/[&.,\-]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -2551,27 +2551,27 @@ function findBestCompanyMatch(geminiName, pendingCompanies) {
 
 /**
  * Pre-filter: returns true if the email is clearly an acknowledgment,
- * confirmation, or identity verification — never a rejection.
+ * confirmation, or identity verification - never a rejection.
  * Called BEFORE the AI to avoid false positives on small models.
  */
 function isAcknowledgmentEmail(subject, body) {
   const combined = (subject + ' ' + body).toLowerCase();
 
-  // Hard signals — these patterns are NEVER rejections, skip immediately
+  // Hard signals - these patterns are NEVER rejections, skip immediately
   const hardSignals = [
-    'bestätige deine identität',
-    'bestätige dein profil',
-    'bestätige deine e-mail',
+    'best-tige deine identit-t',
+    'best-tige dein profil',
+    'best-tige deine e-mail',
     'verifizierungscode',
     'verification code',
-    'bestätigungscode',
+    'best-tigungscode',
     'confirm your identity',
-    'eingangsbestätigung',
-    'hiermit übersende ich',
+    'eingangsbest-tigung',
+    'hiermit -bersende ich',
     'hiermit bewerbe ich mich',
     'ich bewerbe mich hiermit',
     'anbei sende ich',
-    'anbei übersende ich',
+    'anbei -bersende ich',
     'please find attached my',
     'i am writing to apply',
     'i would like to apply',
@@ -2590,7 +2590,7 @@ function isAcknowledgmentEmail(subject, body) {
 'please provide the following',
 'please send us the following',
 'additional documents required',
-'wir benötigen noch',
+'wir ben-tigen noch',
 'wir bitten dich um',
 'bitten wir dich, uns',
     'bewerbung eingegangen',
@@ -2603,18 +2603,18 @@ function isAcknowledgmentEmail(subject, body) {
 
   // Soft signals: "we're reviewing" language combined with NO rejection markers
   const acknowledgmentPhrases = [
-    'wir freuen uns über dein interesse',
-    'wir freuen uns über ihr interesse',
+    'wir freuen uns -ber dein interesse',
+    'wir freuen uns -ber ihr interesse',
     'freuen uns, dass du teil',
     'freuen uns, dass sie teil',
-    'danke für deine bewerbung',
-    'danke für ihre bewerbung',
-    'lieben dank für deine bewerbung',
-    'deine unterlagen werden geprüft',
+    'danke f-r deine bewerbung',
+    'danke f-r ihre bewerbung',
+    'lieben dank f-r deine bewerbung',
+    'deine unterlagen werden gepr-ft',
     'unterlagen werden im ersten schritt',
-    'sorgfältig prüfen',
-    'für eine rückmeldung noch etwas zeit',
-    'wir setzen uns so bald wie möglich',
+    'sorgf-ltig pr-fen',
+    'f-r eine r-ckmeldung noch etwas zeit',
+    'wir setzen uns so bald wie m-glich',
     'wir melden uns bei dir',
     'wir melden uns bei ihnen',
     'thank you for your application',
@@ -2624,7 +2624,7 @@ function isAcknowledgmentEmail(subject, body) {
 
   const rejectionMarkers = [
     'leider', 'bedauern', 'nicht weiterverfolgen', 'anderweitig besetzt',
-    'absage', 'entschieden uns für andere', 'andere bewerber', 'nicht berücksichtigen',
+    'absage', 'entschieden uns f-r andere', 'andere bewerber', 'nicht ber-cksichtigen',
     'unable to', 'not moving forward', 'will not be moving', 'unfortunately',
     'no longer considering', 'decided not to'
   ];
@@ -2637,7 +2637,7 @@ function isAcknowledgmentEmail(subject, body) {
 }
 
 /*
-Rejection Email Scanner — Mistral powered
+Rejection Email Scanner - Mistral powered
 */
 function processRejectionEmails() {
   const ss       = SpreadsheetApp.getActiveSpreadsheet();
@@ -2648,7 +2648,7 @@ function processRejectionEmails() {
   const ts           = props.getProperty('LAST_REJECTION_SCAN');
   const testSince    = ts ? new Date(ts) : new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
   const testFormatted = Utilities.formatDate(testSince, timezone, "yyyy/MM/dd");
-  Logger.log(`Rejection scan — searching after: ${testFormatted}`);
+  Logger.log(`Rejection scan - searching after: ${testFormatted}`);
 
   const COMPANY_COL = 1;
   const STATUS_COL  = 5;
@@ -2685,7 +2685,7 @@ function processRejectionEmails() {
     sinceDate = new Date(lastScanStr);
   } else {
     sinceDate = new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000);
-    Logger.log("First run — scanning last 14 days.");
+    Logger.log("First run - scanning last 14 days.");
   }
   const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
   const sinceFormatted = Utilities.formatDate(queryDate, timezone, "yyyy/MM/dd");
@@ -2722,37 +2722,37 @@ function processRejectionEmails() {
 
   let rejectionsFound = 0;
   const dateStr       = Utilities.formatDate(new Date(), timezone, "dd.MM.yyyy");
-  const botMark       = `${dateStr} 🤖`;
+  const botMark       = `${dateStr} -`;
 
   for (const thread of threadsToProcess) {
     const messages      = thread.getMessages();
     const latestMessage = messages[messages.length - 1];
     let   body          = latestMessage.getPlainBody();
-    if (body.includes('Nachricht gekürzt') || body.includes('message has been truncated')) {
+    if (body.includes('Nachricht gek-rzt') || body.includes('message has been truncated')) {
       body = latestMessage.getRawContent();
     }
     const sender  = latestMessage.getFrom();
     const subject = latestMessage.getSubject();
 
     Logger.log(`Processing: "${subject}" from "${sender}"`);
-    // Fix 2 — Skip interview and meeting invitation emails before calling AI
+    // Fix 2 - Skip interview and meeting invitation emails before calling AI
     const MEETING_SIGNALS = [
-      'bewerbungsgespräch', 'vorstellungsgespräch',
-      'einladung zum gespräch', 'gesprächseinladung',
+      'bewerbungsgespr-ch', 'vorstellungsgespr-ch',
+      'einladung zum gespr-ch', 'gespr-chseinladung',
       'interview einladung', 'einladung zum interview',
       'telefoninterview', 'phone interview', 'video interview',
       'we would like to invite', "we'd like to invite",
       'calendar invite', 'meeting invitation', 'besprechungseinladung'
     ];
     if (MEETING_SIGNALS.some(sig => subject.toLowerCase().includes(sig))) {
-      Logger.log(`⏭ Interview/meeting invitation — skipped: "${subject}"`);
+      Logger.log(`- Interview/meeting invitation - skipped: "${subject}"`);
       Utilities.sleep(300);
       continue;
     }
 
     // Pre-filter: skip acknowledgment and identity verification emails
     if (isAcknowledgmentEmail(subject, body.substring(0, 1500))) {
-      Logger.log(`⏭ Acknowledgment/confirmation email — skipped: "${subject}"`);
+      Logger.log(`- Acknowledgment/confirmation email - skipped: "${subject}"`);
       Utilities.sleep(300);
       continue;
     }
@@ -2771,10 +2771,10 @@ function processRejectionEmails() {
         updateRowStatusLogic(matchedEntry.sheet, matchedEntry.rowIndex, "Rejected");
         rejectionsFound++;
         thread.addLabel(label);
-        Logger.log(`✓ Rejection registered: "${matchedEntry.name}"`);
+        Logger.log(`- Rejection registered: "${matchedEntry.name}"`);
         pendingCompanies = pendingCompanies.filter(p => p !== matchedEntry);
       } else {
-        Logger.log(`⚠ Rejection detected but "${result.companyName}" has no sheet match — labeled for review.`);
+        Logger.log(`- Rejection detected but "${result.companyName}" has no sheet match - labeled for review.`);
         thread.addLabel(label);
       }
     }
@@ -2794,7 +2794,7 @@ function processRejectionEmails() {
 
   const remaining = jobThreads.length - threadsToProcess.length;
   if (remaining > 0) {
-    return `Scan complete. Logged ${rejectionsFound} new rejection(s). ${remaining} more emails pending — run again to continue.`;
+    return `Scan complete. Logged ${rejectionsFound} new rejection(s). ${remaining} more emails pending - run again to continue.`;
   }
   return `Scan complete. Logged ${rejectionsFound} new rejection(s).`;
 }
@@ -2880,9 +2880,9 @@ function updateGeoData() {
     "Ireland":              ["dublin"],
     "Austria":              ["vienna", "wien"],
     "Denmark":              ["kopenhagen", "copenhagen"],
-    "Belgium":              ["brussels", "brussel", "brüssel", "brüssels"],
+    "Belgium":              ["brussels", "brussel", "br-ssel", "br-ssels"],
     "Netherlands":          ["amsterdam"],
-    "Switzerland":          ["zurich", "zürich"],
+    "Switzerland":          ["zurich", "z-rich"],
     "Luxembourg":           ["luxembourg", "luxemburg"],
     "Finland":              ["helsinki"],
   };
@@ -2961,9 +2961,9 @@ function updateInterviewGeoData() {
     "Ireland":              ["dublin"],
     "Austria":              ["vienna", "wien"],
     "Denmark":              ["kopenhagen", "copenhagen"],
-    "Belgium":              ["brussels", "brussel", "brüssel", "brüssels"],
+    "Belgium":              ["brussels", "brussel", "br-ssel", "br-ssels"],
     "Netherlands":          ["amsterdam"],
-    "Switzerland":          ["zurich", "zürich"],
+    "Switzerland":          ["zurich", "z-rich"],
     "Luxembourg":           ["luxembourg", "luxemburg"],
     "Finland":              ["helsinki"],
   };
@@ -2972,7 +2972,7 @@ function updateInterviewGeoData() {
     cities.forEach(city => { cityToCountry[city] = country; });
   });
 
-  // key: "month|city|country" → { maxStageNum, maxStageName, count }
+  // key: "month|city|country" - { maxStageNum, maxStageName, count }
   const cityMap = {};
 
   sheets.forEach(sheet => {
@@ -3038,7 +3038,7 @@ function updateInterviewGeoData() {
   range.setValues(allRows);
 }
 
-// ── Utility / Debug Functions ──────────────────────────────────────────────
+// - Utility / Debug Functions -
 
 function checkScanTimestamp() {
   const props = PropertiesService.getScriptProperties();
@@ -3056,7 +3056,7 @@ function testGeminiDirectly() {
   const result = callGeminiForRejection(
     "wattfox-jobs@m.personio.de",
     "Deine Bewerbung als AI & Marketing Automation Manager bei WattFox",
-    "Hallo Rey, noch einmal vielen Dank. Wir haben uns dieses Mal allerdings für Bewerbende entschieden, deren Erfahrungen besser zur ausgeschriebenen Rolle gepasst haben.",
+    "Hallo Rey, noch einmal vielen Dank. Wir haben uns dieses Mal allerdings f-r Bewerbende entschieden, deren Erfahrungen besser zur ausgeschriebenen Rolle gepasst haben.",
     ["WattFox", "Rhenus Warehousing Solutions Global GmbH & Co. KG", "STI GmbH"]
   );
   Logger.log(`Gemini test result: ${JSON.stringify(result)}`);
@@ -3067,17 +3067,17 @@ function testSpecificRejections() {
                         "WeWork", "Rhenus Warehousing Solutions Global GmbH & Co. KG",
                         "Lidl Dienstleistung", "Columbia Road", "koenig.solutions"];
   const testEmails = [
-    { sender: "towncountry-jobs@m.personio.de", subject: "TC - Vielen Dank für Ihre Bewerbung als Spezialist CRM", body: "Nach eingehender Prüfung Ihrer Unterlagen müssen wir Ihnen leider mitteilen, dass wir Ihre Bewerbung für diese Position nicht weiterverfolgen können." },
-    { sender: "bbidarnariman@tuevnordgroup.recruitmail.com", subject: "Feedback zu deiner Bewerbung als PowerPlatform Manager:in", body: "Leider müssen wir dir mitteilen, dass wir deine Bewerbung im Auswahlverfahren nicht weiter berücksichtigen können." },
+    { sender: "towncountry-jobs@m.personio.de", subject: "TC - Vielen Dank f-r Ihre Bewerbung als Spezialist CRM", body: "Nach eingehender Pr-fung Ihrer Unterlagen m-ssen wir Ihnen leider mitteilen, dass wir Ihre Bewerbung f-r diese Position nicht weiterverfolgen k-nnen." },
+    { sender: "bbidarnariman@tuevnordgroup.recruitmail.com", subject: "Feedback zu deiner Bewerbung als PowerPlatform Manager:in", body: "Leider m-ssen wir dir mitteilen, dass wir deine Bewerbung im Auswahlverfahren nicht weiter ber-cksichtigen k-nnen." },
     { sender: "wework@myworkday.com", subject: "Thank You, from WeWork", body: "We recently filled the role you originally applied to, so we won't be moving forward with your candidacy for this position." },
-    { sender: "rhe@myworkday.com", subject: "Deine Bewerbung für Junior Innovation Manager", body: "Nach sorgfältiger Überlegung bedauern wir, dir mitteilen zu müssen, dass wir deine Bewerbung zu diesem Zeitpunkt nicht weiter verfolgen werden." },
-    { sender: "noreply@lidl.com", subject: "Deine Bewerbung als Junior Automation & AI Specialist", body: "Andere Bewerbungen entsprechen dem Stellenprofil jedoch noch etwas besser. Wir bedauern, den Bewerbungsprozess deshalb an dieser Stelle beenden zu müssen." },
+    { sender: "rhe@myworkday.com", subject: "Deine Bewerbung f-r Junior Innovation Manager", body: "Nach sorgf-ltiger -berlegung bedauern wir, dir mitteilen zu m-ssen, dass wir deine Bewerbung zu diesem Zeitpunkt nicht weiter verfolgen werden." },
+    { sender: "noreply@lidl.com", subject: "Deine Bewerbung als Junior Automation & AI Specialist", body: "Andere Bewerbungen entsprechen dem Stellenprofil jedoch noch etwas besser. Wir bedauern, den Bewerbungsprozess deshalb an dieser Stelle beenden zu m-ssen." },
     { sender: "hannu.saarinen@columbiaroad.teamtailor-mail.com", subject: "Your application to Columbia Road", body: "we will not be moving forward with your application for now." },
-    { sender: "noreply@indeed.com", subject: "Neuigkeiten zu Ihrer Bewerbung von koenig.solutions", body: "Leider konnte Ihre Bewerbung dieses Mal nicht berücksichtigt werden." }
+    { sender: "noreply@indeed.com", subject: "Neuigkeiten zu Ihrer Bewerbung von koenig.solutions", body: "Leider konnte Ihre Bewerbung dieses Mal nicht ber-cksichtigt werden." }
   ];
   testEmails.forEach(email => {
     const result = callGeminiForRejection(email.sender, email.subject, email.body, pendingNames);
-    Logger.log(`"${email.subject}" → ${JSON.stringify(result)}`);
+    Logger.log(`"${email.subject}" - ${JSON.stringify(result)}`);
   });
 }
 
@@ -3100,13 +3100,13 @@ function backfillInterviewReached() {
 }
 
 /* ============================================================
-   AUTOMATED DAILY JOB SEARCH — Complete Section (Adzuna)
+   AUTOMATED DAILY JOB SEARCH - Complete Section (Adzuna)
    Paste this entire block at the end of Code.js, replacing
    everything from this comment to the end of the file.
    ============================================================ */
 
 
-// ── Search config ─────────────────────────────────────────────────────────────
+// - Search config -
 
 const JOB_SEARCH_KEYWORDS = [
   'marketing manager',
@@ -3130,7 +3130,7 @@ const JOB_SEARCH_EXCLUDE_TERMS = [
   'praktikant', 'werkstudent', 'werkstudentin',
   'internship', 'intern ',
   'product marketing', 'field marketing',
-  // ← new: non-marketing roles confirmed M0
+  // - new: non-marketing roles confirmed M0
   'customer success', 'account executive', 'revops'
 ];
 
@@ -3140,7 +3140,7 @@ const DIRECT_FETCH_BLOCKED = [
 ];
 
 
-// ── Tavily credit counter ─────────────────────────────────────────────────────
+// - Tavily credit counter -
 
 function incrementTavilyCounter(credits) {
   if (!credits || credits <= 0) return;
@@ -3159,7 +3159,7 @@ function incrementTavilyCounter(credits) {
   const current  = parseInt(props.getProperty('TAVILY_CREDITS_MONTH') || '0');
   const newTotal = current + credits;
   props.setProperty('TAVILY_CREDITS_MONTH', String(newTotal));
-  Logger.log(`  📊 Tavily credits this month: ${newTotal}/1000`);
+  Logger.log(`  - Tavily credits this month: ${newTotal}/1000`);
   return newTotal;
 }
 
@@ -3170,30 +3170,30 @@ function getTavilyMonthlyUsage() {
 }
 
 
-// ── Content quality check ─────────────────────────────────────────────────────
+// - Content quality check -
 
 function looksLikeJobContent(text) {
   if (!text || text.length < 150) return false;
   const lower = text.toLowerCase();
 
-  // Task/role signals — what the candidate will DO in the role
+  // Task/role signals - what the candidate will DO in the role
   const taskSignals = [
-    'aufgaben', 'tätigkeiten', 'deine aufgaben', 'ihre aufgaben',
+    'aufgaben', 't-tigkeiten', 'deine aufgaben', 'ihre aufgaben',
     'verantwortlichkeiten', 'was du tust', 'was du machst',
     'was du bei uns machst', 'deine rolle', 'in dieser rolle',
     'responsibilities', 'what you will do', 'you will be', 'your role',
     'wir suchen', 'we are looking for', 'your responsibilities',
-    'du verantwortest', 'du übernimmst', 'zu deinen aufgaben'
+    'du verantwortest', 'du -bernimmst', 'zu deinen aufgaben'
   ];
 
-  // Requirement/qualification signals — what the candidate must HAVE
+  // Requirement/qualification signals - what the candidate must HAVE
   const reqSignals = [
     'anforderungen', 'qualifikation', 'voraussetzungen',
     'was du mitbringst', 'was wir erwarten', 'dein profil',
     'berufserfahrung', 'abgeschlossenes studium', 'must-have', 'must have',
     'requirements', 'qualifications', 'you bring', 'required experience',
     'years of experience', 'jahre erfahrung', 'nachweisbare erfahrung',
-    'du hast erfahrung', 'du verfügst', 'du bringst mit'
+    'du hast erfahrung', 'du verf-gst', 'du bringst mit'
   ];
 
   const hasTask = taskSignals.some(s => lower.includes(s));
@@ -3211,10 +3211,10 @@ function isCompleteJobDescription(text) {
   const lower = text.toLowerCase();
   const partialSignals = [
     'zur kompletten stellenbeschreibung',
-    'zur vollständigen stellenbeschreibung',
-    'vollständige stellenbeschreibung',
-    'zum vollständigen stellenangebot',
-    'vollständige jobbeschreibung',
+    'zur vollst-ndigen stellenbeschreibung',
+    'vollst-ndige stellenbeschreibung',
+    'zum vollst-ndigen stellenangebot',
+    'vollst-ndige jobbeschreibung',
     'zur jobbeschreibung',
     'see full job description',
     'view full job',
@@ -3223,10 +3223,10 @@ function isCompleteJobDescription(text) {
     'mehr anzeigen',
     'show more',
     'jobviewtrack.com',      // known redirect tracker used by aggregators
-    'klicken sie hier für'
+    'klicken sie hier f-r'
   ];
   const isPartial = partialSignals.some(s => lower.includes(s));
-  if (isPartial) Logger.log(`  ✗ Truncated JD detected — discarding`);
+  if (isPartial) Logger.log(`  - Truncated JD detected - discarding`);
   return !isPartial;
 }
 
@@ -3249,7 +3249,7 @@ function isJobDetailPage(url) {
   if (/linkedin\.com\/jobs\/search/.test(lower))                    return false;
 
   // NEW: reject root domains and known careers homepage paths
-  // e.g. https://media-karriere.de  →  root domain, no job ID
+  // e.g. https://media-karriere.de  -  root domain, no job ID
   try {
     const parsed    = new URL(url);
     const pathParts = parsed.pathname.replace(/\/$/, '').split('/').filter(Boolean);
@@ -3260,7 +3260,7 @@ function isJobDetailPage(url) {
         /^(karriere|jobs?|stellen|stellenangebote?|vacancies|careers?|arbeiten|offene-stellen|jobs-de)$/.test(pathParts[0])) {
       return false;
     }
-  } catch(e) {} // malformed URL — fall through to true
+  } catch(e) {} // malformed URL - fall through to true
 
   return true;
 }
@@ -3282,18 +3282,18 @@ function isJdRelevantToJob(text, company, jobTitle, trustedSource) {
     .split(/\s+/)
     .filter(w => w.length > 4);
  
-  // ── Trusted source path (Remotive, Jobicy, Arbeitnow, RemoteOK) ───────────
+  // - Trusted source path (Remotive, Jobicy, Arbeitnow, RemoteOK) -
   // Company name is often stripped from raw API descriptions.
   // Title match alone is sufficient evidence.
   if (trustedSource) {
     const titleMatch = titleWords.some(w => lower.includes(w));
     if (!titleMatch) {
-      Logger.log(`  ✗ Relevance (trusted): no title words from "${jobTitle}" in text`);
+      Logger.log(`  - Relevance (trusted): no title words from "${jobTitle}" in text`);
     }
     return titleMatch;
   }
  
-  // ── External/fetched source path — require both company AND title ──────────
+  // - External/fetched source path - require both company AND title -
   const companyWords = company
     .toLowerCase()
     .replace(/\s+(gmbh\s*&\s*co\.?\s*kg|gmbh|ag|se|kg|ohg|ug|ltd|inc|corp|llc|sas|bv|nv|ab)\.?/gi, '')
@@ -3310,13 +3310,13 @@ function isJdRelevantToJob(text, company, jobTitle, trustedSource) {
     companyWords.some(w => textTokens.has(w));
  
   if (!companyMatch) {
-    Logger.log(`  ✗ Relevance: company "${company}" not found in fetched text`);
+    Logger.log(`  - Relevance: company "${company}" not found in fetched text`);
     return false;
   }
  
   const titleMatch = titleWords.some(w => lower.includes(w));
   if (!titleMatch) {
-    Logger.log(`  ✗ Relevance: company found but no title words from "${jobTitle}"`);
+    Logger.log(`  - Relevance: company found but no title words from "${jobTitle}"`);
     return false;
   }
  
@@ -3340,20 +3340,20 @@ function isGermanLocation(location) {
   if (!location || location.trim() === '') return true; // no location = assume Germany
   const lower = location.toLowerCase();
   const germanSignals = [
-    'deutschland', 'germany', 'berlin', 'münchen', 'munich', 'hamburg',
-    'frankfurt', 'köln', 'cologne', 'stuttgart', 'düsseldorf', 'dortmund',
-    'essen', 'bremen', 'hannover', 'nürnberg', 'nuremberg', 'leipzig',
+    'deutschland', 'germany', 'berlin', 'm-nchen', 'munich', 'hamburg',
+    'frankfurt', 'k-ln', 'cologne', 'stuttgart', 'd-sseldorf', 'dortmund',
+    'essen', 'bremen', 'hannover', 'n-rnberg', 'nuremberg', 'leipzig',
     'dresden', 'bonn', 'mannheim', 'karlsruhe', 'augsburg', 'wiesbaden',
-    'freiburg', 'mainz', 'rostock', 'kassel', 'potsdam', 'saarbrücken',
-    'darmstadt', 'heidelberg', 'regensburg', 'würzburg', 'wolfsburg',
-    'ulm', 'heilbronn', 'erfurt', 'magdeburg', 'kiel', 'lübeck',
-    'osnabrück', 'oldenburg', 'braunschweig', 'aachen', 'sassnitz',
+    'freiburg', 'mainz', 'rostock', 'kassel', 'potsdam', 'saarbr-cken',
+    'darmstadt', 'heidelberg', 'regensburg', 'w-rzburg', 'wolfsburg',
+    'ulm', 'heilbronn', 'erfurt', 'magdeburg', 'kiel', 'l-beck',
+    'osnabr-ck', 'oldenburg', 'braunschweig', 'aachen', 'sassnitz',
     ' de,', ', de', '(de)', ' de '
   ];
   return germanSignals.some(s => lower.includes(s));
 }
 
-// ── Tavily advanced extractor ─────────────────────────────────────────────────
+// - Tavily advanced extractor -
 
 function tavilyExtractAdvanced(url) {
   const key = getTavilyKey();
@@ -3386,7 +3386,7 @@ function tavilyExtractAdvanced(url) {
 }
 
 
-// ── Direct HTML fetch ─────────────────────────────────────────────────────────
+// - Direct HTML fetch -
 
 function fetchJobPageDirectly(url) {
   if (!url) return null;
@@ -3415,7 +3415,7 @@ function fetchJobPageDirectly(url) {
 }
 
 
-// ── Adzuna API ────────────────────────────────────────────────────────────────
+// - Adzuna API -
 
 function getAdzunaAppId()  { return getScriptProperty('ADZUNA_APP_ID');  }
 function getAdzunaAppKey() { return getScriptProperty('ADZUNA_APP_KEY'); }
@@ -3437,7 +3437,7 @@ function extractAdzunaCity(location) {
 /**
  * Search Adzuna for one keyword in Germany.
  * Returns array of { title, company, city, url, description, id }.
- * The description field is already clean text — used as Tier 1 JD source.
+ * The description field is already clean text - used as Tier 1 JD source.
  */
 function fetchAdzunaJobs(keyword) {
   const appId  = getAdzunaAppId();
@@ -3489,14 +3489,14 @@ function fetchAdzunaJobs(keyword) {
   }
 }
 
-// ── REPLACE fetchAllJobSources() ─────────────────────────────────────────────
+// - REPLACE fetchAllJobSources() -
 // Change: added sourceStats tracking + structured summary log at end.
 // Everything else identical.
  
 function fetchAllJobSources() {
   const seenIds    = new Set();
   const all        = [];
-  const sourceStats = {}; // ← new: per-source diagnostics
+  const sourceStats = {}; // - new: per-source diagnostics
  
   function addJobs(jobs, sourceName) {
     let added = 0;
@@ -3507,7 +3507,7 @@ function fetchAllJobSources() {
         added++;
       }
     }
-    sourceStats[sourceName] = { fetched: jobs.length, added }; // ← new
+    sourceStats[sourceName] = { fetched: jobs.length, added }; // - new
     Logger.log(`  ${sourceName}: +${added} new (${jobs.length} fetched)`);
   }
  
@@ -3538,7 +3538,7 @@ function fetchAllJobSources() {
     }
   }
  
-  // ── NEW: emit per-source summary ──────────────────────────────────────────
+  // - NEW: emit per-source summary -
   let totalFetched = 0;
   let totalAdded   = 0;
   const sourceLines = Object.entries(sourceStats).map(([src, s]) => {
@@ -3548,60 +3548,60 @@ function fetchAllJobSources() {
   });
   Logger.log([
     '',
-    '━━━ SOURCE SUMMARY ━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '- SOURCE SUMMARY -',
     ...sourceLines,
     `    ${'TOTAL'.padEnd(32)}: fetched=${String(totalFetched).padStart(3)}  added(dedup)=${String(totalAdded).padStart(3)}`,
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '-',
     ''
   ].join('\n'));
-  // ── END NEW ───────────────────────────────────────────────────────────────
+  // - END NEW -
  
   Logger.log(`Total jobs all sources (deduplicated): ${all.length}`);
   return all;
 }
 
-// ── ADD NEW HELPER: emitDiagnosticsSummary() ─────────────────────────────────
+// - ADD NEW HELPER: emitDiagnosticsSummary() -
 // Add this as a new standalone function anywhere in Code.js (e.g. after fetchAllJobSources).
  
 function emitDiagnosticsSummary(diag) {
   const delta = (diag.tavily_end || 0) - (diag.tavily_start || 0);
   Logger.log([
     '',
-    '━━━ RUN DIAGNOSTICS ━━━━━━━━━━━━━━━━━━━━━━━━━',
-    '  ── pipeline gates ─────────────────────────',
+    '- RUN DIAGNOSTICS -',
+    '  - pipeline gates -',
     `  fetched_total     : ${diag.fetched_total}`,
     `  excluded_title    : ${diag.excluded_title}`,
     `  excluded_geo      : ${diag.excluded_geo}`,
     `  excluded_cache    : ${diag.excluded_cache}`,
     `  excluded_applied  : ${diag.excluded_applied}`,
     `  candidate_selected: ${diag.candidate_selected}`,
-    '  ── processing ──────────────────────────────',
+    '  - processing -',
     `  processed_count   : ${diag.processed_count}`,
     `  jd_fetch_failed   : ${diag.jd_fetch_failed}`,
     `  jd_irrelevant     : ${diag.jd_irrelevant}`,
     `  smm_failed        : ${diag.smm_failed}`,
-    '  ── scores ──────────────────────────────────',
+    '  - scores -',
     `  scored_m0         : ${diag.scored_m0}`,
     `  scored_m1         : ${diag.scored_m1}`,
     `  scored_m2_plus    : ${diag.scored_m2_plus}`,
     `  report_jobs_count : ${diag.report_jobs_count}`,
-    '  ── tavily ──────────────────────────────────',
+    '  - tavily -',
     `  tavily_start      : ${diag.tavily_start}/1000`,
     `  tavily_end        : ${diag.tavily_end}/1000`,
     `  tavily_delta      : +${delta} credits this run`,
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '-',
     ''
   ].join('\n'));
 }
 
-// ── ADD NEW HELPER: sendDebugDiagnosticsEmail() ──────────────────────────────
+// - ADD NEW HELPER: sendDebugDiagnosticsEmail() -
 // Called when a run completes with zero M2+ jobs.
 // Uses REPORT_EMAIL script property (same one the job report uses).
  
 function sendDebugDiagnosticsEmail(diag) {
   const recipient = getScriptProperty('REPORT_EMAIL');
   if (!recipient) {
-    Logger.log('⚠ REPORT_EMAIL not set — debug email skipped.');
+    Logger.log('- REPORT_EMAIL not set - debug email skipped.');
     return;
   }
   const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
@@ -3630,7 +3630,7 @@ function sendDebugDiagnosticsEmail(diag) {
 <div style="max-width:520px;margin:0 auto;">
  
   <div style="background:#ea4335;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
-    <h2 style="color:white;margin:0 0 4px;font-size:17px;">🤖 JABA — No M2+ Jobs Found</h2>
+    <h2 style="color:white;margin:0 0 4px;font-size:17px;">- JABA - No M2+ Jobs Found</h2>
     <div style="color:rgba(255,255,255,0.85);font-size:13px;">${dateStr}</div>
   </div>
  
@@ -3640,10 +3640,10 @@ function sendDebugDiagnosticsEmail(diag) {
  
       ${section('Pipeline gates')}
       ${row('Total fetched',       diag.fetched_total)}
-      ${row('Excluded — title',    diag.excluded_title,   diag.excluded_title > 20)}
-      ${row('Excluded — geo',      diag.excluded_geo,     diag.excluded_geo > 10)}
-      ${row('Excluded — cache',    diag.excluded_cache,   diag.excluded_cache > 20)}
-      ${row('Excluded — applied',  diag.excluded_applied, diag.excluded_applied > 10)}
+      ${row('Excluded - title',    diag.excluded_title,   diag.excluded_title > 20)}
+      ${row('Excluded - geo',      diag.excluded_geo,     diag.excluded_geo > 10)}
+      ${row('Excluded - cache',    diag.excluded_cache,   diag.excluded_cache > 20)}
+      ${row('Excluded - applied',  diag.excluded_applied, diag.excluded_applied > 10)}
       ${row('Candidates selected', diag.candidate_selected)}
  
       ${section('Processing')}
@@ -3653,9 +3653,9 @@ function sendDebugDiagnosticsEmail(diag) {
       ${row('SMM failed',          diag.smm_failed,       diag.smm_failed > 1)}
  
       ${section('Score distribution')}
-      ${row('M0 (0–10)',           diag.scored_m0)}
-      ${row('M1 (11–20)',          diag.scored_m1)}
-      ${row('M2+ (21+) ✓',        diag.scored_m2_plus)}
+      ${row('M0 (0-10)',           diag.scored_m0)}
+      ${row('M1 (11-20)',          diag.scored_m1)}
+      ${row('M2+ (21+) -',        diag.scored_m2_plus)}
  
       ${section('Tavily')}
       ${row('Credits used this run', '+' + delta)}
@@ -3666,7 +3666,7 @@ function sendDebugDiagnosticsEmail(diag) {
   </div>
  
   <div style="font-size:11px;color:#9aa0a6;text-align:center;padding-bottom:20px;">
-    JABA 🤖 · Phase 1 Diagnostics · Values in red exceeded expected thresholds
+    JABA - - Phase 1 Diagnostics - Values in red exceeded expected thresholds
   </div>
  
 </div>
@@ -3675,14 +3675,14 @@ function sendDebugDiagnosticsEmail(diag) {
  
   GmailApp.sendEmail(
     recipient,
-    `JABA Debug — No M2+ jobs · ${dateStr}`,
+    `JABA Debug - No M2+ jobs - ${dateStr}`,
     '',
-    { htmlBody: html, name: 'JABA 🤖' }
+    { htmlBody: html, name: 'JABA -' }
   );
   Logger.log(`Debug diagnostics email sent to ${recipient}`);
 }
 
-/* ── Remotive API (free, full JD, remote-first) ── */
+/* - Remotive API (free, full JD, remote-first) - */
 function fetchRemotiveJobs() {
   const categories = ['marketing', 'business'];
   const seenIds = new Set();
@@ -3708,7 +3708,7 @@ function fetchRemotiveJobs() {
           description:     stripHtmlToText(job.description || '').substring(0, 10000),
           id:              id,
           pubDate:         job.publication_date || '',
-          descriptionFull: true   // ← full JD, skip Tavily
+          descriptionFull: true   // - full JD, skip Tavily
         });
       }
       Utilities.sleep(300);
@@ -3720,7 +3720,7 @@ function fetchRemotiveJobs() {
   return all;
 }
 
-/* ── Jobicy API (free, full JD, remote) ── */
+/* - Jobicy API (free, full JD, remote) - */
 function fetchJobicyJobs() {
   try {
     const res = UrlFetchApp.fetch(
@@ -3745,7 +3745,7 @@ function fetchJobicyJobs() {
   }
 }
 
-/* ── Arbeitnow API (free, EU jobs, full JD) ── */
+/* - Arbeitnow API (free, EU jobs, full JD) - */
 function fetchArbeitnowJobs() {
   const allJobs = [];
   const seenIds = new Set();
@@ -3789,7 +3789,7 @@ function fetchArbeitnowJobs() {
   return allJobs;
 }
 
-/* ── Remote OK API (free, international remote, full JD) ── */
+/* - Remote OK API (free, international remote, full JD) - */
 function fetchRemoteOkJobs() {
   try {
     const res = UrlFetchApp.fetch('https://remoteok.com/api', {
@@ -3804,7 +3804,7 @@ function fetchRemoteOkJobs() {
     }
 
     const data = JSON.parse(res.getContentText());
-    // First element is API metadata — skip it
+    // First element is API metadata - skip it
     const jobs = Array.isArray(data) ? data.slice(1) : [];
 
     const results = [];
@@ -3812,7 +3812,7 @@ function fetchRemoteOkJobs() {
       const title = (job.position || '').trim();
       const tags  = Array.isArray(job.tags) ? job.tags.join(' ').toLowerCase() : '';
 
-      // All Remote OK jobs are remote by nature — filter only by relevance
+      // All Remote OK jobs are remote by nature - filter only by relevance
       if (!isRelevantJobTitle(title) &&
           !RELEVANT_KEYWORDS.some(k => tags.includes(k.toLowerCase()))) continue;
 
@@ -3837,7 +3837,7 @@ function fetchRemoteOkJobs() {
   }
 }
 
-/* ── Working Nomads API (free, no key, remote jobs) ── */
+/* - Working Nomads API (free, no key, remote jobs) - */
 function fetchWorkingNomadsJobs() {
   try {
     const res = UrlFetchApp.fetch(
@@ -3861,7 +3861,7 @@ function fetchWorkingNomadsJobs() {
       const title = (job.title || '').trim();
       if (!isRelevantJobTitle(title)) continue;
 
-      // Working Nomads descriptions are HTML — strip tags
+      // Working Nomads descriptions are HTML - strip tags
       const rawDesc = job.description || job.short_description || '';
       const desc    = stripHtmlToText(rawDesc).substring(0, 10000);
 
@@ -3886,7 +3886,7 @@ function fetchWorkingNomadsJobs() {
   }
 }
 
-/* ── Adzuna multi-country (remote filter) ── */
+/* - Adzuna multi-country (remote filter) - */
 const ADZUNA_SEARCH_COUNTRIES = [
   'gb', 'nl', 'se', 'no', 'be', 'at', 'ch', 'es', 'pl', 'fr', 'de'
 ];
@@ -3912,7 +3912,7 @@ function fetchAdzunaJobsForCountry(keyword, countryCode) {
       title:           (job.title || '').trim(),
       company:         (job.company?.display_name || 'Unknown').trim(),
       city:            extractAdzunaCity(job.location) || countryCode.toUpperCase(),
-      country:         countryCode,   // ← NEW: store country code directly
+      country:         countryCode,   // - NEW: store country code directly
       url:             job.redirect_url || '',
       description:     stripHtmlToText(job.description || '').substring(0, 10000),
       id:              `adzuna_${countryCode}_${job.id}`,
@@ -3925,44 +3925,44 @@ function fetchAdzunaJobsForCountry(keyword, countryCode) {
   }
 }
 
-// ── Smart JD extractor ────────────────────────────────────────────────────────
-// Tier 1: Adzuna API description (free, already fetched — covers most cases)
+// - Smart JD extractor -
+// Tier 1: Adzuna API description (free, already fetched - covers most cases)
 // Tier 2: Direct UrlFetchApp HTML fetch (free, unlimited)
-// Tier 3: Tavily advanced (2 credits — only fires when tiers 1 & 2 fail)
+// Tier 3: Tavily advanced (2 credits - only fires when tiers 1 & 2 fail)
 
 function smartExtractJD(url, apiDescription, descriptionFull) {
-  // Remotive / Jobicy / Arbeitnow / RemoteOK — full JD already in API payload
+  // Remotive / Jobicy / Arbeitnow / RemoteOK - full JD already in API payload
   if (descriptionFull && apiDescription && looksLikeJobContent(apiDescription)) {
-    Logger.log(`  ✓ Full API description (${apiDescription.length} chars)`);
+    Logger.log(`  - Full API description (${apiDescription.length} chars)`);
     return { text: apiDescription, source: 'api_full' };
   }
 
-  // Tier 1 — Direct UrlFetchApp
+  // Tier 1 - Direct UrlFetchApp
   // Requires 500+ chars AND no truncation markers to prevent score inflation
   const direct = fetchJobPageDirectly(url);
   if (direct && direct.length >= 500 && looksLikeJobContent(direct) && isCompleteJobDescription(direct)) {
-    Logger.log(`  ✓ Direct fetch OK (${direct.length} chars)`);
+    Logger.log(`  - Direct fetch OK (${direct.length} chars)`);
     return { text: direct, source: 'direct' };
   }
-  if (direct) Logger.log(`  ✗ Direct discarded — length: ${direct.length}, complete: ${isCompleteJobDescription(direct)}`);
+  if (direct) Logger.log(`  - Direct discarded - length: ${direct.length}, complete: ${isCompleteJobDescription(direct)}`);
 
-  // Tier 2 — Tavily advanced
+  // Tier 2 - Tavily advanced
   const tavily = tavilyExtractAdvanced(url);
   if (tavily && tavily.length >= 500 && looksLikeJobContent(tavily) && isCompleteJobDescription(tavily)) {
-    Logger.log(`  ✓ Tavily advanced OK (${tavily.length} chars)`);
+    Logger.log(`  - Tavily advanced OK (${tavily.length} chars)`);
     return { text: tavily, source: 'tavily_advanced' };
   }
-  if (tavily) Logger.log(`  ✗ Tavily discarded — length: ${tavily.length}, complete: ${isCompleteJobDescription(tavily)}`);
+  if (tavily) Logger.log(`  - Tavily discarded - length: ${tavily.length}, complete: ${isCompleteJobDescription(tavily)}`);
 
   // api_snippet fallback intentionally removed.
   // Short Adzuna snippets (~200-400 chars) inflate scores because Mistral
   // sees only the attractive summary without the hard requirements.
-  Logger.log(`  ✗ No complete JD found — skipping`);
+  Logger.log(`  - No complete JD found - skipping`);
   return null;
 }
 
 
-// ── Title filter ──────────────────────────────────────────────────────────────
+// - Title filter -
 
 function isValidJobTitleForSearch(title) {
   if (!title) return false;
@@ -3971,12 +3971,12 @@ function isValidJobTitleForSearch(title) {
 }
 
 
-// ── CV type detector (DE / EN only) ──────────────────────────────────────────
+// - CV type detector (DE / EN only) -
 
 function detectCvTypeForSearch(jdText, jobTitle) {
   const combined = ((jobTitle || '') + ' ' + (jdText || '').substring(0, 800)).toLowerCase();
 
-  // 'token' intentionally excluded — appears in too many non-Web3 contexts
+  // 'token' intentionally excluded - appears in too many non-Web3 contexts
   // (API tokens, auth tokens, loyalty tokens, promo codes).
   const web3Signals = ['web3', 'blockchain', 'crypto', 'defi', 'nft', 'dao',
                        'smart contract', 'solidity', 'decentralized'];
@@ -3994,7 +3994,7 @@ function detectCvTypeForSearch(jdText, jobTitle) {
 }
 
 
-// ── Job_Search_Cache tab ──────────────────────────────────────────────────────
+// - Job_Search_Cache tab -
 
 function getOrCreateJobCacheSheet() {
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
@@ -4011,7 +4011,7 @@ function getOrCreateJobCacheSheet() {
         .requireValueInList(values, true).setAllowInvalid(true).build();
       sheet.getRange(2, col, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
     }
-    dv(5,  ['DE Web2 Marketing Manager','EN Web2 Marketing Manager','Web3 Marketing Manager','—']);
+    dv(5,  ['DE Web2 Marketing Manager','EN Web2 Marketing Manager','Web3 Marketing Manager','-']);
     dv(6,  ['M0','M1','M2','M3','M4','SKIP','QUEUED','already_applied']);
     dv(8,  ['api_full','direct','tavily_advanced','failed','irrelevant_jd',
             'queued','no_jd','already_applied','phase1_prefetch']);
@@ -4032,7 +4032,7 @@ function getOrCreateJobCacheSheet() {
   } else {
     const colCount = sheet.getLastColumn();
     if (colCount < 11) {
-      // Migrate 10 → 12 columns
+      // Migrate 10 - 12 columns
       sheet.getRange(1, 11, 1, 2)
            .setValues([['Review_Status','JD_Text']])
            .setBackground('#34a853').setFontColor('white').setFontWeight('bold');
@@ -4089,7 +4089,7 @@ function isJobInCache(company, title) {
     normalizeJobTitle(r[1].toString()).toLowerCase().trim() === nt
   );
 }
-// Loads the entire Job_Search_Cache into a Set — call once per run
+// Loads the entire Job_Search_Cache into a Set - call once per run
 function buildCachedJobsSet() {
   const cached = new Set();
   const sheet  = getOrCreateJobCacheSheet();
@@ -4104,7 +4104,7 @@ function buildCachedJobsSet() {
   return cached;
 }
 
-// Loads all applied jobs from all monthly sheets into a Set — call once per run
+// Loads all applied jobs from all monthly sheets into a Set - call once per run
 function buildAppliedJobsSet() {
   const applied    = new Set();
   const ss         = SpreadsheetApp.getActiveSpreadsheet();
@@ -4170,7 +4170,7 @@ function addJobToCache(job, smmResult, cvType, fetchSource, fetchedUrl, source, 
 }
 
 
-// ── Email report builder ──────────────────────────────────────────────────────
+// - Email report builder -
 
 function buildJobDots(smmResult) {
   const skills = smmResult.skills || [];
@@ -4178,7 +4178,7 @@ function buildJobDots(smmResult) {
     const g = skills.filter(s => s.importance === imp);
     return g.length > 0 && g.every(s => (s.score || 0) >= 1) ? dot : '';
   }
-  return check('Crucial', '🟢') + check('Necessary', '🟡') + check('Optional', '🔵');
+  return check('Crucial', '-') + check('Necessary', '-') + check('Optional', '-');
 }
 
 function escapeHtmlEmail(str) {
@@ -4192,7 +4192,7 @@ function escapeHtmlEmail(str) {
 function buildJobReportHtml(jobs) {
   const dateStr     = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
   const tavilyMonth = getTavilyMonthlyUsage();
-  const impDot      = { 'Crucial': '🟢', 'Necessary': '🟡', 'Optional': '🔵' };
+  const impDot      = { 'Crucial': '-', 'Necessary': '-', 'Optional': '-' };
 
   function levelColor(score) {
     if (score >= 36) return '#34a853';
@@ -4213,16 +4213,16 @@ function buildJobReportHtml(jobs) {
       <tr>
         <td style="padding:5px 10px;font-size:13px;color:#3c4043;border-bottom:1px solid #f1f3f4;">${escapeHtmlEmail(s.name)}</td>
         <td style="padding:5px 10px;font-size:13px;font-weight:700;color:#3c4043;text-align:center;border-bottom:1px solid #f1f3f4;white-space:nowrap;">${s.score || 0}/5</td>
-        <td style="padding:5px 10px;font-size:12px;text-align:center;border-bottom:1px solid #f1f3f4;white-space:nowrap;">${impDot[s.importance] || '⚪'} ${escapeHtmlEmail(s.importance)}</td>
+        <td style="padding:5px 10px;font-size:12px;text-align:center;border-bottom:1px solid #f1f3f4;white-space:nowrap;">${impDot[s.importance] || '-'} ${escapeHtmlEmail(s.importance)}</td>
       </tr>`).join('');
 
     return `
     <div style="background:#ffffff;border-radius:10px;border:1px solid #e0e0e0;padding:18px 20px;margin-bottom:22px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
       <div style="font-size:16px;font-weight:700;color:#202124;margin-bottom:4px;">
-        🏢 ${escapeHtmlEmail(job.title)} – ${escapeHtmlEmail(job.company)}
+        - ${escapeHtmlEmail(job.title)} - ${escapeHtmlEmail(job.company)}
       </div>
       <div style="font-size:13px;color:#5f6368;margin-bottom:8px;">
-        📍 ${escapeHtmlEmail(job.city || 'Germany')}
+        - ${escapeHtmlEmail(job.city || 'Germany')}
         &nbsp;|&nbsp;
         <span style="font-weight:700;color:${color};">Score: ${score}/40 &nbsp;|&nbsp; ${level}</span>
         &nbsp;${dots}
@@ -4230,7 +4230,7 @@ function buildJobReportHtml(jobs) {
         <span style="font-size:11px;background:#f1f3f4;padding:2px 6px;border-radius:4px;color:#5f6368;">JD: ${escapeHtmlEmail(job.fetchSource || 'unknown')}</span>
       </div>
       <div style="margin-bottom:14px;">
-        <a href="${escapeHtmlEmail(job.url)}" style="display:inline-block;background:#4285f4;color:white;font-size:13px;font-weight:700;padding:6px 14px;border-radius:6px;text-decoration:none;">🔗 View &amp; Apply →</a>
+        <a href="${escapeHtmlEmail(job.url)}" style="display:inline-block;background:#4285f4;color:white;font-size:13px;font-weight:700;padding:6px 14px;border-radius:6px;text-decoration:none;">- View &amp; Apply -</a>
       </div>
       <table style="width:100%;border-collapse:collapse;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;">
         <thead>
@@ -4256,14 +4256,14 @@ function buildJobReportHtml(jobs) {
 <body style="font-family:'Segoe UI',Arial,sans-serif;background:#f8f9fa;padding:20px;margin:0;">
 <div style="max-width:660px;margin:0 auto;">
   <div style="background:#4285f4;border-radius:10px;padding:18px 22px;margin-bottom:24px;">
-    <h2 style="color:white;margin:0 0 4px;font-size:18px;">🤖 JABA Job Report — ${escapeHtmlEmail(dateStr)}</h2>
+    <h2 style="color:white;margin:0 0 4px;font-size:18px;">- JABA Job Report - ${escapeHtmlEmail(dateStr)}</h2>
     <div style="color:rgba(255,255,255,0.88);font-size:13px;">
-      ${jobs.length} job(s) at M2 or above &nbsp;·&nbsp; Tavily this month: ${tavilyMonth}/1000 credits
+      ${jobs.length} job(s) at M2 or above &nbsp;-&nbsp; Tavily this month: ${tavilyMonth}/1000 credits
     </div>
   </div>
   ${cards}
   <div style="font-size:11px;color:#9aa0a6;text-align:center;margin-top:12px;padding-bottom:20px;">
-    Generated by JABA · Only M2 / M3 / M4 matches shown
+    Generated by JABA - Only M2 / M3 / M4 matches shown
   </div>
 </div>
 </body>
@@ -4273,11 +4273,11 @@ function buildJobReportHtml(jobs) {
 function sendJobReportEmail(htmlBody) {
   const recipient = getScriptProperty('REPORT_EMAIL');
   if (!recipient) {
-    Logger.log('⚠ REPORT_EMAIL not set in Script Properties — email not sent.');
+    Logger.log('- REPORT_EMAIL not set in Script Properties - email not sent.');
     return;
   }
   const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
-  GmailApp.sendEmail(recipient, `JABA Job Report ${dateStr}`, '', { htmlBody, name: 'JABA 🤖' });
+  GmailApp.sendEmail(recipient, `JABA Job Report ${dateStr}`, '', { htmlBody, name: 'JABA -' });
   Logger.log(`Job report sent to ${recipient}`);
 }
 
@@ -4309,7 +4309,7 @@ function scoreJobTitleQuality(title) {
     if (lower.includes(t)) score -= 1;
   });
  
-  // ── Conditional penalties ────────────────────────────────────────────────
+  // - Conditional penalties -
  
   // "Account manager" is a sales role UNLESS it contains marketing/growth context
   if (lower.includes('account manager')) {
@@ -4326,10 +4326,10 @@ function scoreJobTitleQuality(title) {
     else score -= 1; // small penalty even with discipline (vs. permanent role)
   }
  
-  // "Content creator" — consistently M0 in scoring history, deprioritize hard
+  // "Content creator" - consistently M0 in scoring history, deprioritize hard
   if (lower.includes('content creator')) score -= 4;
  
-  // "Community manager" alone — too narrow, unlikely M2+
+  // "Community manager" alone - too narrow, unlikely M2+
   if (lower.includes('community manager') &&
       !['crm', 'growth', 'lifecycle', 'retention'].some(t => lower.includes(t))) {
     score -= 2;
@@ -4338,9 +4338,9 @@ function scoreJobTitleQuality(title) {
   return score;
 }
 
-// ── Main orchestrator ─────────────────────────────────────────────────────────
+// - Main orchestrator -
 
-// ── REPLACE runDailyJobSearch() ──────────────────────────────────────────────
+// - REPLACE runDailyJobSearch() -
 // Changes: added diag counter object; increment at each gate;
 // call emitDiagnosticsSummary() at end; call sendDebugDiagnosticsEmail()
 // when no M2+ jobs found. All filtering logic identical.
@@ -4359,7 +4359,7 @@ function runDailyJobSearch() {
     excluded_cache:     0,
     excluded_applied:   0,
     candidate_selected: 0,
-    candidates_deduped: 0, // ← new counter
+    candidates_deduped: 0, // - new counter
     jd_fetch_failed:    0,
     jd_irrelevant:      0,
     smm_failed:         0,
@@ -4388,7 +4388,7 @@ function runDailyJobSearch() {
     return;
   }
  
-  // ── Step 3: filter candidates ─────────────────────────────────────────────
+  // - Step 3: filter candidates -
   Logger.log('Preloading cache and applied sets...');
   const cachedSet  = buildCachedJobsSet();
   const appliedSet = buildAppliedJobsSet();
@@ -4398,13 +4398,13 @@ function runDailyJobSearch() {
   for (const job of allJobs) {
 
     if (!isRelevantJobTitle(job.title)) {
-      Logger.log(`  ✗ [title] "${job.title}"`);
+      Logger.log(`  - [title] "${job.title}"`);
       diag.excluded_title++;
       continue;
     }
 
     if (!isJobRemoteEligible(job)) {
-      Logger.log(`  ✗ [geo] "${job.title}" @ ${job.city || job.country || '?'}`);
+      Logger.log(`  - [geo] "${job.title}" @ ${job.city || job.country || '?'}`);
       diag.excluded_geo++;
       continue;
     }
@@ -4413,13 +4413,13 @@ function runDailyJobSearch() {
                      normalizeJobTitle(job.title).toLowerCase().trim();
 
     if (cachedSet.has(cacheKey)) {
-      Logger.log(`  ✗ [cache] "${job.title}" @ ${job.company}`);
+      Logger.log(`  - [cache] "${job.title}" @ ${job.company}`);
       diag.excluded_cache++;
       continue;
     }
 
     if (appliedSet.has(cacheKey)) {
-      Logger.log(`  ✗ [applied] "${job.title}" @ ${job.company}`);
+      Logger.log(`  - [applied] "${job.title}" @ ${job.company}`);
       diag.excluded_applied++;
       addJobToCache(job, { match_level: 'already_applied', total_score: 0 },
                     '', 'already_applied', '', 'JobSearch', '');
@@ -4430,7 +4430,7 @@ function runDailyJobSearch() {
     if (candidates.length >= CANDIDATE_CAP) break;
   }
  
-  // ── NEW: deduplicate candidates by normalized company + title ─────────────
+  // - NEW: deduplicate candidates by normalized company + title -
   // Prevents two Adzuna listings for the same role from consuming two slots.
   const dedupSeen = new Set();
   const dedupedCandidates = [];
@@ -4445,7 +4445,7 @@ function runDailyJobSearch() {
   if (diag.candidates_deduped > 0) {
     Logger.log(`  Removed ${diag.candidates_deduped} duplicate candidate(s) before scoring`);
   }
-  // ── END dedup ─────────────────────────────────────────────────────────────
+  // - END dedup -
  
   // Sort best candidates first
   dedupedCandidates.sort((a, b) => scoreJobTitleQuality(b.title) - scoreJobTitleQuality(a.title));
@@ -4457,13 +4457,13 @@ function runDailyJobSearch() {
   Logger.log(`Candidates after filtering + dedup: ${dedupedCandidates.length}`);
  
   if (dedupedCandidates.length === 0) {
-    Logger.log('No new candidates today — no email sent.');
+    Logger.log('No new candidates today - no email sent.');
     diag.tavily_end = getTavilyMonthlyUsage();
     emitDiagnosticsSummary(diag);
     return;
   }
  
-  // ── Step 4: extract JD, score, collect M2+ ───────────────────────────────
+  // - Step 4: extract JD, score, collect M2+ -
   const reportJobs = [];
   let   processed  = 0;
  
@@ -4472,15 +4472,15 @@ function runDailyJobSearch() {
  
     const elapsed = Date.now() - runStart;
     if (elapsed > TIME_BUDGET_MS) {
-      Logger.log(`⏱ Time budget reached (${Math.round(elapsed/1000)}s) after ${processed} jobs — stopping gracefully`);
+      Logger.log(`- Time budget reached (${Math.round(elapsed/1000)}s) after ${processed} jobs - stopping gracefully`);
       break;
     }
  
-    Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" — ${job.company} [${job.country || 'remote'}]`);
+    Logger.log(`\n[${processed + 1}/${MAX_JOBS}] "${job.title}" - ${job.company} [${job.country || 'remote'}]`);
  
     const extracted = smartExtractJD(job.url, job.description, job.descriptionFull);
     if (!extracted) {
-      Logger.log(`  ✗ JD fetch failed — skipping`);
+      Logger.log(`  - JD fetch failed - skipping`);
       diag.jd_fetch_failed++;
       addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'failed', job.url, 'JobSearch', '');
       processed++;
@@ -4490,7 +4490,7 @@ function runDailyJobSearch() {
  
     const isTrustedSource = job.descriptionFull === true || extracted.source === 'api_full';
     if (!isJdRelevantToJob(extracted.text, job.company, job.title, isTrustedSource)) {
-      Logger.log(`  ✗ JD failed relevance check for "${job.company}" — skipping`);
+      Logger.log(`  - JD failed relevance check for "${job.company}" - skipping`);
       diag.jd_irrelevant++;
       addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'irrelevant_jd', job.url, 'JobSearch', '');
       processed++;
@@ -4501,13 +4501,13 @@ function runDailyJobSearch() {
     const cvType = detectCvTypeForSearch(extracted.text, job.title);
     Logger.log(`  CV type: ${cvType}`);
 
-    // ── Pre-SMM time budget check ─────────────────────────────────────────
+    // - Pre-SMM time budget check -
     const preSmm = Date.now() - runStart;
     if (preSmm > TIME_BUDGET_MS - 90000) {
-      Logger.log(`⏱ Pre-SMM: only ${Math.round((TIME_BUDGET_MS - preSmm)/1000)}s left — stopping run`);
+      Logger.log(`- Pre-SMM: only ${Math.round((TIME_BUDGET_MS - preSmm)/1000)}s left - stopping run`);
       break;
     }
-    // ─────────────────────────────────────────────────────────────────────
+    // -
 
     let smmResult;
     try {
@@ -4515,7 +4515,7 @@ function runDailyJobSearch() {
       smmResult = JSON.parse(raw);
       if (smmResult.error) throw new Error(smmResult.error);
     } catch (e) {
-      Logger.log(`  ✗ SMM error: ${e.message}`);
+      Logger.log(`  - SMM error: ${e.message}`);
       diag.smm_failed++;
       processed++;
       Utilities.sleep(3000);
@@ -4530,7 +4530,7 @@ function runDailyJobSearch() {
     else if (levelNum === 1) diag.scored_m1++;
     else                     diag.scored_m2_plus++;
  
-    // ── Location enrichment ───────────────────────────────────────────────
+    // - Location enrichment -
     enrichSmmLocation(smmResult, job.company);
 
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${extracted.source} | Location: ${JSON.stringify(smmResult.job_location)} (${smmResult.location_source || 'unknown'})`);
@@ -4539,7 +4539,7 @@ function runDailyJobSearch() {
  
     if (levelNum >= 2) {
       reportJobs.push({ ...job, smmResult, cvType, fetchSource: extracted.source });
-      Logger.log(`  ✓ Added to report (${level})`);
+      Logger.log(`  - Added to report (${level})`);
     }
  
     processed++;
@@ -4554,7 +4554,7 @@ function runDailyJobSearch() {
  
   if (reportJobs.length > 0) {
     Logger.log(`${reportJobs.length} M2+ job(s) stored in Job_Search_Cache with "in process" status.`);
-    reportJobs.forEach(j => Logger.log(`  → ${j.company} — ${j.title} (${j.smmResult.match_level})`));
+    reportJobs.forEach(j => Logger.log(`  - ${j.company} - ${j.title} (${j.smmResult.match_level})`));
   } else {
     Logger.log('No M2+ jobs today. All scored jobs are in Job_Search_Cache for review.');
   }
@@ -4581,12 +4581,12 @@ function clearAllJobCache() {
   sheet.deleteRows(2, count);
   SpreadsheetApp.flush();
   Logger.log(`Job cache cleared: ${count} entries removed.`);
-  if (ui) ui.alert(`✅ Job cache cleared — ${count} entries removed.\nThe next daily search run will evaluate fresh candidates.`);
+  if (ui) ui.alert(`- Job cache cleared - ${count} entries removed.\nThe next daily search run will evaluate fresh candidates.`);
 }
 
 
 /* ============================================================
-   BA (BUNDESAGENTUR FÜR ARBEIT) JOB ALERT PROCESSOR
+   BA (BUNDESAGENTUR F-R ARBEIT) JOB ALERT PROCESSOR
    Processes email alerts from jobsuche@arbeitsagentur.de
    Separate label tree: JABA BA Alert/
    Separate timestamp cursor: LAST_BA_ALERT_SCAN
@@ -4613,7 +4613,7 @@ function extractBAJobListingsFromHtml(htmlBody) {
   //     <span class="hover-underline">JOB TITLE HERE</span>
   //   </a>
   // The title link and the "Stelle ansehen" button share the same jobdetail URL.
-  // We target the hover-underline span — this is always the actual job title.
+  // We target the hover-underline span - this is always the actual job title.
 
   const jobPattern = /href="(https:\/\/www\.arbeitsagentur\.de\/jobsuche\/jobdetail\/([^"]+))"[^>]*>[\s\S]{0,800}?<span[^>]*class="hover-underline"[^>]*>([\s\S]*?)<\/span>/gi;
 
@@ -4670,10 +4670,10 @@ function processArbeitsagenturAlertEmails_Phase1() {
     : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
   const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
   const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
-  Logger.log(`BA Phase 1 — since: ${sinceFormatted}`);
+  Logger.log(`BA Phase 1 - since: ${sinceFormatted}`);
 
-  const labelInternship = getOrCreateLabel('JABA BA Alert/🎓 Internship');
-  const labelQueued     = getOrCreateLabel('JABA BA Alert/⏳ Queued');
+  const labelInternship = getOrCreateLabel('JABA BA Alert/- Internship');
+  const labelQueued     = getOrCreateLabel('JABA BA Alert/- Queued');
 
   const query = [
     'from:jobsuche@arbeitsagentur.de',
@@ -4699,12 +4699,12 @@ function processArbeitsagenturAlertEmails_Phase1() {
   let totalCached  = 0;
   let totalApplied = 0;
 
-  // Load applied jobs once — same pattern as Indeed Phase 1 and job search.
+  // Load applied jobs once - same pattern as Indeed Phase 1 and job search.
   const appliedSetBa = buildAppliedJobsSet();
 
   for (const thread of threads) {
     if (Date.now() - runStart > TIME_BUDGET_MS - 30000) {
-      Logger.log('⏱ BA Phase 1 time budget — stopping');
+      Logger.log('- BA Phase 1 time budget - stopping');
       break;
     }
 
@@ -4732,13 +4732,13 @@ function processArbeitsagenturAlertEmails_Phase1() {
 
     for (const job of relevantJobs) {
       if (isJobInCache(job.company, job.title)) {
-        Logger.log(`    [cache] "${job.title}" @ ${job.company} — skip`);
+        Logger.log(`    [cache] "${job.title}" @ ${job.company} - skip`);
         totalCached++;
         continue;
       }
 
       if (jdFetches >= MAX_JD_FETCHES) {
-        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached — thread not fully processed`);
+        Logger.log(`  MAX_JD_FETCHES (${MAX_JD_FETCHES}) reached - thread not fully processed`);
         threadFullyProcessed = false;
         break;
       }
@@ -4748,13 +4748,13 @@ function processArbeitsagenturAlertEmails_Phase1() {
         break;
       }
 
-      Logger.log(`  → "${job.title}" at "${job.company}"`);
+      Logger.log(`  - "${job.title}" at "${job.company}"`);
       jdFetches++;
 
       let jdText    = null;
       let fetchedUrl = job.url;
 
-      // Tier 1: direct UrlFetchApp — BA pages are public
+      // Tier 1: direct UrlFetchApp - BA pages are public
       const direct = fetchJobPageDirectly(job.url);
       if (direct && looksLikeJobContent(direct) && isCompleteJobDescription(direct) &&
           isJdRelevantToJob(direct, job.company, job.title, false)) {
@@ -4774,7 +4774,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
       }
 
       if (!jdText) {
-        Logger.log(`    ✗ No valid JD — writing skipped to Alert_Results`);
+        Logger.log(`    - No valid JD - writing skipped to Alert_Results`);
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'BA', job.company, job.title,
                             job.url, '', 0, 'Skip', 'No valid JD found', '', '', threadId);
@@ -4784,11 +4784,11 @@ function processArbeitsagenturAlertEmails_Phase1() {
         continue;
       }
 
-      // ── Already applied check (post-JD-fetch, consistent with job search) ──
+      // - Already applied check (post-JD-fetch, consistent with job search) -
       const baApplyKey = job.company.toLowerCase().trim() + '||' +
                          normalizeJobTitle(job.title).toLowerCase().trim();
       if (appliedSetBa.has(baApplyKey)) {
-        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} — skipping`);
+        Logger.log(`    [already_applied] "${job.title}" @ ${job.company} - skipping`);
         const skipDate = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm');
         writeToAlertResults(skipDate, 'BA', job.company, job.title,
                             job.url, fetchedUrl, 0, 'already_applied',
@@ -4799,7 +4799,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
         Utilities.sleep(300);
         continue;
       }
-      // ─────────────────────────────────────────────────────────────────────
+      // -
 
       pendingSheet.appendRow([
         dateStr, job.company, job.title, job.url,
@@ -4812,12 +4812,12 @@ function processArbeitsagenturAlertEmails_Phase1() {
         'BA',
         threadId,
         'TRUE',
-        fetchedUrl                        // Source_URL — actual JD source (may differ from job.url)
+        fetchedUrl                        // Source_URL - actual JD source (may differ from job.url)
       ]);
       addJobToCache(job, { match_level: 'QUEUED', total_score: 0 }, '', 'queued', fetchedUrl, 'BA', '');
       totalQueued++;
       threadQueued++;
-      Logger.log(`    ✓ Queued for SMM`);
+      Logger.log(`    - Queued for SMM`);
 
       Utilities.sleep(1000);
     }
@@ -4826,7 +4826,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
       thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
       if (threadQueued > 0) thread.addLabel(labelQueued);
     } else {
-      Logger.log(`  Thread not fully processed — will retry on next trigger run`);
+      Logger.log(`  Thread not fully processed - will retry on next trigger run`);
     }
 
     Utilities.sleep(300);
@@ -4839,16 +4839,16 @@ function processArbeitsagenturAlertEmails_Phase1() {
   if (totalQueued > 0) {
     deletePhase2Triggers();
     ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
-    Logger.log(`Phase 2 trigger created — runs in ${PHASE2_DELAY_MS / 60000} min`);
+    Logger.log(`Phase 2 trigger created - runs in ${PHASE2_DELAY_MS / 60000} min`);
   }
 
   const summary = [
-    '📧 BA Alert Phase 1 Complete',
-    '─────────────────────────────',
-    `✅ Queued for SMM: ${totalQueued}`,
-    `⚠  Skipped (no valid JD): ${totalSkipped}`,
-    `⏭  Already cached: ${totalCached}`,
-    `✅ Already applied (skipped): ${totalApplied}`,
+    '- BA Alert Phase 1 Complete',
+    '-',
+    `- Queued for SMM: ${totalQueued}`,
+    `-  Skipped (no valid JD): ${totalSkipped}`,
+    `-  Already cached: ${totalCached}`,
+    `- Already applied (skipped): ${totalApplied}`,
     totalQueued > 0 ? `\nSMM analysis runs automatically in ${PHASE2_DELAY_MS / 60000} minutes.` : ''
   ].filter(Boolean).join('\n');
 
@@ -4858,7 +4858,7 @@ function processArbeitsagenturAlertEmails_Phase1() {
 /**
  * DEPRECATED: Main BA alert processor.
  * Replaced by processArbeitsagenturAlertEmails_Phase1 + runPhase2.
- * Kept as dead code reference only — do not run or trigger.
+ * Kept as dead code reference only - do not run or trigger.
  */
 function _DEPRECATED_processArbeitsagenturAlertEmails() {
   const props    = PropertiesService.getScriptProperties();
@@ -4867,18 +4867,18 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
   const TIME_BUDGET_MS = 280000; // 4.67 minutes
   const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
 
-  // ── Timestamp cursor ──────────────────────────────────────────────────────
+  // - Timestamp cursor -
   const lastScanStr = props.getProperty('LAST_BA_ALERT_SCAN');
   const sinceDate   = lastScanStr
     ? new Date(lastScanStr)
     : new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
-  // Gmail's after: is exclusive — subtract 1 day so emails on the last-scan date are not missed.
+  // Gmail's after: is exclusive - subtract 1 day so emails on the last-scan date are not missed.
   // The -label:Processed filter prevents re-processing already-handled threads.
   const queryDate      = new Date(sinceDate.getTime() - 24 * 60 * 60 * 1000);
   const sinceFormatted = Utilities.formatDate(queryDate, timezone, 'yyyy/MM/dd');
-  Logger.log(`BA alert scan — searching since: ${sinceFormatted}`);
+  Logger.log(`BA alert scan - searching since: ${sinceFormatted}`);
 
-  const labelInternship = getOrCreateLabel('JABA BA Alert/🎓 Internship');
+  const labelInternship = getOrCreateLabel('JABA BA Alert/- Internship');
 
   const query = [
     'from:jobsuche@arbeitsagentur.de',
@@ -4904,7 +4904,7 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
 
   for (const thread of threads) {
     if (jobsProcessed >= MAX_JOBS_PER_RUN) {
-      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached — run again for remaining emails.`);
+      Logger.log(`MAX_JOBS_PER_RUN (${MAX_JOBS_PER_RUN}) reached - run again for remaining emails.`);
       break;
     }
 
@@ -4930,15 +4930,15 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
     for (const job of relevantJobs) {
       if (jobsProcessed >= MAX_JOBS_PER_RUN) break;
 
-      // ── Time budget check ───────────────────────────────────────────────
+      // - Time budget check -
       if (Date.now() - runStart > TIME_BUDGET_MS - 60000) {
-        Logger.log(`⏱ BA scan: time budget nearly exhausted — stopping gracefully`);
+        Logger.log(`- BA scan: time budget nearly exhausted - stopping gracefully`);
         break;
       }
 
-      Logger.log(`→ "${job.title}" at "${job.company}"`);
+      Logger.log(`- "${job.title}" at "${job.company}"`);
 
-      // ── JD fetch: direct → Tavily ───────────────────────────────────────
+      // - JD fetch: direct - Tavily -
       let jdText   = null;
       let jdSource = 'unknown';
 
@@ -4962,24 +4962,24 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
       }
 
       if (!jdText) {
-        Logger.log(`  ⚠ No valid JD found — skipping`);
+        Logger.log(`  - No valid JD found - skipping`);
         totalSkipped++;
         threadResults.push({ title: job.title, company: job.company, skipped: true, reason: 'no_jd' });
         jobsProcessed++;
         continue;
       }
 
-      // ── CV type detection ───────────────────────────────────────────────
+      // - CV type detection -
       const cvType = detectCvTypeFromText(job.title + ' ' + jdText.substring(0, 500));
 
-      // ── SMM analysis ────────────────────────────────────────────────────
+      // - SMM analysis -
       let smmResult;
       try {
         const smmRaw = analyzeSkillsMatch(jdText, cvType, runStart, TIME_BUDGET_MS);
         smmResult    = JSON.parse(smmRaw);
         if (smmResult.error) throw new Error(smmResult.error);
       } catch(e) {
-        Logger.log(`  ✗ SMM error: ${e.message}`);
+        Logger.log(`  - SMM error: ${e.message}`);
         totalSkipped++;
         threadResults.push({ title: job.title, company: job.company, skipped: true });
         jobsProcessed++;
@@ -5002,22 +5002,22 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
       if (zeroCrucial) {
         totalLow++;
         threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: false, reason: 'no-crucial' });
-        summaryLines.push(`⚠ MANUAL REVIEW: ${job.company} — ${job.title} — ${score}/40`);
+        summaryLines.push(`- MANUAL REVIEW: ${job.company} - ${job.title} - ${score}/40`);
       } else if (qualifies) {
         totalReviewed++;
         threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: true });
-        summaryLines.push(`✅ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+        summaryLines.push(`- ${job.company} - ${job.title} - ${score}/40 (${matchLevel})`);
       } else {
         totalLow++;
         threadResults.push({ title: job.title, company: job.company, smmResult, score, matchLevel, qualifies: false });
-        summaryLines.push(`⬇ ${job.company} — ${job.title} — ${score}/40 (${matchLevel})`);
+        summaryLines.push(`- ${job.company} - ${job.title} - ${score}/40 (${matchLevel})`);
       }
 
       jobsProcessed++;
       Utilities.sleep(2500);
     }
 
-    // ── Apply Gmail labels ────────────────────────────────────────────────
+    // - Apply Gmail labels -
     const analyzed  = threadResults.filter(r => r.smmResult);
     const noJd      = threadResults.filter(r => r.skipped && r.reason === 'no_jd');
     const otherSkip = threadResults.filter(r => r.skipped && r.reason !== 'no_jd');
@@ -5030,9 +5030,9 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
         .replace('JABA Alert/', 'JABA BA Alert/');
       thread.addLabel(getOrCreateLabel(scoreLabel));
     } else if (noJd.length > 0 && analyzed.length === 0) {
-      thread.addLabel(getOrCreateLabel('JABA BA Alert/⏭ No JD Found'));
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/- No JD Found'));
     } else if (otherSkip.length > 0 && analyzed.length === 0) {
-      thread.addLabel(getOrCreateLabel('JABA BA Alert/⏭ Skipped'));
+      thread.addLabel(getOrCreateLabel('JABA BA Alert/- Skipped'));
     }
 
     thread.addLabel(getOrCreateLabel('JABA BA Alert/Processed'));
@@ -5043,16 +5043,16 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
 
   const remaining = Math.max(0, threads.length - jobsProcessed);
   const summary = [
-    '📧 BA Alert Scan Complete',
-    '─────────────────────────────',
-    `✅ Qualifying jobs: ${totalReviewed}`,
-    `⬇  Below threshold: ${totalLow}`,
-    `⚠  Skipped (fetch failed): ${totalSkipped}`,
+    '- BA Alert Scan Complete',
+    '-',
+    `- Qualifying jobs: ${totalReviewed}`,
+    `-  Below threshold: ${totalLow}`,
+    `-  Skipped (fetch failed): ${totalSkipped}`,
     '',
     ...summaryLines,
     '',
     `Jobs processed this run: ${jobsProcessed}/${MAX_JOBS_PER_RUN}`,
-    remaining > 0 ? `${remaining} email(s) still pending — run again to continue.` : ''
+    remaining > 0 ? `${remaining} email(s) still pending - run again to continue.` : ''
   ].filter(l => l !== undefined).join('\n');
 
   Logger.log(summary);
@@ -5060,7 +5060,7 @@ function _DEPRECATED_processArbeitsagenturAlertEmails() {
 }
 
 /* ============================================================
-   ALERT_RESULTS & M2_NOTIFICATIONS — Schema helpers
+   ALERT_RESULTS & M2_NOTIFICATIONS - Schema helpers
    ============================================================ */
 
 function getOrCreateAlertResultsSheet() {
@@ -5095,7 +5095,7 @@ function getOrCreateM2NotificationsSheet() {
   return sheet;
 }
 
-/* ── Insert newest row at top, below frozen header ── */
+/* - Insert newest row at top, below frozen header - */
 function writeToAlertResults(dateStr, source, company, title,
                               sourceUrl, fetchedUrl, score, level,
                               status, dots, cvType, threadId) {
@@ -5110,12 +5110,12 @@ function writeToAlertResults(dateStr, source, company, title,
   ]]);
 }
 
-/* ── Delete rows older than 7 days — called at Phase 1 start ── */
+/* - Delete rows older than 7 days - called at Phase 1 start - */
 /**
  * Parses an Alert_Results date string stored as "dd.MM.yyyy HH:mm".
  * Returns a Date object, or null if the string cannot be parsed.
  * Uses explicit DD/MM/YYYY parsing because new Date("05.06.2026 14:30")
- * produces Invalid Date in V8/GAS — the dot-separated format is not ISO.
+ * produces Invalid Date in V8/GAS - the dot-separated format is not ISO.
  */
 function parseAlertResultsDate(str) {
   if (!str) return null;
@@ -5142,17 +5142,17 @@ function cleanAlertResults() {
   }
 }
 
-/* ── Write to hidden M2_Notifications cell (triggers mobile push) ── */
+/* - Write to hidden M2_Notifications cell (triggers mobile push) - */
 function updateM2NotificationCell(count, jobLines) {
   const sheet   = getOrCreateM2NotificationsSheet();
   const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
   sheet.getRange('A1').setValue(
-    `🚨 ${count} new M2+ job${count > 1 ? 's' : ''} · ${dateStr}\n${jobLines.join('\n')}`
+    `- ${count} new M2+ job${count > 1 ? 's' : ''} - ${dateStr}\n${jobLines.join('\n')}`
   );
   Logger.log(`M2_Notifications updated: ${count} M2+ alert job(s).`);
 }
 
-/* ── Apply M-level summary label to each alert thread ── */
+/* - Apply M-level summary label to each alert thread - */
 function applyAlertThreadLabels() {
   const sheet = getOrCreateAlertResultsSheet();
   if (sheet.getLastRow() < 2) return;
@@ -5190,7 +5190,7 @@ function applyAlertThreadLabels() {
         const prefix    = info.source === 'BA' ? 'JABA BA Alert' : 'JABA Alert';
         const labelName = `${prefix}/${parts.join(' ')}`;
         thread.addLabel(getOrCreateLabel(labelName));
-        Logger.log(`Thread ${threadId}: label applied — "${labelName}"`);
+        Logger.log(`Thread ${threadId}: label applied - "${labelName}"`);
         labeled++;
       }
       info.rowIndices.forEach(rowNum => sheet.getRange(rowNum, 14).setValue(true));
@@ -5202,7 +5202,7 @@ function applyAlertThreadLabels() {
   Logger.log(`Alert thread labels applied: ${labeled} thread(s).`);
 }
 
-/* ── Desktop dialog on sheet open — shows unread M2+ alert jobs ── */
+/* - Desktop dialog on sheet open - shows unread M2+ alert jobs - */
 function checkUnreadM2Alerts() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Alert_Results');
@@ -5220,11 +5220,11 @@ function checkUnreadM2Alerts() {
     if (unread.length === 0) return;
 
     const lines = unread.map(j =>
-      `${j.source === 'BA' ? '🏛' : '🔔'} ${j.company} — ${j.title} (${j.level}: ${j.score}/40)`
+      `${j.source === 'BA' ? '-' : '-'} ${j.company} - ${j.title} (${j.level}: ${j.score}/40)`
     ).join('\n');
 
     SpreadsheetApp.getUi().alert(
-      `🚨 ${unread.length} new M2+ Alert Job${unread.length > 1 ? 's' : ''}`,
+      `- ${unread.length} new M2+ Alert Job${unread.length > 1 ? 's' : ''}`,
       `${lines}\n\nOpen the Alert_Results tab for links and details.`,
       SpreadsheetApp.getUi().ButtonSet.OK
     );
@@ -5236,7 +5236,7 @@ function checkUnreadM2Alerts() {
   }
 }
 
-/* ── Called from runPhase2 when all pending rows processed ── */
+/* - Called from runPhase2 when all pending rows processed - */
 function finalizeAlertResults(m2PlusRows) {
   applyAlertThreadLabels();
   if (!m2PlusRows || m2PlusRows.length === 0) {
@@ -5244,14 +5244,14 @@ function finalizeAlertResults(m2PlusRows) {
     return;
   }
   const jobLines = m2PlusRows.map(row =>
-    `• ${(row[14] || 'Indeed')} | ${row[1]} — ${row[2]}`
+    `- ${(row[14] || 'Indeed')} | ${row[1]} - ${row[2]}`
   );
   updateM2NotificationCell(m2PlusRows.length, jobLines);
   Logger.log(`finalizeAlertResults: ${m2PlusRows.length} M2+ alert job(s) notified.`);
 }
 
 /* ============================================================
-   PHASE 1 / PHASE 2 — Batched daily job search
+   PHASE 1 / PHASE 2 - Batched daily job search
    Phase 1: fetch all sources, filter, write top 24 to Pending_SMM,
             create a one-time trigger for Phase 2.
    Phase 2: pick 8 rows from Pending_SMM, fetch JD, run SMM,
@@ -5264,7 +5264,7 @@ const PHASE1_CANDIDATE_CAP = 24;  // top N candidates saved per day
 const PHASE2_BATCH_SIZE    = 8;   // SMM calls per Phase 2 run (~5 min)
 const PHASE2_DELAY_MS      = 15 * 60 * 1000; // 15 minutes between batches
 
-/* ── Pending_SMM sheet ─────────────────────────────────────── */
+/* - Pending_SMM sheet - */
 function getOrCreatePendingSmmSheet() {
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
   let   sheet   = ss.getSheetByName('Pending_SMM');
@@ -5292,7 +5292,7 @@ function getOrCreatePendingSmmSheet() {
   return sheet;
 }
 
-/* ── Trigger helpers ───────────────────────────────────────── */
+/* - Trigger helpers - */
 function deletePhase2Triggers() {
   ScriptApp.getProjectTriggers()
     .filter(t =>
@@ -5302,14 +5302,14 @@ function deletePhase2Triggers() {
     .forEach(t => ScriptApp.deleteTrigger(t));
 }
 
-/* ── PHASE 1 ───────────────────────────────────────────────── */
+/* - PHASE 1 - */
 function runJobSearchPhase1() {
 
   try {
     _runJobSearchPhase1Impl();
   } catch (e) {
     if (e.message && (e.message.includes('INTERNAL') || e.message.includes('server error occurred'))) {
-      Logger.log('⚠️ GAS INTERNAL storage error — scheduling retry in 10 min: ' + e.message);
+      Logger.log('- GAS INTERNAL storage error - scheduling retry in 10 min: ' + e.message);
       ScriptApp.newTrigger('runJobSearchPhase1')
         .timeBased()
         .after(10 * 60 * 1000)
@@ -5329,14 +5329,14 @@ function _runJobSearchPhase1Impl() {
 
   const allJobs = fetchAllJobSources();
   Logger.log('Phase 1: ' + allJobs.length + ' total jobs fetched');
-  if (allJobs.length === 0) { Logger.log('Phase 1: no jobs returned — exiting.'); return; }
+  if (allJobs.length === 0) { Logger.log('Phase 1: no jobs returned - exiting.'); return; }
 
-  // ── Preload cache + applied data ONCE (fixes timeout) ────────────────────
+  // - Preload cache + applied data ONCE (fixes timeout) -
   Logger.log('Phase 1: preloading cache and applied sets...');
   const cachedSet  = buildCachedJobsSet();
   const appliedSet = buildAppliedJobsSet();
   Logger.log('Phase 1: cache=' + cachedSet.size + ' applied=' + appliedSet.size);
-  // ─────────────────────────────────────────────────────────────────────────
+  // -
 
   let excludedTitle = 0, excludedGeo = 0, excludedCache = 0, excludedApplied = 0;
   const candidates = [];
@@ -5360,7 +5360,7 @@ function _runJobSearchPhase1Impl() {
     candidates.push(job);
   }
 
-  // ── Deduplicate ───────────────────────────────────────────────────────────
+  // - Deduplicate -
   const seen    = new Set();
   const deduped = [];
   for (const job of candidates) {
@@ -5373,17 +5373,17 @@ function _runJobSearchPhase1Impl() {
   const selected = deduped.slice(0, PHASE1_CANDIDATE_CAP);
 
   Logger.log(
-    'Phase 1 gates — title: ' + excludedTitle + ', geo: ' + excludedGeo +
+    'Phase 1 gates - title: ' + excludedTitle + ', geo: ' + excludedGeo +
     ', cache: ' + excludedCache + ', applied: ' + excludedApplied +
     ' | candidates: ' + deduped.length + ' | selected (cap ' + PHASE1_CANDIDATE_CAP + '): ' + selected.length
   );
 
   if (selected.length === 0) {
-    Logger.log('Phase 1: no candidates after filtering — no Phase 2 needed.');
+    Logger.log('Phase 1: no candidates after filtering - no Phase 2 needed.');
     return;
   }
 
-  // ── Write to Pending_SMM ──────────────────────────────────────────────────
+  // - Write to Pending_SMM -
   const sheet   = getOrCreatePendingSmmSheet();
   const lastRow = sheet.getLastRow();
 
@@ -5394,7 +5394,7 @@ function _runJobSearchPhase1Impl() {
       (oldStatuses[i][0] || '').toString().trim() === 'M2+'
     );
     if (oldM2Plus.length > 0) {
-      Logger.log('Phase 1: found ' + oldM2Plus.length + ' unreported M2+ rows — routing by source');
+      Logger.log('Phase 1: found ' + oldM2Plus.length + ' unreported M2+ rows - routing by source');
       const oldJobSearch = oldM2Plus.filter(r => (r[14] || 'JobSearch').toString().trim() === 'JobSearch');
       const oldAlerts    = oldM2Plus.filter(r => (r[14] || '').toString().trim() !== 'JobSearch');
       if (oldJobSearch.length > 0) sendPhase2Report(oldJobSearch);
@@ -5431,11 +5431,11 @@ function _runJobSearchPhase1Impl() {
     .timeBased()
     .after(PHASE2_DELAY_MS)
     .create();
-  Logger.log('Phase 1: Phase 2 trigger created — runs in ' + (PHASE2_DELAY_MS / 60000) + ' min');
+  Logger.log('Phase 1: Phase 2 trigger created - runs in ' + (PHASE2_DELAY_MS / 60000) + ' min');
 }
 
 /* ============================================================
-   UNIVERSAL PHASE 2 — handles JobSearch, Indeed, BA
+   UNIVERSAL PHASE 2 - handles JobSearch, Indeed, BA
    Replaces runJobSearchPhase2 (keep old function until Deploy 3)
    ============================================================ */
 function runPhase2() {
@@ -5447,7 +5447,7 @@ function runPhase2() {
 
   const sheet = getOrCreatePendingSmmSheet();
   if (sheet.getLastRow() < 2) {
-    Logger.log('Phase 2: Pending_SMM empty — nothing to do.');
+    Logger.log('Phase 2: Pending_SMM empty - nothing to do.');
     return;
   }
 
@@ -5474,7 +5474,7 @@ function runPhase2() {
   }));
 
   if (pendingEntries.length === 0) {
-    Logger.log('Phase 2: no pending rows — finalizing.');
+    Logger.log('Phase 2: no pending rows - finalizing.');
     sendPhase2Report(m2PlusJobSearch);
     finalizeAlertResults(m2PlusAlerts);
     if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
@@ -5488,7 +5488,7 @@ function runPhase2() {
 
   for (const { sheetRow, data } of batch) {
     if (Date.now() - runStart > TIME_BUDGET_MS - 90000) {
-      Logger.log('⏱ Phase 2 time budget — stopping early');
+      Logger.log('- Phase 2 time budget - stopping early');
       break;
     }
 
@@ -5507,7 +5507,7 @@ function runPhase2() {
     const job             = { title, company, city, country, url, description, descriptionFull, id: jobId };
     const dateStr         = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy HH:mm');
 
-    Logger.log(`\n[${source}] "${title}" — ${company}`);
+    Logger.log(`\n[${source}] "${title}" - ${company}`);
 
     let extractedText = null;
     let fetchSource   = 'phase1_prefetch';
@@ -5518,12 +5518,12 @@ function runPhase2() {
       // Use sourceUrl (col 18) which now stores the actual JD source URL from Phase 1
       extractedText = description;
       fetchedUrl    = sourceUrl;
-      Logger.log(`  ✓ Pre-fetched JD (${description.length} chars) from ${sourceUrl}`);
+      Logger.log(`  - Pre-fetched JD (${description.length} chars) from ${sourceUrl}`);
     } else {
       // Job Search jobs: fetch JD now (existing logic unchanged)
       const extracted = smartExtractJD(url, description, descriptionFull);
       if (!extracted) {
-        Logger.log('  ✗ JD fetch failed — skipping');
+        Logger.log('  - JD fetch failed - skipping');
         addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'failed', url, source, '');
         if (source !== 'JobSearch') {
           writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'No JD found', '', '', threadId);
@@ -5534,7 +5534,7 @@ function runPhase2() {
       }
       const isTrusted = descriptionFull || extracted.source === 'api_full';
       if (!isJdRelevantToJob(extracted.text, company, title, isTrusted)) {
-        Logger.log('  ✗ JD irrelevant — skipping');
+        Logger.log('  - JD irrelevant - skipping');
         addJobToCache(job, { match_level: 'SKIP', total_score: 0 }, '', 'irrelevant_jd', url, source, '');
         if (source !== 'JobSearch') {
           writeToAlertResults(dateStr, source, company, title, sourceUrl, url, 0, 'Skip', 'JD irrelevant', '', '', threadId);
@@ -5557,7 +5557,7 @@ function runPhase2() {
       smmResult = JSON.parse(raw);
       if (smmResult.error) throw new Error(smmResult.error);
     } catch(e) {
-      Logger.log(`  ✗ SMM error: ${e.message}`);
+      Logger.log(`  - SMM error: ${e.message}`);
       if (source !== 'JobSearch') {
         writeToAlertResults(dateStr, source, company, title, sourceUrl, fetchedUrl, 0, 'Err', 'SMM error', '', '', threadId);
       }
@@ -5571,7 +5571,7 @@ function runPhase2() {
     const levelNum = parseInt(level.replace(/\D/g, '')) || 0;
     const dots     = buildJobDots(smmResult);
 
-    // ── Location enrichment — fills job_location when JD had none ────────
+    // - Location enrichment - fills job_location when JD had none -
     enrichSmmLocation(smmResult, company);
 
     Logger.log(`  Score: ${score}/40 | ${level} | Source: ${source} | Location: ${JSON.stringify(smmResult.job_location)} (${smmResult.location_source || 'unknown'})`);
@@ -5587,7 +5587,7 @@ function runPhase2() {
       sheet.getRange(sheetRow, 12).setValue(cvType);
       sheet.getRange(sheetRow, 13).setValue(fetchSource);
       sheet.getRange(sheetRow, 14).setValue(JSON.stringify(smmResult));
-      Logger.log(`  ✓ M2+ — kept for final report`);
+      Logger.log(`  - M2+ - kept for final report`);
     } else {
       rowsToDelete.push(sheetRow);
     }
@@ -5613,7 +5613,7 @@ function runPhase2() {
   PropertiesService.getScriptProperties().deleteProperty('PHASE2_STATUS');
   if (remainingPending > 0) {
     ScriptApp.newTrigger('runPhase2').timeBased().after(PHASE2_DELAY_MS).create();
-    Logger.log(`Phase 2 rescheduled — ${PHASE2_DELAY_MS / 60000} min`);
+    Logger.log(`Phase 2 rescheduled - ${PHASE2_DELAY_MS / 60000} min`);
   } else {
     const finalLastRow = sheet.getLastRow();
     const finalData    = finalLastRow > 1
@@ -5634,18 +5634,18 @@ function runPhase2() {
 
     if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
     SpreadsheetApp.flush();
-    Logger.log('Phase 2 complete — Pending_SMM cleared.');
+    Logger.log('Phase 2 complete - Pending_SMM cleared.');
   }
 }
 
 
-// runJobSearchPhase2 removed — superseded by runPhase2 (universal handler).
+// runJobSearchPhase2 removed - superseded by runPhase2 (universal handler).
 // deletePhase2Triggers() still cleans up this name as a safety net.
 
-/* ── Send report and clear Pending_SMM ─────────────────────── */
+/* - Send report and clear Pending_SMM - */
 function sendPhase2Report(m2PlusRows) {
   if (!m2PlusRows || m2PlusRows.length === 0) {
-    Logger.log('sendPhase2Report: no M2+ rows — no email sent.');
+    Logger.log('sendPhase2Report: no M2+ rows - no email sent.');
     return;
   }
   const reportJobs = m2PlusRows.map(row => {
@@ -5664,12 +5664,12 @@ function sendPhase2Report(m2PlusRows) {
   }).filter(Boolean);
   if (reportJobs.length === 0) return;
   Logger.log(`sendPhase2Report: sending email for ${reportJobs.length} M2+ job(s)`);
-  reportJobs.forEach(j => Logger.log(`  → ${j.company} — ${j.title} (${j.smmResult.match_level})`));
+  reportJobs.forEach(j => Logger.log(`  - ${j.company} - ${j.title} (${j.smmResult.match_level})`));
   const html = buildJobReportHtml(reportJobs);
   sendJobReportEmail(html);
 }
 
-/** Debug utility — resets the BA scan window to 7 days ago. */
+/** Debug utility - resets the BA scan window to 7 days ago. */
 function resetBAAlertScanTimestamp() {
   PropertiesService.getScriptProperties().deleteProperty('LAST_BA_ALERT_SCAN');
   Logger.log('BA alert scan timestamp cleared. Next run will scan last 7 days.');
@@ -5905,11 +5905,11 @@ function checkJdSimilarity(fetchedUrl, cachedJdText) {
 /**
  * Jaccard similarity between two texts.
  * Tokenises into unique lowercase words, removes stop words and short tokens.
- * Returns a float 0.0–1.0.
+ * Returns a float 0.0-1.0.
  */
 function computeTextSimilarity(text1, text2) {
   const stopWords = new Set([
-    'die','der','das','und','in','zu','den','ist','für','von','mit','wir','sie',
+    'die','der','das','und','in','zu','den','ist','f-r','von','mit','wir','sie',
     'ihr','ein','eine','einen','dem','des','einer','werden','kann','auch','an',
     'bei','nach','auf','hat','wird','durch','haben','oder','aber','als','sind',
     'the','and','for','are','you','our','your','will','have','with','this',
@@ -5919,7 +5919,7 @@ function computeTextSimilarity(text1, text2) {
   function tokenize(text) {
     return new Set(
       text.toLowerCase()
-          .replace(/[^a-zäöüßàáâèéêëìíîïòóôùúû0-9\s]/g, ' ')
+          .replace(/[^a-z-0-9\s]/g, ' ')
           .split(/\s+/)
           .filter(w => w.length > 3 && !stopWords.has(w))
     );
@@ -5954,7 +5954,7 @@ function markCacheRowStatus(company, title, newStatus) {
     });
     if (updated > 0) {
       SpreadsheetApp.flush();
-      Logger.log(`markCacheRowStatus: "${company}" / "${title}" → "${newStatus}" (${updated} row(s))`);
+      Logger.log(`markCacheRowStatus: "${company}" / "${title}" - "${newStatus}" (${updated} row(s))`);
     }
   } catch(e) {
     Logger.log(`markCacheRowStatus error: ${e.message}`);
@@ -5963,8 +5963,8 @@ function markCacheRowStatus(company, title, newStatus) {
  
 /**
  * Fires at 15:00 Berlin time (time-based trigger).
- * Counts 'in process' M1–M4 rows and:
- *  1. Writes summary to M2_Notifications A1  →  triggers Sheets mobile push
+ * Counts 'in process' M1-M4 rows and:
+ *  1. Writes summary to M2_Notifications A1  -  triggers Sheets mobile push
  *     if the user enabled "Content changes" notifications in the Sheets app.
  *  2. Stores summary in PENDING_NOTIFICATION_TEXT script property
  *     so onOpen() can display a desktop popup.
@@ -5984,13 +5984,13 @@ function sendDailyNotificationSummary() {
     if (total === 0) { Logger.log('sendDailyNotificationSummary: no in-process jobs.'); return; }
  
     const parts = [];
-    if (counts.M4 > 0) parts.push(`${counts.M4}× M4`);
-    if (counts.M3 > 0) parts.push(`${counts.M3}× M3`);
-    if (counts.M2 > 0) parts.push(`${counts.M2}× M2`);
-    if (counts.M1 > 0) parts.push(`${counts.M1}× M1`);
+    if (counts.M4 > 0) parts.push(`${counts.M4}- M4`);
+    if (counts.M3 > 0) parts.push(`${counts.M3}- M3`);
+    if (counts.M2 > 0) parts.push(`${counts.M2}- M2`);
+    if (counts.M1 > 0) parts.push(`${counts.M1}- M1`);
  
     const ts       = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd-MM-yyyy HH:mm');
-    const message  = `📋 ${total} job${total > 1 ? 's' : ''} in review: ${parts.join(', ')}`;
+    const message  = `- ${total} job${total > 1 ? 's' : ''} in review: ${parts.join(', ')}`;
     const fullText = `${message}\nUpdated: ${ts}`;
  
     getOrCreateM2NotificationsSheet().getRange('A1').setValue(fullText);
@@ -6012,8 +6012,8 @@ function checkPendingNotification() {
     const text  = props.getProperty('PENDING_NOTIFICATION_TEXT');
     if (!text) return;
     SpreadsheetApp.getUi().alert(
-      '📋 JABA Job Review',
-      text + '\n\nOpen Job_Search_Cache → change promising rows to "fit" → use the sidebar to register.',
+      '- JABA Job Review',
+      text + '\n\nOpen Job_Search_Cache - change promising rows to "fit" - use the sidebar to register.',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
     props.deleteProperty('PENDING_NOTIFICATION_TEXT');
@@ -6024,12 +6024,12 @@ function checkPendingNotification() {
  
 /**
  * Creates the daily 15:00 Berlin trigger for sendDailyNotificationSummary.
- * Run once from the menu: 🤖 AI Recruitment → 🔔 Setup Daily Notification (15:00).
+ * Run once from the menu: - AI Recruitment - - Setup Daily Notification (15:00).
  *
  * MOBILE SETUP (one-time, manual):
  *   1. Open Google Sheets app on your phone.
- *   2. Tap the JABA spreadsheet → ⋮ → Notifications → enable "When content changes".
- *   JABA writes to the hidden M2_Notifications sheet at 15:00 → phone push notification.
+ *   2. Tap the JABA spreadsheet - - - Notifications - enable "When content changes".
+ *   JABA writes to the hidden M2_Notifications sheet at 15:00 - phone push notification.
  */
 function createDailyNotificationTrigger() {
   ScriptApp.getProjectTriggers()
@@ -6038,12 +6038,12 @@ function createDailyNotificationTrigger() {
   ScriptApp.newTrigger('sendDailyNotificationSummary')
     .timeBased().atHour(15).everyDays(1).inTimezone('Europe/Berlin').create();
   SpreadsheetApp.getUi().alert(
-    '✅ Daily notification trigger set for 15:00 Berlin time.\n\n' +
+    '- Daily notification trigger set for 15:00 Berlin time.\n\n' +
     'MOBILE PUSH (one-time setup):\n' +
     '1. Open Google Sheets app on your phone\n' +
-    '2. Long-press or open ⋮ menu on the JABA spreadsheet\n' +
-    '3. Tap Notifications → enable "When content changes"\n' +
-    'JABA writes to the hidden M2_Notifications sheet at 15:00 → ' +
+    '2. Long-press or open - menu on the JABA spreadsheet\n' +
+    '3. Tap Notifications - enable "When content changes"\n' +
+    'JABA writes to the hidden M2_Notifications sheet at 15:00 - ' +
     'your phone receives a push notification.'
   );
 }
@@ -6053,14 +6053,14 @@ function createDailyNotificationTrigger() {
  * These entries were likely scored on a wrong/incomplete page (e.g. a
  * company homepage instead of the actual job posting).
  * Flagged entries are marked "suspicious" in the Review_Status column.
- * Run from: 🤖 AI Recruitment → 🔍 Audit Cache Quality
+ * Run from: - AI Recruitment - - Audit Cache Quality
  */
 function auditCacheQuality() {
   const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
   const sheet = getOrCreateJobCacheSheet();
 
   if (sheet.getLastRow() < 2) {
-    if (ui) ui.alert('Job_Search_Cache is empty — nothing to audit.');
+    if (ui) ui.alert('Job_Search_Cache is empty - nothing to audit.');
     return;
   }
 
@@ -6095,7 +6095,7 @@ function auditCacheQuality() {
 
   if (flagged.length === 0) {
     if (ui) ui.alert(
-      '✅ Cache Quality Audit',
+      '- Cache Quality Audit',
       'All "in process" and "fit" entries passed the JD quality check.\nNo suspicious entries found.',
       ui.ButtonSet.OK
     );
@@ -6104,7 +6104,7 @@ function auditCacheQuality() {
   }
 
   const lines = flagged.map(function(j) {
-    return '• ' + j.company + ' — ' + j.title + ' (' + j.level + ': ' + j.score + '/40)';
+    return '- ' + j.company + ' - ' + j.title + ' (' + j.level + ': ' + j.score + '/40)';
   }).join('\n');
 
   const message =
@@ -6113,15 +6113,15 @@ function auditCacheQuality() {
     lines + '\n\n' +
     'These have been marked "suspicious" in Job_Search_Cache.\n\n' +
     'Options:\n' +
-    '  • Open the sidebar → paste the real JD → run SMM to re-score\n' +
-    '  • Change status to "discarded" if you\'ve already reviewed manually';
+    '  - Open the sidebar - paste the real JD - run SMM to re-score\n' +
+    '  - Change status to "discarded" if you\'ve already reviewed manually';
 
-  if (ui) ui.alert('⚠️ Cache Quality Audit — ' + flagged.length + ' Suspicious Entry(ies)', message, ui.ButtonSet.OK);
+  if (ui) ui.alert('- Cache Quality Audit - ' + flagged.length + ' Suspicious Entry(ies)', message, ui.ButtonSet.OK);
   Logger.log('Cache quality audit: ' + flagged.length + ' suspicious entries flagged.');
 }
 
 /* ============================================================
-   WEB APP — 3 NEW FUNCTIONS FOR Code.js
+   WEB APP - 3 NEW FUNCTIONS FOR Code.js
    
    WHERE TO PASTE: Open Code.js in Cloud Shell Editor.
    Scroll to the very bottom of the file.
@@ -6143,7 +6143,7 @@ function doGet() {
 
 /**
  * Returns ALL Job_Search_Cache rows where Review_Status = 'fit',
- * sorted M4 → M3 → M2, then by score descending within each level.
+ * sorted M4 - M3 - M2, then by score descending within each level.
  * Called by the Queue tab in Index.html on page load and after refresh.
  */
 function getAllFitJobs() {
@@ -6157,7 +6157,7 @@ function getAllFitJobs() {
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
 
-      // Column 11 (index 10) = Review_Status — filter for 'fit' only
+      // Column 11 (index 10) = Review_Status - filter for 'fit' only
       if ((row[10] || '').toString().trim() !== 'fit') continue;
 
       const matchLevel = (row[5] || '').toString().trim();
@@ -6210,7 +6210,7 @@ function getMonthlySheetNames() {
       'Weekly_Data'
     ]);
  
-    // Month parsing helper — returns a sortable date from "Jun 2026" etc.
+    // Month parsing helper - returns a sortable date from "Jun 2026" etc.
     const MONTH_NAMES = {
       jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
       jul:6,aug:7,sep:8,oct:9,nov:10,dec:11
@@ -6248,7 +6248,7 @@ function getMonthlySheetData(tabName) {
     const lastRow = sheet.getLastRow();
     if (lastRow < 1) return JSON.stringify({ rows: [], tabName });
  
-    // Read all 20 columns (A–T).  Cols J–R (10–18) are binary stage columns.
+    // Read all 20 columns (A-T).  Cols J-R (10-18) are binary stage columns.
     const NUM_COLS = 20;
     const allData  = sheet.getRange(1, 1, lastRow, NUM_COLS).getValues();
  
@@ -6261,7 +6261,7 @@ function getMonthlySheetData(tabName) {
       // Skip completely empty rows (no company in col B)
       if (!row[1]) continue;
       rows.push(row.map(cell => {
-        // Dates come back as Date objects from Sheets — format them
+        // Dates come back as Date objects from Sheets - format them
         if (cell instanceof Date && !isNaN(cell)) {
           return Utilities.formatDate(cell, CONFIG.TIMEZONE, 'dd.MM.yyyy');
         }
@@ -6280,7 +6280,7 @@ function getMonthlySheetData(tabName) {
  * Marks a single Job_Search_Cache row as 'discarded'.
  * Called when the user clicks Skip in the Queue tab and selects a reason.
  * rowIndex : 1-based sheet row number (comes from getAllFitJobs).
- * reason   : string — logged only, not stored in the sheet.
+ * reason   : string - logged only, not stored in the sheet.
  */
 function skipFitJob(rowIndex, reason) {
   try {
@@ -6288,7 +6288,7 @@ function skipFitJob(rowIndex, reason) {
     // Column 11 = Review_Status
     sheet.getRange(rowIndex, 11).setValue('discarded');
     SpreadsheetApp.flush();
-    Logger.log(`skipFitJob: row ${rowIndex} → discarded. Reason: ${reason || 'none given'}`);
+    Logger.log(`skipFitJob: row ${rowIndex} - discarded. Reason: ${reason || 'none given'}`);
     return JSON.stringify({ success: true });
   } catch (e) {
     Logger.log(`skipFitJob error: ${e.message}`);
@@ -6300,7 +6300,7 @@ function skipFitJob(rowIndex, reason) {
    Called from the web app Scan table on every cell edit.
    Writes one value to a specific row + column in a monthly tab.
    For Status column (F = col 6): also calls updateRowStatusLogic
-   and handles Rejected → Email Rejection timestamp.
+   and handles Rejected - Email Rejection timestamp.
    tabName  : e.g. "Jun 2026"
    rowIndex : 1-based sheet row (2 = first data row)
    colIndex : 1-based column (1 = A, 6 = F, etc.)
@@ -6318,21 +6318,21 @@ function updateMonthlyCell(tabName, rowIndex, colIndex, value) {
  
     const cell = sheet.getRange(rowIndex, colIndex);
  
-    // Column 7 (G) = Application Date — store as-is (string dd.MM.yyyy)
-    // Column 10–18 (J–R) = binary stage columns — store as integer
+    // Column 7 (G) = Application Date - store as-is (string dd.MM.yyyy)
+    // Column 10-18 (J-R) = binary stage columns - store as integer
     if (colIndex >= 10 && colIndex <= 18) {
       cell.setValue(value === '1' || value === true || value === 1 ? 1 : 0);
     } else {
       cell.setValue(value);
     }
  
-    // Column 6 (F) = Status — trigger binary column update + Rejected timestamp
+    // Column 6 (F) = Status - trigger binary column update + Rejected timestamp
     if (colIndex === 6) {
       updateRowStatusLogic(sheet, rowIndex, value);
  
       if (value === 'Rejected') {
         const dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'dd.MM.yyyy');
-        sheet.getRange(rowIndex, 20).setValue(`${dateStr} 🙅🏽‍♂️`);
+        sheet.getRange(rowIndex, 20).setValue(`${dateStr} -`);
       }
  
       // Flag Interview_Reached in SMM_Raw_Data for HR/1st Interview
@@ -6367,9 +6367,9 @@ function focusJdContent(text) {
     'aufgaben', 'deine aufgaben', 'ihre aufgaben', 'zu deinen aufgaben',
     'was du machst', 'was du tust', 'was du bei uns',
     'in dieser rolle', 'wir suchen', 'du verantwortest',
-    'stellenbeschreibung', 'über die stelle',
+    'stellenbeschreibung', '-ber die stelle',
     'dein profil', 'anforderungen', 'voraussetzungen',
-    'was wir uns wünschen', 'was du mitbringst',
+    'was wir uns w-nschen', 'was du mitbringst',
     // English
     'responsibilities', 'what you will do', "what you'll do",
     'about the role', 'about this role', 'the role',
@@ -6384,8 +6384,8 @@ function focusJdContent(text) {
   for (const pattern of jobStartPatterns) {
     const idx = lower.indexOf(pattern);
     // Only trim noise that is between 150 and 3000 chars from the start.
-    // Below 150: probably already at the job start — don't trim.
-    // Above 3000: the "pattern" found is likely inside the job itself — don't trim.
+    // Below 150: probably already at the job start - don't trim.
+    // Above 3000: the "pattern" found is likely inside the job itself - don't trim.
     if (idx > 150 && idx < 6000) {
       if (bestStart === -1 || idx < bestStart) {
         bestStart = idx;
@@ -6406,7 +6406,7 @@ function focusJdContent(text) {
 /**
  * Resolves a company's headquarters city when the JD contains no location.
  * Uses Tavily Search (1 credit) + Groq extraction.
- * Results cached in Script Properties — same company never looked up twice.
+ * Results cached in Script Properties - same company never looked up twice.
  * Returns { city, country, fromCompany: true } or { city: null, country: null }.
  */
 function resolveCompanyLocation(companyName) {
@@ -6414,11 +6414,11 @@ function resolveCompanyLocation(companyName) {
     return { city: null, country: null };
   }
 
-  // ── Cache check ───────────────────────────────────────────────────────────
+  // - Cache check -
   const props      = PropertiesService.getScriptProperties();
   const cacheKey   = 'COMPLOC_' + companyName
     .toLowerCase()
-    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/-/g,'ae').replace(/-/g,'oe').replace(/-/g,'ue').replace(/-/g,'ss')
     .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')
     .substring(0, 40);
 
@@ -6426,18 +6426,18 @@ function resolveCompanyLocation(companyName) {
     const cached = props.getProperty(cacheKey);
     if (cached) {
       if (cached === 'NOTFOUND') {
-        Logger.log(`resolveCompanyLocation: cached miss → "${companyName}"`);
+        Logger.log(`resolveCompanyLocation: cached miss - "${companyName}"`);
         return { city: null, country: null };
       }
       const parsed = JSON.parse(cached);
-      Logger.log(`resolveCompanyLocation: cache hit → "${companyName}" → ${parsed.city}, ${parsed.country}`);
+      Logger.log(`resolveCompanyLocation: cache hit - "${companyName}" - ${parsed.city}, ${parsed.country}`);
       return { ...parsed, fromCompany: true };
     }
   } catch(e) {
     Logger.log(`resolveCompanyLocation: cache read error: ${e.message}`);
   }
 
-  // ── Tavily Search (1 credit) ──────────────────────────────────────────────
+  // - Tavily Search (1 credit) -
   const tavilyKey = getTavilyKey();
   if (!tavilyKey) {
     Logger.log('resolveCompanyLocation: TAVILY_API_KEY not set');
@@ -6481,7 +6481,7 @@ function resolveCompanyLocation(companyName) {
     return { city: null, country: null };
   }
 
-  // ── Groq extraction ───────────────────────────────────────────────────────
+  // - Groq extraction -
   const systemPrompt = 'You extract company headquarters location from text snippets. JSON only, no markdown.';
   const userPrompt   = `Extract the city and country where "${companyName}" is headquartered.
 
@@ -6519,7 +6519,7 @@ Respond ONLY with JSON: {"city": "Berlin", "country": "Germany"}`;
       props.setProperty(cacheKey, JSON.stringify({ city, country }));
     } catch(e) {}
 
-    Logger.log(`resolveCompanyLocation: resolved "${companyName}" → ${city}, ${country}`);
+    Logger.log(`resolveCompanyLocation: resolved "${companyName}" - ${city}, ${country}`);
     return { city, country, fromCompany: true };
 
   } catch(e) {
@@ -6533,16 +6533,16 @@ Respond ONLY with JSON: {"city": "Berlin", "country": "Germany"}`;
  * Enriches an SMM result object with company-lookup location when the JD
  * provided no location. Modifies parsed in place and returns it.
  *
- * companyName : string — the company name from the job listing
- * parsed      : object — already-parsed SMM JSON result
+ * companyName : string - the company name from the job listing
+ * parsed      : object - already-parsed SMM JSON result
  *
  * Sets parsed.location_source to:
- *   "jd"             — location came from JD text (already set, untouched)
- *   "company_lookup" — location found via company name search
- *   "unknown"        — no location found anywhere
+ *   "jd"             - location came from JD text (already set, untouched)
+ *   "company_lookup" - location found via company name search
+ *   "unknown"        - no location found anywhere
  */
 function enrichSmmLocation(parsed, companyName) {
-  // Already has a JD location — nothing to do
+  // Already has a JD location - nothing to do
   if (parsed.location_source === 'jd' &&
       parsed.job_location &&
       (parsed.job_location.city || parsed.job_location.country)) {
@@ -6554,7 +6554,7 @@ function enrichSmmLocation(parsed, companyName) {
   if (resolved.city || resolved.country) {
     parsed.job_location    = { city: resolved.city, country: resolved.country };
     parsed.location_source = 'company_lookup';
-    Logger.log(`enrichSmmLocation: "${companyName}" → ${resolved.city}, ${resolved.country}`);
+    Logger.log(`enrichSmmLocation: "${companyName}" - ${resolved.city}, ${resolved.country}`);
   } else {
     parsed.location_source = 'unknown';
   }
@@ -6566,7 +6566,7 @@ function enrichSmmLocation(parsed, companyName) {
  * Geocodes a city + country pair via Nominatim (OpenStreetMap).
  * Called from the sidebar/web app when the user switches to the Map chart view.
  * Returns JSON string: { lat, lng, display } or { lat: null, lng: null }.
- * Note: Nominatim requires a proper User-Agent — never call it client-side.
+ * Note: Nominatim requires a proper User-Agent - never call it client-side.
  */
 /**
  * Geocodes a city + country pair.
@@ -6582,27 +6582,27 @@ function geocodeLocation(city, country) {
     return JSON.stringify({ lat: null, lng: null, isRemote: true });
   }
 
-  // ── Build a stable cache key ──────────────────────────────────────────────
+  // - Build a stable cache key -
   const cacheKey = 'GEO2_' + cityClean
     .toLowerCase()
-    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/-/g,'ae').replace(/-/g,'oe').replace(/-/g,'ue').replace(/-/g,'ss')
     .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
 
   const props = PropertiesService.getScriptProperties();
 
-  // ── Check cache first (both success and known-failures) ──────────────────
+  // - Check cache first (both success and known-failures) -
   try {
     const cached = props.getProperty(cacheKey);
     if (cached) {
       if (cached === 'NOTFOUND') {
-        Logger.log(`geocodeLocation: cached miss → "${cityClean}"`);
+        Logger.log(`geocodeLocation: cached miss - "${cityClean}"`);
         return JSON.stringify({ lat: null, lng: null });
       }
       const parts = cached.split(',');
       const lat = parseFloat(parts[0]);
       const lng = parseFloat(parts[1]);
       if (!isNaN(lat) && !isNaN(lng)) {
-        Logger.log(`geocodeLocation: cache hit → "${cityClean}" (${lat}, ${lng})`);
+        Logger.log(`geocodeLocation: cache hit - "${cityClean}" (${lat}, ${lng})`);
         return JSON.stringify({
           lat, lng,
           display: cityClean + (country ? ', ' + country : ''),
@@ -6614,10 +6614,10 @@ function geocodeLocation(city, country) {
     Logger.log(`geocodeLocation: cache read error: ${e.message}`);
   }
 
-  // ── Tier 1: hardcoded lookup table ────────────────────────────────────────
+  // - Tier 1: hardcoded lookup table -
   // Covers the most common German cities + major European job hubs.
   const COORDS = {
-    // German cities — alphabetical
+    // German cities - alphabetical
     'aachen':        [50.7753, 6.0839],
     'augsburg':      [48.3705, 10.8978],
     'berlin':        [52.5200, 13.4050],
@@ -6718,12 +6718,12 @@ function geocodeLocation(city, country) {
   // Normalise city for lookup: lowercase + umlaut substitution
   const cityNorm = cityClean
     .toLowerCase()
-    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
+    .replace(/-/g,'ae').replace(/-/g,'oe').replace(/-/g,'ue').replace(/-/g,'ss')
     .replace(/[^a-z]/g,'');
 
   if (COORDS[cityNorm]) {
     const [lat, lng] = COORDS[cityNorm];
-    Logger.log(`geocodeLocation: hardcoded hit → "${cityClean}" (${lat}, ${lng})`);
+    Logger.log(`geocodeLocation: hardcoded hit - "${cityClean}" (${lat}, ${lng})`);
     try { props.setProperty(cacheKey, lat + ',' + lng); } catch(e) {}
     return JSON.stringify({
       lat, lng,
@@ -6732,7 +6732,7 @@ function geocodeLocation(city, country) {
     });
   }
 
-  // ── Tier 2: Open-Meteo Geocoding API (free, no key, GCP-friendly) ─────────
+  // - Tier 2: Open-Meteo Geocoding API (free, no key, GCP-friendly) -
   try {
     const query   = encodeURIComponent(cityClean + (country ? ', ' + country : ''));
     const apiUrl  = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
@@ -6777,7 +6777,7 @@ function geocodeLocation(city, country) {
                     (best.country ? ', ' + best.country : '');
 
     try { props.setProperty(cacheKey, lat + ',' + lng); } catch(e) {}
-    Logger.log(`geocodeLocation: Open-Meteo OK → "${cityClean}" → ${display} (${lat}, ${lng})`);
+    Logger.log(`geocodeLocation: Open-Meteo OK - "${cityClean}" - ${display} (${lat}, ${lng})`);
 
     return JSON.stringify({ lat, lng, display, source: 'open-meteo' });
 
@@ -6910,25 +6910,25 @@ function applyJobCacheFormatting() {
   }
  
   sheet.setConditionalFormatRules([
-    rule('fit',         '#0d2e1e', '#34d399'),  // green — ready to act on
-    rule('in process',  '#0f1f3a', '#4f8ef7'),  // blue  — scored, under review
-    rule('registered',  '#0a1f12', '#22c55e'),  // bright green — applied
-    rule('discarded',   '#1a1a1a', '#6b7280'),  // gray  — skipped
-    rule('suspicious',  '#2d1f0a', '#f59e0b'),  // amber — needs re-check
-    rule('auto',        '#141414', '#4b5563'),  // very muted — M0, auto-dismissed
+    rule('fit',         '#0d2e1e', '#34d399'),  // green - ready to act on
+    rule('in process',  '#0f1f3a', '#4f8ef7'),  // blue  - scored, under review
+    rule('registered',  '#0a1f12', '#22c55e'),  // bright green - applied
+    rule('discarded',   '#1a1a1a', '#6b7280'),  // gray  - skipped
+    rule('suspicious',  '#2d1f0a', '#f59e0b'),  // amber - needs re-check
+    rule('auto',        '#141414', '#4b5563'),  // very muted - M0, auto-dismissed
   ]);
  
   SpreadsheetApp.flush();
   Logger.log('applyJobCacheFormatting: conditional formatting applied.');
  
   if (ui) ui.alert(
-    '🎨 Job Cache Color Coding Applied',
-    '🟢 fit         — green\n' +
-    '🔵 in process  — blue\n' +
-    '✅ registered  — bright green\n' +
-    '⚫ discarded   — dark gray\n' +
-    '🟡 suspicious  — amber\n' +
-    '⬛ auto        — very muted\n\n' +
+    '- Job Cache Color Coding Applied',
+    '- fit         - green\n' +
+    '- in process  - blue\n' +
+    '- registered  - bright green\n' +
+    '- discarded   - dark gray\n' +
+    '- suspicious  - amber\n' +
+    '- auto        - very muted\n\n' +
     'Run again anytime to refresh.',
     ui.ButtonSet.OK
   );
@@ -7021,292 +7021,4 @@ function updateWeeklyData() {
   range.setValues(allRows);
  
   Logger.log(`updateWeeklyData: ${rows.length} week(s) written.`);
-}
-
-/* ============================================================
-   FEATURE 3: JABA_Config — dropdown chip colors
-   Functions: setupJabaConfig, getJabaConfig,
-              saveJabaConfigValue, deleteJabaConfigValue,
-              applyConfigToNewMonthlyTabs
-   ============================================================ */
-
-/**
- * JABA_Config sheet schema (hidden):
- * Col A: Column   — e.g. "Platform", "Status", "Match Level", "Language Req."
- * Col B: Value    — e.g. "LinkedIn"
- * Col C: Background — hex e.g. "#1d4ed8"
- * Col D: Text Color  — hex e.g. "#ffffff"
- *
- * Run once from Apps Script editor or add a menu item.
- */
-function setupJabaConfig() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  let   sheet = ss.getSheetByName('JABA_Config');
-
-  if (sheet) {
-    // Already exists — ask before overwriting
-    const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
-    if (ui) {
-      const resp = ui.alert(
-        'JABA_Config already exists',
-        'Do you want to reset it to defaults? This will overwrite all custom colors.',
-        ui.ButtonSet.YES_NO
-      );
-      if (resp !== ui.Button.YES) return;
-      sheet.clearContents();
-    }
-  } else {
-    sheet = ss.insertSheet('JABA_Config');
-    sheet.hideSheet();
-  }
-
-  // Seed data — all four dropdown columns
-  const rows = [
-    // ── Match Level ──────────────────────────────────────────
-    ['Match Level', 'M0',        '#374151', '#9ca3af'],
-    ['Match Level', 'M1',        '#78350f', '#fcd34d'],
-    ['Match Level', 'M2',        '#1e3a5f', '#60a5fa'],
-    ['Match Level', 'M3',        '#2e1065', '#a78bfa'],
-    ['Match Level', 'M4',        '#064e3b', '#34d399'],
-    ['Match Level', '🚀 Web3',   '#064e3b', '#34d399'],
-
-    // ── Status ───────────────────────────────────────────────
-    ['Status', 'Applied',        '#064e3b', '#34d399'],
-    ['Status', 'HR Interview',   '#1e3a5f', '#4f8ef7'],
-    ['Status', '1st Interview',  '#2e1065', '#a78bfa'],
-    ['Status', '2nd Interview',  '#2e1065', '#a78bfa'],
-    ['Status', '3rd Interview',  '#2e1065', '#a78bfa'],
-    ['Status', '4th Interview',  '#2e1065', '#a78bfa'],
-    ['Status', 'Offer',          '#713f12', '#fbbf24'],
-    ['Status', 'Ignored',        '#1f2937', '#6b7280'],
-    ['Status', 'Rejected',       '#450a0a', '#f87171'],
-
-    // ── Platform ─────────────────────────────────────────────
-    ['Platform', 'LinkedIn',           '#1d4ed8', '#ffffff'],
-    ['Platform', 'Indeed',             '#2563eb', '#ffffff'],
-    ['Platform', 'Stepstone',          '#dc2626', '#ffffff'],
-    ['Platform', 'Arbeitsagentur',     '#374151', '#9ca3af'],
-    ['Platform', 'Arbeitnow',          '#ffffff', '#00abd3'],
-    ['Platform', 'Kimeta',             '#ffffff', '#b8ce52'],
-    ['Platform', 'Studysmaster',       '#ffffff', '#0039ff'],
-    ['Platform', 'Workwise',           '#ffffff', '#000000'],
-    ['Platform', 'Remotive',           '#7c3aed', '#ffffff'],
-    ['Platform', 'Jobicy',             '#0f766e', '#ffffff'],
-    ['Platform', 'Working Nomads',     '#0369a1', '#ffffff'],
-    ['Platform', 'Cryptojobslist',     '#f59e0b', '#000000'],
-    ['Platform', 'Cryptocurrencyjobs', '#f59e0b', '#000000'],
-    ['Platform', 'Web3career',         '#6d28d9', '#ffffff'],
-    ['Platform', 'WeWorkRemotely',     '#16a34a', '#ffffff'],
-    ['Platform', 'EuroJobs',           '#1e40af', '#ffffff'],
-    ['Platform', 'Himalayas',          '#0c4a6e', '#ffffff'],
-    ['Platform', 'Adzuna',             '#0d9488', '#ffffff'],
-    ['Platform', 'Own website',        '#374151', '#9ca3af'],
-
-    // ── Language Req. ─────────────────────────────────────────
-    ['Language Req.', 'C2 required', '#450a0a', '#f87171'],
-    ['Language Req.', 'C1 required', '#064e3b', '#34d399'],
-    ['Language Req.', 'Other',       '#1e3a5f', '#60a5fa'],
-  ];
-
-  sheet.getRange(1, 1, rows.length, 4).setValues(rows);
-  SpreadsheetApp.flush();
-
-  Logger.log(`JABA_Config seeded: ${rows.length} rows.`);
-
-  const ui2 = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
-  if (ui2) ui2.alert(
-    '✅ JABA_Config created',
-    `${rows.length} dropdown values seeded.\n\nThe sheet is hidden — edit colors via the Web App config panel.`,
-    ui2.ButtonSet.OK
-  );
-}
-
-
-/**
- * Returns the full JABA_Config as a nested JSON object:
- * { "Platform": { "LinkedIn": { bg: "#1d4ed8", text: "#ffffff" }, ... }, ... }
- * Called from Web App / Sidebar on Scan tab open.
- */
-function getJabaConfig() {
-  try {
-    const ss    = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('JABA_Config');
-
-    // Fallback: if sheet doesn't exist yet, return empty config
-    if (!sheet || sheet.getLastRow() < 1) {
-      return JSON.stringify({});
-    }
-
-    const data   = sheet.getRange(1, 1, sheet.getLastRow(), 4).getValues();
-    const config = {};
-
-    data.forEach(function(row) {
-      const col   = (row[0] || '').toString().trim();
-      const val   = (row[1] || '').toString().trim();
-      const bg    = (row[2] || '').toString().trim();
-      const text  = (row[3] || '').toString().trim();
-      if (!col || !val) return;
-      if (!config[col]) config[col] = {};
-      config[col][val] = { bg, text };
-    });
-
-    return JSON.stringify(config);
-  } catch(e) {
-    Logger.log(`getJabaConfig error: ${e.message}`);
-    return JSON.stringify({});
-  }
-}
-
-
-/**
- * Add or update a single dropdown value in JABA_Config.
- * If the value already exists for that column, updates colors in place.
- * If not, appends a new row.
- * columnName : e.g. "Platform"
- * value      : e.g. "LinkedIn"
- * bg         : hex background color
- * textColor  : hex text color
- */
-function saveJabaConfigValue(columnName, value, bg, textColor) {
-  try {
-    const ss    = SpreadsheetApp.getActiveSpreadsheet();
-    let   sheet = ss.getSheetByName('JABA_Config');
-    if (!sheet) {
-      // Auto-create if missing
-      setupJabaConfig();
-      sheet = ss.getSheetByName('JABA_Config');
-      if (!sheet) return JSON.stringify({ error: 'Could not create JABA_Config sheet.' });
-    }
-
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 1) {
-      const data = sheet.getRange(1, 1, lastRow, 2).getValues();
-      for (let i = 0; i < data.length; i++) {
-        const existingCol = (data[i][0] || '').toString().trim();
-        const existingVal = (data[i][1] || '').toString().trim();
-        if (existingCol === columnName && existingVal === value) {
-          // Update existing row in place
-          sheet.getRange(i + 1, 3, 1, 2).setValues([[bg, textColor]]);
-          SpreadsheetApp.flush();
-          Logger.log(`saveJabaConfigValue: updated "${columnName}" / "${value}"`);
-          return JSON.stringify({ success: true, action: 'updated' });
-        }
-      }
-    }
-
-    // Not found — append new row
-    sheet.appendRow([columnName, value, bg, textColor]);
-    SpreadsheetApp.flush();
-    Logger.log(`saveJabaConfigValue: added "${columnName}" / "${value}"`);
-    return JSON.stringify({ success: true, action: 'added' });
-
-  } catch(e) {
-    Logger.log(`saveJabaConfigValue error: ${e.message}`);
-    return JSON.stringify({ error: e.message });
-  }
-}
-
-
-/**
- * Deletes a value from JABA_Config.
- * columnName : e.g. "Platform"
- * value      : e.g. "LinkedIn"
- */
-function deleteJabaConfigValue(columnName, value) {
-  try {
-    const ss    = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('JABA_Config');
-    if (!sheet || sheet.getLastRow() < 1) {
-      return JSON.stringify({ error: 'JABA_Config sheet not found.' });
-    }
-
-    const data    = sheet.getRange(1, 1, sheet.getLastRow(), 2).getValues();
-    const toDelete = [];
-
-    data.forEach(function(row, i) {
-      if ((row[0] || '').toString().trim() === columnName &&
-          (row[1] || '').toString().trim() === value) {
-        toDelete.push(i + 1); // 1-based
-      }
-    });
-
-    // Delete in reverse order
-    for (let i = toDelete.length - 1; i >= 0; i--) {
-      sheet.deleteRow(toDelete[i]);
-    }
-
-    SpreadsheetApp.flush();
-    Logger.log(`deleteJabaConfigValue: removed "${columnName}" / "${value}" (${toDelete.length} row(s))`);
-    return JSON.stringify({ success: true, deleted: toDelete.length });
-
-  } catch(e) {
-    Logger.log(`deleteJabaConfigValue error: ${e.message}`);
-    return JSON.stringify({ error: e.message });
-  }
-}
-
-
-/**
- * Re-applies dropdown validation lists from JABA_Config to all existing
- * monthly tabs. Only updates the validation list — does NOT reformat
- * cells that already have values.
- *
- * Column mapping:
- *   Match Level   → col 1 (A)
- *   Platform      → col 4 (D)
- *   Status        → col 6 (F)
- *   Language Req. → col 8 (H)
- */
-function applyConfigToNewMonthlyTabs() {
-  try {
-    const ss     = SpreadsheetApp.getActiveSpreadsheet();
-    const config = JSON.parse(getJabaConfig());
-
-    const COL_MAP = {
-      'Match Level':   1,
-      'Platform':      4,
-      'Status':        6,
-      'Language Req.': 8
-    };
-
-    const SKIP_SHEETS = new Set([
-      'Sankey_Data', 'Geo_Data', 'SMM_Raw_Data', 'Interview_Geo_Data',
-      'Job_Search_Cache', 'Pending_SMM', 'Alert_Results', 'M2_Notifications',
-      'Weekly_Data', 'JABA_Config'
-    ]);
-
-    let updated = 0;
-
-    ss.getSheets().forEach(function(sheet) {
-      const name = sheet.getName();
-      if (SKIP_SHEETS.has(name) || !/[A-Za-z]+ \d{4}/.test(name)) return;
-
-      const maxRows = sheet.getMaxRows();
-
-      Object.entries(COL_MAP).forEach(function([colName, colIndex]) {
-        const values = Object.keys(config[colName] || {});
-        if (values.length === 0) return;
-
-        const rule = SpreadsheetApp.newDataValidation()
-          .requireValueInList(values, true)
-          .setAllowInvalid(true)
-          .build();
-
-        // Apply to data rows only (row 2 onward), skip header
-        sheet.getRange(2, colIndex, maxRows - 1, 1).setDataValidation(rule);
-        updated++;
-      });
-    });
-
-    SpreadsheetApp.flush();
-    Logger.log(`applyConfigToNewMonthlyTabs: updated ${updated} validation range(s).`);
-
-    const ui = (() => { try { return SpreadsheetApp.getUi(); } catch(e) { return null; } })();
-    if (ui) ui.alert(`✅ Done. Dropdown lists updated across all monthly tabs (${updated} ranges).`);
-    return JSON.stringify({ success: true, updated });
-
-  } catch(e) {
-    Logger.log(`applyConfigToNewMonthlyTabs error: ${e.message}`);
-    return JSON.stringify({ error: e.message });
-  }
 }

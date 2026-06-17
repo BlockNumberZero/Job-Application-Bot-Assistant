@@ -17,7 +17,7 @@
       }
       h3 { color: #4285f4; margin: 0 0 10px 0; font-size: 15px; }
 
-      /* ── Stats Strip ── */
+      /* - Stats Strip - */
       .stats-strip {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -59,7 +59,7 @@
       }
       textarea:focus { outline: none; border-color: #4285f4; }
 
-      /* ── Fit Jobs Panel ── */
+      /* - Fit Jobs Panel - */
       #fit-panel {
         background: white;
         border-radius: 8px;
@@ -89,7 +89,7 @@
       #loadFitBtn:hover    { background-color: #1557b0; }
       #loadFitBtn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-      /* ── Fit Job Preview ── */
+      /* - Fit Job Preview - */
       #fit-job-preview { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f3f4; }
       #fit-job-label  { font-size: 13px; font-weight: 700; color: #202124; margin-bottom: 3px; }
       #fit-job-source { font-size: 11px; color: #9aa0a6; margin-bottom: 8px; }
@@ -103,7 +103,7 @@
         color: #5f6368;
       }
 
-      /* ── DUPLICATE WARNING BANNER ── */
+      /* - DUPLICATE WARNING BANNER - */
       #duplicate-banner {
         display: none;
         align-items: flex-start;
@@ -121,7 +121,7 @@
       #duplicate-banner .dup-text { flex: 1; }
       #duplicate-banner .dup-text strong { color: #5a3e00; }
 
-      /* ── SMM Button Group ── */
+      /* - SMM Button Group - */
       .smm-btn-group { display: flex; gap: 5px; margin-top: 6px; }
       .smm-btn {
         flex: 1;
@@ -139,7 +139,7 @@
       .smm-btn:hover    { background-color: #357ae8; }
       .smm-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-      /* ── Rejection Button ── */
+      /* - Rejection Button - */
       #rejectionBtn {
         width: 100%;
         margin-top: 10px;
@@ -156,7 +156,7 @@
       #rejectionBtn:hover    { background-color: #e0a800; }
       #rejectionBtn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-      /* ── Loader ── */
+      /* - Loader - */
       #loader {
         display: none;
         color: #5f6368;
@@ -167,10 +167,10 @@
         padding: 6px;
       }
 
-      /* ── Divider ── */
+      /* - Divider - */
       .section-divider { border: none; border-top: 1px solid #e0e0e0; margin: 14px 0 10px; }
 
-      /* ── Score Badge ── */
+      /* - Score Badge - */
       #score-badge {
         display: flex;
         align-items: center;
@@ -191,7 +191,7 @@
       }
       #score-label-text { font-size: 11px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; }
 
-      /* ── Language Pill ── */
+      /* - Language Pill - */
       #language-pill {
         display: none;
         align-items: center;
@@ -204,7 +204,7 @@
         line-height: 1.4;
       }
 
-      /* ── Chart toggle bar ── */
+      /* - Chart toggle bar - */
       #chart-toggle-bar {
         display: flex;
         align-items: center;
@@ -228,7 +228,7 @@
       .ctype-btn:hover  { border-color: #9aa0a6; color: #3c4043; }
       .ctype-btn.active { border-color: #4285f4; background: #e8f0fe; color: #1a73e8; }
 
-      /* ── Radar / Chart Container ── */
+      /* - Radar / Chart Container - */
       #radar-container {
         background: white;
         border-radius: 8px;
@@ -241,7 +241,7 @@
       #radar-container.bar-mode { padding: 12px 10px 10px; height: 320px; }
       #radarChart { width: 100% !important; max-width: 660px; max-height: 520px; }
 
-      /* ── Map Container ── */
+      /* - Map Container - */
       #map-container {
         display: none;
         height: 260px;
@@ -263,10 +263,10 @@
         font-style: italic;
       }
 
-      /* ── CV Type Indicator ── */
+      /* - CV Type Indicator - */
       #cv-type-indicator { font-size: 11px; color: #5f6368; text-align: center; margin-bottom: 6px; font-style: italic; }
 
-      /* ── Gap Tips ── */
+      /* - Gap Tips - */
       #gap-tips-section {
         background: white; border-radius: 8px;
         border: 1px solid #e0e0e0; padding: 10px 12px; margin-bottom: 10px;
@@ -281,7 +281,7 @@
       .imp-necessary { background: #fef7e0; color: #c77c00; }
       .imp-optional  { background: #e8f0fe; color: #1967d2; }
 
-      /* ── Action Buttons ── */
+      /* - Action Buttons - */
       .action-btn-group { display: flex; gap: 8px; margin-top: 4px; }
       #registerBtn {
         flex: 2; padding: 10px; border-radius: 6px; border: none;
@@ -299,7 +299,7 @@
       #resetBtn:hover    { background-color: #f1f3f4; }
       #resetBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-      /* ── Output ── */
+      /* - Output - */
       #output {
         margin-top: 10px; padding: 10px; border-radius: 6px;
         font-size: 12px; display: none; line-height: 1.5;
@@ -308,7 +308,7 @@
       .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb !important; }
       .error   { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb !important; }
 
-      /* ── Phase 2 Banner ── */
+      /* - Phase 2 Banner - */
       #phase2-banner {
         display: none; align-items: center; gap: 8px;
         background: #fff8e1; border: 1px solid #ffc107;
@@ -323,65 +323,60 @@
       @keyframes p2spin { to { transform: rotate(360deg); } }
       #phase2-checked { margin-left: auto; font-size: 10px; color: #9aa0a6; white-space: nowrap; }
 
-      /* ── Leaflet dark popup tweaks ── */
+      /* - Leaflet dark popup tweaks - */
       .leaflet-control-attribution { font-size: 9px !important; }
-
-      /* ── Colored Dropdown Chips (Scan tab mirror) ── */
-      .d-chip{display:inline-flex;align-items:center;gap:0;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap;cursor:default;overflow:hidden;vertical-align:middle}
-      .d-chip-label{padding:2px 7px;flex:1;overflow:hidden;text-overflow:ellipsis}
-      .d-chip-arrow{padding:2px 4px;font-size:9px;opacity:.6;border-left:1px solid rgba(0,0,0,.12);flex-shrink:0}
     </style>
   </head>
 
   <body>
-    <h3>🤖 AI Recruitment Suite</h3>
+    <h3>- AI Recruitment Suite</h3>
 
     <!-- Stats Strip -->
     <div class="stats-strip">
-      <div class="stat-box"><div class="stat-num sn-blue" id="ss-applied">—</div><div class="stat-lbl">Applied</div></div>
-      <div class="stat-box"><div class="stat-num sn-warn"  id="ss-inproc">—</div><div class="stat-lbl">In Review</div></div>
-      <div class="stat-box"><div class="stat-num sn-green" id="ss-fit">—</div><div class="stat-lbl">Fit Jobs</div></div>
+      <div class="stat-box"><div class="stat-num sn-blue" id="ss-applied">-</div><div class="stat-lbl">Applied</div></div>
+      <div class="stat-box"><div class="stat-num sn-warn"  id="ss-inproc">-</div><div class="stat-lbl">In Review</div></div>
+      <div class="stat-box"><div class="stat-num sn-green" id="ss-fit">-</div><div class="stat-lbl">Fit Jobs</div></div>
     </div>
 
     <!-- Phase 2 Banner -->
     <div id="phase2-banner">
       <div id="phase2-spinner"></div>
-      <span id="phase2-text">Phase 2 running…</span>
+      <span id="phase2-text">Phase 2 running-</span>
       <span id="phase2-checked"></span>
     </div>
 
     <!-- Fit Jobs Panel -->
     <div id="fit-panel">
       <div id="fit-panel-header">
-        <span id="fit-count-badge">📋 Loading…</span>
-        <button id="loadFitBtn" onclick="loadNextFitJob()" disabled>Load Next Fit Job →</button>
+        <span id="fit-count-badge">- Loading-</span>
+        <button id="loadFitBtn" onclick="loadNextFitJob()" disabled>Load Next Fit Job -</button>
       </div>
       <div id="fit-job-preview" style="display:none;">
         <div id="fit-job-label"></div>
         <div id="fit-job-source"></div>
-        <span id="similarity-badge">⏳ Verifying JD…</span>
+        <span id="similarity-badge">- Verifying JD-</span>
       </div>
     </div>
 
     <!-- Input Section -->
     <label for="jdInput">Job Description / URL:</label>
-    <textarea id="jdInput" placeholder="Paste a job description or URL — or use Load Next Fit Job above…"></textarea>
+    <textarea id="jdInput" placeholder="Paste a job description or URL - or use Load Next Fit Job above-"></textarea>
 
-    <!-- ── DUPLICATE WARNING BANNER (shown before SMM buttons) ── -->
+    <!-- - DUPLICATE WARNING BANNER (shown before SMM buttons) - -->
     <div id="duplicate-banner">
-      <span class="dup-icon">⚠️</span>
+      <span class="dup-icon">-</span>
       <span class="dup-text" id="duplicate-text">Already applied</span>
     </div>
 
     <label>Analyze Skills Match (SMM):</label>
     <div class="smm-btn-group">
-      <button class="smm-btn" onclick="runSmmWithDupCheck('DE Web2 Marketing Manager')">🇩🇪 DE<br>Web2</button>
-      <button class="smm-btn" onclick="runSmmWithDupCheck('EN Web2 Marketing Manager')">🇬🇧 EN<br>Web2</button>
-      <button class="smm-btn" onclick="runSmmWithDupCheck('Web3 Marketing Manager')">🔗<br>Web3</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('DE Web2 Marketing Manager')">- DE<br>Web2</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('EN Web2 Marketing Manager')">- EN<br>Web2</button>
+      <button class="smm-btn" onclick="runSmmWithDupCheck('Web3 Marketing Manager')">-<br>Web3</button>
     </div>
 
     <!-- Loader -->
-    <div id="loader">Analyzing with Mistral... 🤖</div>
+    <div id="loader">Analyzing with Mistral... -</div>
 
     <!-- SMM Results -->
     <div id="smm-section" style="display:none;">
@@ -401,14 +396,14 @@
       <!-- Chart toggle -->
       <div id="chart-toggle-bar">
         <div class="imp-legend">
-          <span style="color:#ea4335;">● Crucial</span>
-          <span style="color:#f4b400;">● Necessary</span>
-          <span style="color:#4285f4;">● Optional</span>
+          <span style="color:#ea4335;">- Crucial</span>
+          <span style="color:#f4b400;">- Necessary</span>
+          <span style="color:#4285f4;">- Optional</span>
         </div>
         <div class="chart-type-btns">
-          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">📊</button>
-          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">🕸️</button>
-          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">🗺️</button>
+          <button id="btn-bar"   class="ctype-btn active" onclick="setChartType('bar')">-</button>
+          <button id="btn-radar" class="ctype-btn"         onclick="setChartType('radar')">-</button>
+          <button id="btn-map"   class="ctype-btn"         onclick="setChartType('map')">-</button>
         </div>
       </div>
 
@@ -424,25 +419,25 @@
 
       <!-- Gap Tips -->
       <div id="gap-tips-section">
-        <div id="gap-tips-title">💡 Gap Tips</div>
+        <div id="gap-tips-title">- Gap Tips</div>
         <div id="gap-tips-list"></div>
       </div>
 
       <!-- Action Buttons -->
       <div class="action-btn-group">
-        <button id="registerBtn" onclick="proceedToRegister()">✅ Generate &amp; Register</button>
-        <button id="resetBtn"    onclick="resetAll()">🔄 Reset</button>
+        <button id="registerBtn" onclick="proceedToRegister()">- Generate &amp; Register</button>
+        <button id="resetBtn"    onclick="resetAll()">- Reset</button>
       </div>
     </div>
 
     <!-- Scan Rejections -->
-    <button id="rejectionBtn" onclick="scanRejections()">Scan Rejections 🤖</button>
+    <button id="rejectionBtn" onclick="scanRejections()">Scan Rejections -</button>
 
     <!-- Output -->
     <div id="output"></div>
 
     <script>
-      /* ── State ── */
+      /* - State - */
       var currentSmmData    = null;
       var currentCvType     = null;
       var currentChartType  = 'bar';
@@ -455,7 +450,7 @@
       var loadedRowIndices  = [];
       var pendingCvType     = null;  // used by duplicate-check flow
 
-      /* ── Helpers ── */
+      /* - Helpers - */
       function getImpColor(imp) {
         if (!imp) return '#4285f4';
         var l = imp.toLowerCase();
@@ -481,7 +476,7 @@
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
 
-      /* ── Stats ── */
+      /* - Stats - */
       function loadSidebarStats() {
         google.script.run
           .withSuccessHandler(function(result) {
@@ -497,7 +492,7 @@
           .getQueueStats();
       }
 
-      /* ── Phase 2 ── */
+      /* - Phase 2 - */
       var POLL_IDLE_MS   = 300000;
       var POLL_ACTIVE_MS = 30000;
 
@@ -527,8 +522,8 @@
 
         if (status && status.running) {
           banner.style.display = 'flex';
-          var eta = status.etaMinutes ? ' · ~' + status.etaMinutes + ' min' : '';
-          text.innerText = '⚙️ Phase 2 running — ' + (status.pending || '?') + ' job(s)' + eta + '. SMM paused.';
+          var eta = status.etaMinutes ? ' - ~' + status.etaMinutes + ' min' : '';
+          text.innerText = '- Phase 2 running - ' + (status.pending || '?') + ' job(s)' + eta + '. SMM paused.';
           setAllDisabled(true);
         } else {
           banner.style.display = 'none';
@@ -538,29 +533,29 @@
         }
       }
 
-      /* ── Fit Jobs Panel ── */
+      /* - Fit Jobs Panel - */
       function updateFitJobCount() {
         google.script.run
           .withSuccessHandler(function(count) {
             var badge = document.getElementById('fit-count-badge');
             var btn   = document.getElementById('loadFitBtn');
             if (count === 0) {
-              badge.innerText = '📋 No fit jobs pending';
+              badge.innerText = '- No fit jobs pending';
               btn.disabled = true;
             } else {
-              badge.innerText = '📋 ' + count + ' fit job' + (count > 1 ? 's' : '') + ' waiting';
+              badge.innerText = '- ' + count + ' fit job' + (count > 1 ? 's' : '') + ' waiting';
               btn.disabled = false;
             }
           })
           .withFailureHandler(function() {
-            document.getElementById('fit-count-badge').innerText = '📋 —';
+            document.getElementById('fit-count-badge').innerText = '- -';
           })
           .getFitJobCount();
       }
 
       function loadNextFitJob() {
         document.getElementById('loadFitBtn').disabled = true;
-        document.getElementById('fit-count-badge').innerText = '📋 Loading…';
+        document.getElementById('fit-count-badge').innerText = '- Loading-';
         hideDuplicateBanner();
 
         google.script.run
@@ -571,7 +566,7 @@
               updateFitJobCount(); return;
             }
             if (result.error || result.empty) {
-              document.getElementById('fit-count-badge').innerText = '📋 No fit jobs pending';
+              document.getElementById('fit-count-badge').innerText = '- No fit jobs pending';
               document.getElementById('fit-job-preview').style.display = 'none';
               document.getElementById('loadFitBtn').disabled = true;
               currentFitJobUrl = null; currentFitJobData = null; return;
@@ -581,28 +576,28 @@
             loadedRowIndices.push(result.rowIndex);
             document.getElementById('jdInput').value = result.jdText || '';
             document.getElementById('fit-job-label').innerText =
-              result.company + ' — ' + result.title + '  (' + result.matchLevel + ': ' + result.score + '/40)';
+              result.company + ' - ' + result.title + '  (' + result.matchLevel + ': ' + result.score + '/40)';
             document.getElementById('fit-job-source').innerText =
-              '📌 ' + result.source +
-              (result.urlMatchesFetched ? ' · URL = source page' : ' · URL ≠ source page (company page fetched)');
+              '- ' + result.source +
+              (result.urlMatchesFetched ? ' - URL = source page' : ' - URL - source page (company page fetched)');
             document.getElementById('fit-job-preview').style.display = 'block';
-            setSimilarityBadge('⏳ Verifying JD…', '#f1f3f4', '#5f6368');
+            setSimilarityBadge('- Verifying JD-', '#f1f3f4', '#5f6368');
             var remaining = Math.max(0, result.fitCount - 1);
             document.getElementById('fit-count-badge').innerText =
               remaining > 0
-                ? '📋 ' + remaining + ' fit job' + (remaining !== 1 ? 's' : '') + ' remaining'
-                : '📋 Last fit job loaded';
+                ? '- ' + remaining + ' fit job' + (remaining !== 1 ? 's' : '') + ' remaining'
+                : '- Last fit job loaded';
             document.getElementById('loadFitBtn').disabled = remaining <= 0;
             if (result.fetchedUrl) {
               google.script.run
                 .withSuccessHandler(function(simStr) {
                   try { var sim = JSON.parse(simStr); renderSimilarityBadge(sim, result.urlMatchesFetched); }
-                  catch(e) { setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6'); }
+                  catch(e) { setSimilarityBadge('- N/A', '#f1f3f4', '#9aa0a6'); }
                 })
-                .withFailureHandler(function() { setSimilarityBadge('⚪ N/A', '#f1f3f4', '#9aa0a6'); })
+                .withFailureHandler(function() { setSimilarityBadge('- N/A', '#f1f3f4', '#9aa0a6'); })
                 .checkJdSimilarity(result.fetchedUrl, result.jdText);
             } else {
-              setSimilarityBadge('⚪ No source URL', '#f1f3f4', '#9aa0a6');
+              setSimilarityBadge('- No source URL', '#f1f3f4', '#9aa0a6');
             }
           })
           .withFailureHandler(function(err) {
@@ -617,29 +612,29 @@
         b.innerText = text; b.style.background = bg; b.style.color = color;
       }
       function renderSimilarityBadge(sim, urlMatchesFetched) {
-        if (!sim.accessible) { setSimilarityBadge('⚪ N/A — source not accessible', '#f1f3f4', '#9aa0a6'); return; }
+        if (!sim.accessible) { setSimilarityBadge('- N/A - source not accessible', '#f1f3f4', '#9aa0a6'); return; }
         var s = sim.score;
         var suffix = urlMatchesFetched ? 'source verified' : 'company page verified';
-        if      (s >= 90) setSimilarityBadge('🟢 ' + s + '% — ' + suffix, '#e6f4ea', '#1e8e3e');
-        else if (s >= 70) setSimilarityBadge('🟡 ' + s + '% — minor differences', '#fef7e0', '#c77c00');
-        else              setSimilarityBadge('🔴 ' + s + '% — JD may have changed', '#fce8e6', '#c5221f');
+        if      (s >= 90) setSimilarityBadge('- ' + s + '% - ' + suffix, '#e6f4ea', '#1e8e3e');
+        else if (s >= 70) setSimilarityBadge('- ' + s + '% - minor differences', '#fef7e0', '#c77c00');
+        else              setSimilarityBadge('- ' + s + '% - JD may have changed', '#fce8e6', '#c5221f');
       }
 
-      /* ── Duplicate Banner Helpers ── */
+      /* - Duplicate Banner Helpers - */
       function showDuplicateBanner(tabName, company, position) {
         var banner = document.getElementById('duplicate-banner');
         var text   = document.getElementById('duplicate-text');
         text.innerHTML =
-          '<strong>⚠️ Already applied in ' + escHtml(tabName) + '</strong> — ' +
-          escHtml(company) + ' · ' + escHtml(position) +
-          '<br><span style="font-size:11px;opacity:0.8;">SMM buttons still active — you can re-analyse or choose a different position.</span>';
+          '<strong>- Already applied in ' + escHtml(tabName) + '</strong> - ' +
+          escHtml(company) + ' - ' + escHtml(position) +
+          '<br><span style="font-size:11px;opacity:0.8;">SMM buttons still active - you can re-analyse or choose a different position.</span>';
         banner.style.display = 'flex';
       }
       function hideDuplicateBanner() {
         document.getElementById('duplicate-banner').style.display = 'none';
       }
 
-      /* ── SMM with duplicate check ── */
+      /* - SMM with duplicate check - */
       function runSmmWithDupCheck(cvType) {
         var jd = document.getElementById('jdInput').value.trim();
         if (!jd) { showOutput('Please paste a Job Description or load a fit job first.', 'error'); return; }
@@ -650,7 +645,7 @@
         // otherwise we skip the check (no reliable names from plain JD text).
         if (currentFitJobData && currentFitJobData.company && currentFitJobData.title) {
           setAllDisabled(true);
-          document.getElementById('loader').innerText = 'Checking for duplicates…';
+          document.getElementById('loader').innerText = 'Checking for duplicates-';
           document.getElementById('loader').style.display = 'block';
 
           google.script.run
@@ -661,7 +656,7 @@
                 if (r.found) {
                   restoreButtons();
                   showDuplicateBanner(r.tabName, r.company, r.position);
-                  // Still allow SMM — user decides
+                  // Still allow SMM - user decides
                   runSmm(pendingCvType);
                 } else {
                   hideDuplicateBanner();
@@ -679,13 +674,13 @@
             })
             .checkIfAlreadyApplied(currentFitJobData.company, currentFitJobData.title);
         } else {
-          // No fit job loaded — run SMM directly, no duplicate check possible
+          // No fit job loaded - run SMM directly, no duplicate check possible
           hideDuplicateBanner();
           runSmm(cvType);
         }
       }
 
-      /* ── Chart Toggle ── */
+      /* - Chart Toggle - */
       function setChartType(type) {
         currentChartType = type;
         ['bar','radar','map'].forEach(function(t) {
@@ -721,7 +716,7 @@
               data: { labels: labels, datasets: [{ data: scores, backgroundColor: ic.map(function(x) { return x + 'cc'; }), borderColor: ic, borderWidth: 2, borderRadius: 4, borderSkipped: false }] },
               options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 scales: { x: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 }, color: '#9aa0a6' }, grid: { color: '#f1f3f4' } }, y: { ticks: { font: { size: 12 }, color: '#3c4043' }, grid: { display: false } } },
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.raw + '/5  ·  ' + (s ? s.importance : ''); } } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.raw + '/5  -  ' + (s ? s.importance : ''); } } } },
                 layout: { padding: { right: 8 } } }
             });
           } else {
@@ -739,24 +734,24 @@
                       if (cur) lines.push(cur.trim()); return lines;
                     } } } },
                 layout: { padding: { top: 30, left: 70, right: 70, bottom: 30 } },
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.parsed.r + '/5  ·  ' + (s ? s.importance : ''); } } } } }
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { var s = skills[ctx.dataIndex]; return ' ' + ctx.parsed.r + '/5  -  ' + (s ? s.importance : ''); } } } } }
             });
           }
         }, 80);
       }
 
-      /* ── Geo Map ── */
+      /* - Geo Map - */
       function renderGeoMap() {
         var mapDiv = document.getElementById('leaflet-map'); if (!mapDiv) return;
-        mapDiv.innerHTML = '<div class="map-ph">📍 Locating job…</div>';
+        mapDiv.innerHTML = '<div class="map-ph">- Locating job-</div>';
         var loc = currentSmmData && currentSmmData.job_location;
-        if (!loc || (!loc.city && !loc.country)) { mapDiv.innerHTML = '<div class="map-ph">📍 Location not found in JD</div>'; return; }
-        if (loc.city && loc.city.toLowerCase() === 'remote') { mapDiv.innerHTML = '<div class="map-ph" style="color:#34a853">🌐 Remote — no physical location</div>'; return; }
+        if (!loc || (!loc.city && !loc.country)) { mapDiv.innerHTML = '<div class="map-ph">- Location not found in JD</div>'; return; }
+        if (loc.city && loc.city.toLowerCase() === 'remote') { mapDiv.innerHTML = '<div class="map-ph" style="color:#34a853">- Remote - no physical location</div>'; return; }
         google.script.run
           .withSuccessHandler(function(resultStr) {
             try {
               var geo = JSON.parse(resultStr);
-              if (!geo.lat || !geo.lng) { mapDiv.innerHTML = '<div class="map-ph">📍 Could not locate: ' + escHtml((loc.city || '') + (loc.country ? ', ' + loc.country : '')) + '</div>'; return; }
+              if (!geo.lat || !geo.lng) { mapDiv.innerHTML = '<div class="map-ph">- Could not locate: ' + escHtml((loc.city || '') + (loc.country ? ', ' + loc.country : '')) + '</div>'; return; }
               initAndRenderMap(geo, loc);
             } catch(e) { mapDiv.innerHTML = '<div class="map-ph" style="color:#ea4335">Map error</div>'; }
           })
@@ -773,7 +768,7 @@
         leafletMap = L.map(mapDiv).setView([geo.lat, geo.lng], 11);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+          attribution: '- <a href="https://www.openstreetmap.org/copyright">OSM</a>',
           maxZoom: 18
         }).addTo(leafletMap);
 
@@ -791,7 +786,7 @@
         setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 300);
       }
 
-      /* ── SMM (core — called after duplicate check) ── */
+      /* - SMM (core - called after duplicate check) - */
       function runSmm(cvType) {
         var jd = document.getElementById('jdInput').value.trim();
         if (!jd) { showOutput('Please paste a Job Description or load a fit job first.', 'error'); return; }
@@ -799,7 +794,7 @@
         setAllDisabled(true);
         document.getElementById('smm-section').style.display = 'none';
         document.getElementById('output').style.display = 'none';
-        document.getElementById('loader').innerText = 'Analyzing skills with Mistral… 🤖';
+        document.getElementById('loader').innerText = 'Analyzing skills with Mistral- -';
         document.getElementById('loader').style.display = 'block';
         if (currentFitJobUrl) window.open(currentFitJobUrl, '_blank');
         google.script.run
@@ -833,7 +828,7 @@
         document.getElementById('match-level-pill').style.backgroundColor = color;
         renderLanguagePill(data.language_note);
 
-        var cvLabel = { 'DE Web2 Marketing Manager': '🇩🇪 DE Web2', 'EN Web2 Marketing Manager': '🇬🇧 EN Web2', 'Web3 Marketing Manager': '🔗 Web3' };
+        var cvLabel = { 'DE Web2 Marketing Manager': '- DE Web2', 'EN Web2 Marketing Manager': '- EN Web2', 'Web3 Marketing Manager': '- Web3' };
         document.getElementById('cv-type-indicator').innerText = 'Profile: ' + (cvLabel[cvType] || cvType);
 
         currentChartType = 'bar';
@@ -851,7 +846,7 @@
           var div = document.createElement('div');
           div.className = 'gap-tip-item';
           var impClass = getImpClass(s.importance);
-          var evText = (s.evidence && s.evidence !== 'Not found in CV') ? '📄 ' + escHtml(s.evidence) : '🚫 Not found in CV';
+          var evText = (s.evidence && s.evidence !== 'Not found in CV') ? '- ' + escHtml(s.evidence) : '- Not found in CV';
           div.innerHTML =
             '<span class="gap-tip-skill">' + escHtml(s.name) + '</span>' +
             ' <span class="gap-tip-score">(' + (s.score || 0) + '/5)</span>' +
@@ -867,22 +862,22 @@
         var text = document.getElementById('language-pill-text');
         if (!langNote || !langNote.text) { pill.style.display = 'none'; return; }
         var cfg = {
-          unmet: { icon: '⚠️ ', bg: '#fce8e6', color: '#c5221f', border: '1px solid #f4c7c3' },
-          met:   { icon: '✅ ', bg: '#e6f4ea', color: '#1e8e3e', border: '1px solid #ceead6' },
-          other: { icon: 'ℹ️ ', bg: '#fef7e0', color: '#c77c00', border: '1px solid #fde293' },
-          none:  { icon: '✅ ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' }
-        }[langNote.status] || { icon: '✅ ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' };
+          unmet: { icon: '- ', bg: '#fce8e6', color: '#c5221f', border: '1px solid #f4c7c3' },
+          met:   { icon: '- ', bg: '#e6f4ea', color: '#1e8e3e', border: '1px solid #ceead6' },
+          other: { icon: '- ', bg: '#fef7e0', color: '#c77c00', border: '1px solid #fde293' },
+          none:  { icon: '- ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' }
+        }[langNote.status] || { icon: '- ', bg: '#f1f3f4', color: '#5f6368', border: '1px solid #e0e0e0' };
         pill.style.display = 'flex'; pill.style.background = cfg.bg; pill.style.color = cfg.color; pill.style.border = cfg.border;
         text.innerText = cfg.icon + langNote.text;
       }
 
-      /* ── Register ── */
+      /* - Register - */
       function proceedToRegister() {
         var jd = document.getElementById('jdInput').value.trim();
         if (!jd || !currentSmmData || !currentCvType) { showOutput('Please run an SMM analysis first.', 'error'); return; }
         setAllDisabled(true);
         document.getElementById('output').style.display = 'none';
-        document.getElementById('loader').innerText = 'Generating cover letter & registering… 🤖';
+        document.getElementById('loader').innerText = 'Generating cover letter & registering- -';
         document.getElementById('loader').style.display = 'block';
         google.script.run
           .withSuccessHandler(function(res) {
@@ -901,7 +896,7 @@
           .mainJobProcessor(jd, currentCvType, JSON.stringify(currentSmmData));
       }
 
-      /* ── Reset ── */
+      /* - Reset - */
       function resetAll() {
         document.getElementById('jdInput').value = '';
         document.getElementById('smm-section').style.display = 'none';
@@ -919,28 +914,28 @@
         ['bar','radar','map'].forEach(function(t) { var b=document.getElementById('btn-'+t); if(b) b.classList.toggle('active',t==='bar'); });
       }
 
-      /* ── Scan Rejections ── */
+      /* - Scan Rejections - */
       function scanRejections() {
         var rejBtn = document.getElementById('rejectionBtn');
-        setAllDisabled(true); rejBtn.innerText = 'Scanning Inbox…';
+        setAllDisabled(true); rejBtn.innerText = 'Scanning Inbox-';
         document.getElementById('output').style.display = 'none';
-        document.getElementById('loader').innerText = 'Scanning for rejections… 🤖';
+        document.getElementById('loader').innerText = 'Scanning for rejections- -';
         document.getElementById('loader').style.display = 'block';
         google.script.run
           .withSuccessHandler(function(res) {
-            restoreButtons(); rejBtn.innerText = 'Scan Rejections 🤖';
+            restoreButtons(); rejBtn.innerText = 'Scan Rejections -';
             document.getElementById('loader').style.display = 'none';
             showOutput(res, 'success');
           })
           .withFailureHandler(function(err) {
-            restoreButtons(); rejBtn.innerText = 'Scan Rejections 🤖';
+            restoreButtons(); rejBtn.innerText = 'Scan Rejections -';
             document.getElementById('loader').style.display = 'none';
             showOutput('Error: ' + err.message, 'error');
           })
           .processRejectionEmails();
       }
 
-      /* ── Button state helpers ── */
+      /* - Button state helpers - */
       function setAllDisabled(disabled) {
         document.querySelectorAll('.smm-btn').forEach(function(b) { b.disabled = disabled; });
         ['rejectionBtn','loadFitBtn','registerBtn','resetBtn'].forEach(function(id) {
@@ -960,7 +955,7 @@
         out.innerText = text; out.className = type; out.style.display = 'block';
       }
 
-      /* ── Startup ── */
+      /* - Startup - */
       startPhase2Poll();
       updateFitJobCount();
       loadSidebarStats();
